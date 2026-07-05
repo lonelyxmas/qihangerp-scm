@@ -5,10 +5,12 @@ import com.laoqi.assistant.util.TimeUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestClient;
 
-import java.io.*;
+import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -20,16 +22,23 @@ public class FeishuService {
     private final AppConfig appConfig;
     private final ConfigService configService;
     private final LogService logService;
+    private final RestClient restClient;
 
     private volatile String cachedToken;
     private volatile long tokenExpiresAt;
     private final Object tokenLock = new Object();
 
     public FeishuService(AppConfig appConfig, ConfigService configService,
-                          LogService logService) {
+                          LogService logService, RestClient.Builder restClientBuilder) {
         this.appConfig = appConfig;
         this.configService = configService;
         this.logService = logService;
+        var httpClient = java.net.http.HttpClient.newBuilder()
+                .connectTimeout(Duration.ofSeconds(10))
+                .build();
+        var factory = new org.springframework.http.client.JdkClientHttpRequestFactory(httpClient);
+        factory.setReadTimeout(Duration.ofSeconds(10));
+        this.restClient = restClientBuilder.clone().requestFactory(factory).build();
     }
 
     public String getTenantToken(String appId, String appSecret) throws IOException {
@@ -253,38 +262,27 @@ public class FeishuService {
     }
 
     private String httpPost(String url, String body, String contentType, String token) throws IOException {
-        var conn = (java.net.HttpURLConnection) new java.net.URL(url).openConnection();
         try {
-            conn.setRequestMethod("POST");
-            conn.setDoOutput(true);
-            conn.setConnectTimeout(10000);
-            conn.setReadTimeout(10000);
-            conn.setRequestProperty("Content-Type", contentType);
-            if (token != null) conn.setRequestProperty("Authorization", "Bearer " + token);
-            try (OutputStream os = conn.getOutputStream()) {
-                os.write(body.getBytes(StandardCharsets.UTF_8));
-            }
-            int code = conn.getResponseCode();
-            try (InputStream is = code >= 400 ? conn.getErrorStream() : conn.getInputStream()) {
-                return new String(is.readAllBytes(), StandardCharsets.UTF_8);
-            }
-        } finally {
-            conn.disconnect();
+            var spec = restClient.post()
+                    .uri(url)
+                    .header("Content-Type", contentType)
+                    .body(body);
+            if (token != null) spec = spec.header("Authorization", "Bearer " + token);
+            return spec.retrieve().body(String.class);
+        } catch (Exception e) {
+            throw new IOException("POST 请求失败: " + url + " - " + e.getMessage(), e);
         }
     }
 
     private String httpGet(String url, String token) throws IOException {
-        var conn = (java.net.HttpURLConnection) new java.net.URL(url).openConnection();
         try {
-            conn.setRequestMethod("GET");
-            conn.setConnectTimeout(10000);
-            conn.setReadTimeout(10000);
-            conn.setRequestProperty("Authorization", "Bearer " + token);
-            try (InputStream is = conn.getResponseCode() >= 400 ? conn.getErrorStream() : conn.getInputStream()) {
-                return new String(is.readAllBytes(), StandardCharsets.UTF_8);
-            }
-        } finally {
-            conn.disconnect();
+            return restClient.get()
+                    .uri(url)
+                    .header("Authorization", "Bearer " + token)
+                    .retrieve()
+                    .body(String.class);
+        } catch (Exception e) {
+            throw new IOException("GET 请求失败: " + url + " - " + e.getMessage(), e);
         }
     }
 }

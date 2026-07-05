@@ -12,9 +12,11 @@ import org.springframework.stereotype.Service;
 
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
+import org.springframework.web.client.RestClient;
 import java.io.*;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -36,6 +38,7 @@ public class FeishuCodingBotService {
     private final CodingRecordDbService recordDbService;
     @SuppressWarnings("unused")
     private final AppConfig appConfig;
+    private final RestClient restClient;
 
     private com.lark.oapi.ws.Client wsClient;
     private com.lark.oapi.Client client;
@@ -56,12 +59,19 @@ public class FeishuCodingBotService {
                                   CodePiService codePiService,
                                   LogService logService,
                                   CodingRecordDbService recordDbService,
-                                  AppConfig appConfig) {
+                                  AppConfig appConfig,
+                                  RestClient.Builder restClientBuilder) {
         this.configService = configService;
         this.codePiService = codePiService;
         this.logService = logService;
         this.recordDbService = recordDbService;
         this.appConfig = appConfig;
+        var httpClient = java.net.http.HttpClient.newBuilder()
+                .connectTimeout(Duration.ofSeconds(10))
+                .build();
+        var factory = new org.springframework.http.client.JdkClientHttpRequestFactory(httpClient);
+        factory.setReadTimeout(Duration.ofSeconds(30));
+        this.restClient = restClientBuilder.clone().requestFactory(factory).build();
     }
 
     @PostConstruct
@@ -423,25 +433,18 @@ public class FeishuCodingBotService {
                 url = "https://open.feishu.cn/open-apis/im/v1/files/" + URLEncoder.encode(fileKey, "UTF-8") + "?type=file";
             }
 
-            var conn = (java.net.HttpURLConnection) new java.net.URL(url).openConnection();
-            conn.setRequestMethod("GET");
-            conn.setRequestProperty("Authorization", "Bearer " + token);
-            conn.setConnectTimeout(15000);
-            conn.setReadTimeout(30000);
+            var entity = restClient.get()
+                    .uri(url)
+                    .header("Authorization", "Bearer " + token)
+                    .retrieve()
+                    .toEntity(byte[].class);
 
-            int code = conn.getResponseCode();
-            if (code != 200) {
-                try (InputStream es = conn.getErrorStream()) {
-                    String errBody = es != null ? new String(es.readAllBytes(), StandardCharsets.UTF_8) : "";
-                    log.warn("[编程AI] 下载媒体失败 HTTP {}: {}", code, errBody.substring(0, Math.min(100, errBody.length())));
-                }
+            if (!entity.getStatusCode().is2xxSuccessful()) {
+                log.warn("[编程AI] 下载媒体失败 HTTP {}: {}", entity.getStatusCode(), "响应异常");
                 return null;
             }
 
-            byte[] data;
-            try (InputStream is = conn.getInputStream()) {
-                data = is.readAllBytes();
-            }
+            byte[] data = entity.getBody();
             if (data.length == 0) return null;
 
             String ext = guessExt(data);
@@ -481,21 +484,12 @@ public class FeishuCodingBotService {
                 String appId = config.getCodingFeishuAppId();
                 String appSecret = config.getCodingFeishuAppSecret();
                 String body = "{\"app_id\":\"" + appId + "\",\"app_secret\":\"" + appSecret + "\"}";
-                var conn = (java.net.HttpURLConnection)
-                        new java.net.URL("https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal")
-                        .openConnection();
-                conn.setRequestMethod("POST");
-                conn.setDoOutput(true);
-                conn.setConnectTimeout(10000);
-                conn.setReadTimeout(10000);
-                conn.setRequestProperty("Content-Type", "application/json");
-                try (OutputStream os = conn.getOutputStream()) {
-                    os.write(body.getBytes(StandardCharsets.UTF_8));
-                }
-                String resp;
-                try (InputStream is = conn.getInputStream()) {
-                    resp = new String(is.readAllBytes(), StandardCharsets.UTF_8);
-                }
+                String resp = restClient.post()
+                        .uri("https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal")
+                        .header("Content-Type", "application/json")
+                        .body(body)
+                        .retrieve()
+                        .body(String.class);
                 @SuppressWarnings("unchecked")
                 Map<String, Object> json = new Gson().fromJson(resp, Map.class);
                 String token = (String) json.get("tenant_access_token");

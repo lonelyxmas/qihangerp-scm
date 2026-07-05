@@ -5,10 +5,14 @@ import com.laoqi.assistant.service.db.LlmProfileDbService;
 import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.DependsOn;
+import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 
+import java.net.http.HttpClient;
+import java.time.Duration;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -19,14 +23,17 @@ public class LlmConfigResolver {
     private static final Logger log = LoggerFactory.getLogger(LlmConfigResolver.class);
 
     private final ConfigService configService;
-    private final RestClient.Builder llmRestClientBuilder;
+    private final RestClient.Builder restClientBuilder;
     private final LlmProfileDbService llmProfileDbService;
+    private final int defaultTimeoutSec;
 
-    public LlmConfigResolver(ConfigService configService, RestClient.Builder llmRestClientBuilder,
-                             LlmProfileDbService llmProfileDbService) {
+    public LlmConfigResolver(ConfigService configService, RestClient.Builder restClientBuilder,
+                             LlmProfileDbService llmProfileDbService,
+                             @Value("${app.llm-timeout:600}") int defaultTimeoutSec) {
         this.configService = configService;
-        this.llmRestClientBuilder = llmRestClientBuilder;
+        this.restClientBuilder = restClientBuilder;
         this.llmProfileDbService = llmProfileDbService;
+        this.defaultTimeoutSec = defaultTimeoutSec;
     }
 
     @PostConstruct
@@ -105,7 +112,7 @@ public class LlmConfigResolver {
     public int resolveTimeout() {
         LlmProfileEntity p = resolveDefaultProfile();
         if (p != null && p.getTimeout() != null && p.getTimeout() > 0) return p.getTimeout();
-        return 60;
+        return defaultTimeoutSec;
     }
 
     public boolean isAvailable() {
@@ -114,7 +121,13 @@ public class LlmConfigResolver {
     }
 
     public RestClient.Builder buildRestClientBuilder() {
-        return llmRestClientBuilder;
+        int timeoutSec = resolveTimeout();
+        HttpClient httpClient = HttpClient.newBuilder()
+                .connectTimeout(Duration.ofSeconds(10))
+                .build();
+        JdkClientHttpRequestFactory requestFactory = new JdkClientHttpRequestFactory(httpClient);
+        requestFactory.setReadTimeout(Duration.ofSeconds(timeoutSec));
+        return this.restClientBuilder.clone().requestFactory(requestFactory);
     }
 
     // ========== Profile-based resolution (for multi-model) ==========

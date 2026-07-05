@@ -4,19 +4,18 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.tool.annotation.Tool;
 import org.springframework.ai.tool.annotation.ToolParam;
+import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
+import org.springframework.web.client.RestClient;
 
-import java.net.URI;
 import java.net.URLEncoder;
 import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 
 /**
  * 互联网搜索与网页获取工具集 — 让 AI 可以获取最新的网络信息。
- * 使用内置 HttpClient，无需外部依赖。
+ * 基于 Spring RestClient，自动跟随重定向。
  */
 @Component
 public class WebTools {
@@ -27,13 +26,16 @@ public class WebTools {
     private static final int TIMEOUT_SECONDS = 15;
     private static final int MAX_RESPONSE_LENGTH = 8000;
 
-    private final HttpClient httpClient;
+    private final RestClient restClient;
 
-    public WebTools() {
-        this.httpClient = HttpClient.newBuilder()
+    public WebTools(RestClient.Builder restClientBuilder) {
+        HttpClient httpClient = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(TIMEOUT_SECONDS))
-                .followRedirects(HttpClient.Redirect.NORMAL)
+                .followRedirects(java.net.http.HttpClient.Redirect.NORMAL)
                 .build();
+        JdkClientHttpRequestFactory factory = new JdkClientHttpRequestFactory(httpClient);
+        factory.setReadTimeout(Duration.ofSeconds(TIMEOUT_SECONDS));
+        this.restClient = restClientBuilder.clone().requestFactory(factory).build();
     }
 
     @Tool(description = "搜索互联网获取最新信息。当用户问实时新闻、当前事件、最新消息、你不知道的信息时必须使用此工具。注意：搜索结果可能包含广告，请甄别使用")
@@ -46,18 +48,14 @@ public class WebTools {
         try {
             String encoded = URLEncoder.encode(query, StandardCharsets.UTF_8);
             String url = DEFAULT_SEARCH_URL + encoded;
-            HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create(url))
+            String body = restClient.get()
+                    .uri(url)
                     .header("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
                             + "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
                     .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
                     .header("Accept-Language", "zh-CN,zh;q=0.9,en;q=0.8")
-                    .timeout(Duration.ofSeconds(TIMEOUT_SECONDS))
-                    .GET()
-                    .build();
-
-            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-            String body = response.body();
+                    .retrieve()
+                    .body(String.class);
             if (body == null || body.isEmpty()) {
                 return "搜索无结果";
             }
@@ -88,18 +86,14 @@ public class WebTools {
         }
 
         try {
-            HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create(url))
+            String body = restClient.get()
+                    .uri(url)
                     .header("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
                             + "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
                     .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
                     .header("Accept-Language", "zh-CN,zh;q=0.9,en;q=0.8")
-                    .timeout(Duration.ofSeconds(TIMEOUT_SECONDS))
-                    .GET()
-                    .build();
-
-            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-            String body = response.body();
+                    .retrieve()
+                    .body(String.class);
             if (body == null || body.isEmpty()) {
                 return "该页面无内容";
             }

@@ -43,3 +43,5 @@ AI/
 AGENTS.md
 CLAUDE.md
 app.log.*.*.gz
+deps.txt
+memory.db-journal

@@ -8,10 +8,13 @@ import org.slf4j.LoggerFactory;
 import org.springframework.ai.embedding.EmbeddingModel;
 import org.springframework.ai.openai.OpenAiEmbeddingModel;
 import org.springframework.ai.openai.OpenAiEmbeddingOptions;
+import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestClient;
+import org.springframework.web.reactive.function.client.WebClient;
 
-import java.net.HttpURLConnection;
-import java.net.URI;
+import java.net.http.HttpClient;
+import java.time.Duration;
 
 /**
  * 向量化服务。支持两种模式：
@@ -27,15 +30,21 @@ public class OllamaEmbeddingService {
     private final AppConfig appConfig;
     private final LogService logService;
     private final ConfigService configService;
+    private final RestClient.Builder restClientBuilder;
+    private final WebClient.Builder webClientBuilder;
     private EmbeddingModel embeddingModel;
     private boolean available;
     private String providerLabel = "";
     private String currentModelKey = "";  // 用于检测模型是否变更
     public OllamaEmbeddingService(AppConfig appConfig, LogService logService,
-                                   ConfigService configService) {
+                                   ConfigService configService,
+                                   RestClient.Builder restClientBuilder,
+                                   WebClient.Builder webClientBuilder) {
         this.appConfig = appConfig;
         this.logService = logService;
         this.configService = configService;
+        this.restClientBuilder = restClientBuilder;
+        this.webClientBuilder = webClientBuilder;
     }
 
     @PostConstruct
@@ -102,20 +111,21 @@ public class OllamaEmbeddingService {
     }
 
     private void initOllamaEmbedding(String model, String baseUrl) {
+        // 快速健康检查：Ollama 是否运行 & 模型是否安装
         try {
-            URI uri = URI.create(baseUrl + "/api/tags");
-            HttpURLConnection conn = (HttpURLConnection) uri.toURL().openConnection();
-            conn.setConnectTimeout(3000);
-            conn.setReadTimeout(3000);
-            int code = conn.getResponseCode();
-            if (code != 200) {
-                log.warn("⚠️ Ollama 未运行 ({}), 语义检索不可用", baseUrl);
-                logService.add("Ollama", "不可用", "连接失败: HTTP " + code);
-                this.available = false;
-                return;
-            }
+            java.net.http.HttpClient quickClient = java.net.http.HttpClient.newBuilder()
+                    .connectTimeout(Duration.ofSeconds(3))
+                    .build();
+            org.springframework.http.client.JdkClientHttpRequestFactory quickFactory =
+                    new org.springframework.http.client.JdkClientHttpRequestFactory(quickClient);
+            quickFactory.setReadTimeout(Duration.ofSeconds(3));
+            RestClient checkClient = this.restClientBuilder.clone().requestFactory(quickFactory).build();
 
-            String body = new String(conn.getInputStream().readAllBytes());
+            String body = checkClient.get()
+                    .uri(baseUrl + "/api/tags")
+                    .retrieve()
+                    .body(String.class);
+
             if (!body.contains("\"name\":\"" + model + "\"") && !body.contains("\"name\":\"" + model + ":")) {
                 log.warn("⚠️ Embedding 模型 '{}' 未安装, 请执行: ollama pull {}", model, model);
                 logService.add("Ollama", "模型未安装", "请执行: ollama pull " + model);
@@ -129,9 +139,31 @@ public class OllamaEmbeddingService {
             return;
         }
 
+        // 基于 Spring Boot 已自动配置的 RestClient/WebClient Builder 增加超时
+        HttpClient jdkHttpClient = HttpClient.newBuilder()
+                .connectTimeout(Duration.ofMinutes(10))
+                .build();
+        JdkClientHttpRequestFactory requestFactory =
+                new JdkClientHttpRequestFactory(jdkHttpClient);
+        requestFactory.setReadTimeout(Duration.ofMinutes(10));
+
+        RestClient.Builder rcBuilder = this.restClientBuilder.clone()
+                .requestFactory(requestFactory);
+
+        reactor.netty.http.client.HttpClient nettyHttpClient =
+                reactor.netty.http.client.HttpClient.create()
+                        .responseTimeout(Duration.ofMinutes(10));
+        org.springframework.http.client.reactive.ReactorClientHttpConnector connector =
+                new org.springframework.http.client.reactive.ReactorClientHttpConnector(nettyHttpClient);
+
+        WebClient.Builder wcBuilder = this.webClientBuilder.clone()
+                .clientConnector(connector);
+
         this.embeddingModel = org.springframework.ai.ollama.OllamaEmbeddingModel.builder()
                 .ollamaApi(org.springframework.ai.ollama.api.OllamaApi.builder()
                         .baseUrl(baseUrl)
+                        .restClientBuilder(rcBuilder)
+                        .webClientBuilder(wcBuilder)
                         .build())
                 .options(org.springframework.ai.ollama.api.OllamaEmbeddingOptions.builder()
                         .model(model)

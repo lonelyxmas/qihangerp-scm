@@ -5,12 +5,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.laoqi.assistant.entity.LlmProfileEntity;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestClient;
 
-import java.net.URI;
 import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.List;
 
@@ -19,14 +18,18 @@ public class ImageGenerateService {
 
     private static final Logger log = LoggerFactory.getLogger(ImageGenerateService.class);
     private static final ObjectMapper mapper = new ObjectMapper();
-    private static final HttpClient httpClient = HttpClient.newBuilder()
-            .connectTimeout(Duration.ofSeconds(30))
-            .build();
 
     private final LlmConfigResolver configResolver;
+    private final RestClient restClient;
 
-    public ImageGenerateService(LlmConfigResolver configResolver) {
+    public ImageGenerateService(LlmConfigResolver configResolver, RestClient.Builder restClientBuilder) {
         this.configResolver = configResolver;
+        HttpClient httpClient = HttpClient.newBuilder()
+                .connectTimeout(Duration.ofSeconds(30))
+                .build();
+        JdkClientHttpRequestFactory requestFactory = new JdkClientHttpRequestFactory(httpClient);
+        requestFactory.setReadTimeout(Duration.ofSeconds(120));
+        this.restClient = restClientBuilder.clone().requestFactory(requestFactory).build();
     }
 
     /**
@@ -78,22 +81,14 @@ public class ImageGenerateService {
 
             log.info("[ImageGen] 调用: profile={}, model={}, url={}", profile.getName(), model, url);
 
-            HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create(url))
-                    .header("Content-Type", "application/json")
+            String responseBody = restClient.post()
+                    .uri(url)
                     .header("Authorization", "Bearer " + apiKey)
-                    .POST(HttpRequest.BodyPublishers.ofString(body))
-                    .timeout(Duration.ofSeconds(120))
-                    .build();
+                    .body(body)
+                    .retrieve()
+                    .body(String.class);
 
-            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-
-            if (response.statusCode() != 200) {
-                log.error("[ImageGen] API 错误: status={}, body={}", response.statusCode(), response.body());
-                throw new RuntimeException("图片生成失败: HTTP " + response.statusCode() + " - " + response.body());
-            }
-
-            JsonNode root = mapper.readTree(response.body());
+            JsonNode root = mapper.readTree(responseBody);
             JsonNode data = root.get("data");
             if (data != null && data.isArray() && data.size() > 0) {
                 JsonNode first = data.get(0);
