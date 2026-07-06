@@ -242,11 +242,6 @@ public class V3Controller {
             }
         }
 
-        if (resolvedKbId == null) {
-            KnowledgeBaseEntity first = kbService.getFirst();
-            if (first != null) resolvedKbId = first.getId();
-        }
-
         final Long finalKbId = resolvedKbId;
         final String finalMessage = cleanMessage;
 
@@ -260,18 +255,20 @@ public class V3Controller {
                 if (emitterDone[0]) return;
 
                 if (finalKbId == null) {
-                    if (!llmService.isAvailable()) {
-                        sendError(emitter, "未配置大模型，请先到配置页设置");
-                        return;
+                    String hint = "请先选择一个笔记库，或在问题中使用 @笔记库名 指定要搜索的笔记库。\n\n" +
+                            "例如：'@工作笔记 查一下项目进展'\n\n" +
+                            "可用笔记库：";
+                    List<KnowledgeBaseEntity> kbList = kbService.getAll();
+                    if (kbList.isEmpty()) {
+                        hint += "\n- 暂无笔记库，请先到配置页添加";
+                    } else {
+                        for (KnowledgeBaseEntity kb : kbList) {
+                            hint += "\n- @" + kb.getName();
+                        }
                     }
-                    sendStatus(emitter, mode, "正在对话...");
-                    sessionService.saveMessage("v3-global", "user", finalMessage, "general", "web");
-
-                    String reply = llmService.chat("你是笔灵AI，一个智能个人助手。", finalMessage);
-                    sessionService.saveMessage("v3-global", "assistant", reply, "general", "web");
-
+                    
                     emitter.send(SseEmitter.event().data(mapper.writeValueAsString(
-                            Map.of("type", "text", "content", reply, "mode", mode))));
+                            Map.of("type", "text", "content", hint, "mode", mode))));
                     sendDone(emitter, mode);
                     return;
                 }

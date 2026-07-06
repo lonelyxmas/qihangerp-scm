@@ -258,7 +258,7 @@ public class NoteTools {
         Long kbId = getCurrentKbId();
         if (kbId == null) {
             reportStatus("🔍 搜索失败：未指定知识库");
-            return "未指定知识库";
+            return "未指定知识库。请在问题中使用 @笔记库名 来指定要搜索的笔记库，例如：'@工作笔记 查一下项目进展'。";
         }
 
         if (!noteIndexService.isAvailable()) {

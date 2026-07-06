@@ -38,11 +38,12 @@ public class IndexController {
 
     @GetMapping("/")
     public String home() {
-        var first = kbService.getFirst();
-        if (first != null) {
-            return "redirect:/kb/" + first.getId() + "/chat";
-        }
-        return "redirect:/config";
+//        var first = kbService.getFirst();
+//        if (first != null) {
+//            return "redirect:/kb/" + first.getId() + "/chat";
+//        }
+//        return "redirect:/config";
+        return "redirect:/v3/chat";
     }
 
     @GetMapping("/v1")

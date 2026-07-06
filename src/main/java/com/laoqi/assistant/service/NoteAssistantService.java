@@ -186,31 +186,23 @@ public class NoteAssistantService {
             }
 
             StringBuilder fullReply = new StringBuilder();
-            boolean[] isFirstChunk = {true};
-            client.prompt()
+            
+            String reply = client.prompt()
                     .system(SYSTEM_PROMPT)
                     .user(fullMessage)
-                    .stream()
-                    .content()
-                    .toStream()
-                    .forEach(chunk -> {
-                        if (chunk != null && !chunk.isEmpty()) {
-                            String processedChunk = chunk;
-                            if (isFirstChunk[0]) {
-                                processedChunk = chunk.replaceFirst("^[\\s\\r\\n]+", "");
-                                isFirstChunk[0] = false;
-                            }
-                            processedChunk = processedChunk.replaceAll("\\n{3,}", "\n\n");
-                            fullReply.append(processedChunk);
-                            if (chunkCallback != null) {
-                                chunkCallback.accept(processedChunk);
-                            }
-                            log.debug("[编排] 流式接收: {} chars", processedChunk.length());
-                        }
-                    });
+                    .call()
+                    .content();
 
-            String reply = fullReply.toString().trim().replaceAll("\\n{3,}", "\n\n");
-            log.info("[编排] 回复长度: {}", reply.length());
+            if (reply != null && !reply.isEmpty()) {
+                fullReply.append(reply);
+                reply = reply.trim().replaceAll("\\n{3,}", "\n\n");
+                
+                if (chunkCallback != null) {
+                    chunkCallback.accept(reply);
+                }
+            }
+            
+            log.info("[编排] 回复长度: {}", reply != null ? reply.length() : 0);
 
             // Step 4: 记录决策追踪
             String finalReply = reply;

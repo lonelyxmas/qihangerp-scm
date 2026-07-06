@@ -81,7 +81,11 @@ public class ContextBuilder {
         }
 
         // 4. 组合上下文
-        if (statusCallback != null) statusCallback.accept("上下文构建完成，正在请求 AI...");
+        if (kbId == null) {
+            if (statusCallback != null) statusCallback.accept("未指定知识库，请使用 @笔记库名 指定");
+        } else {
+            if (statusCallback != null) statusCallback.accept("上下文构建完成，正在请求 AI...");
+        }
         return new ChatContext(historyContext, relevantNotes, agentsMd);
     }
 
@@ -97,6 +101,15 @@ public class ContextBuilder {
         sb.append("== 当前时间 ==\n");
         sb.append("日期: ").append(dateStr).append(" (").append(weekday).append(")\n");
         sb.append("请以当前日期为基准理解'今天'、'本周'、'本月'等时间概念。\n\n");
+
+        // 检查是否包含 @笔记库 标记
+        boolean hasMention = userMessage != null && userMessage.contains("@");
+        if (!hasMention) {
+            sb.append("== 提示 ==\n");
+            sb.append("用户的问题中没有指定笔记库（使用 @笔记库名 格式）。\n");
+            sb.append("如果用户的问题需要搜索笔记内容，请提示用户使用 @笔记库名 来指定要搜索的笔记库，例如：'@工作笔记 查一下项目进展'。\n");
+            sb.append("如果是一般性问题，可以直接回答，不需要搜索笔记库。\n\n");
+        }
 
         // 规则文件
         if (context.agentsMd() != null && !context.agentsMd().isBlank()) {
