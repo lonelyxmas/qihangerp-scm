@@ -1,63 +1,4 @@
-<!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org"
-      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
-      layout:decorate="~{1.0/layout}">
-<head>
-    <style>
-        .data-tabs { display:flex; gap:0; border-bottom:2px solid #e1e3e6; margin-bottom:20px; background:#fff; border-radius:12px 12px 0 0; padding:0 20px; }
-        .data-tab { padding:12px 20px; font-size:14px; cursor:pointer; transition:all .15s; border:none; background:transparent; color:#5c5f66; border-bottom:2px solid transparent; margin-bottom:-2px; font-weight:500; }
-        .data-tab:hover { color:#1a1b1e; background:#f5f5f7; border-radius:6px 6px 0 0; }
-        .data-tab.active { color:#7c5cfc; border-bottom-color:#7c5cfc; font-weight:600; }
-
-        .di-wrap { max-width:900px; margin:0 auto; }
-        .di-section { background:#fff; border:1px solid #e1e3e6; border-radius:12px; padding:20px; margin-bottom:16px; }
-        .di-section h2 { font-size:16px; font-weight:600; margin:0 0 16px; display:flex; align-items:center; gap:8px; }
-        .di-section .desc { font-size:13px; color:#5c5f66; margin-bottom:12px; }
-
-        .form-row { display:flex; gap:12px; margin-bottom:12px; flex-wrap:wrap; }
-        .form-group { flex:1; min-width:180px; display:flex; flex-direction:column; gap:4px; }
-        .form-group label { font-size:12px; color:#5c5f66; font-weight:500; }
-        .form-group input, .form-group select, .form-group textarea {
-            padding:8px 10px; border:1px solid #e1e3e6; border-radius:6px; font-size:13px; outline:none; background:#fff; color:#1a1b1e; box-sizing:border-box;
-        }
-        .form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color:#7c5cfc; }
-        .form-group textarea { resize:vertical; min-height:60px; }
-
-        .upload-area { border:2px dashed #d0d0d0; border-radius:8px; padding:30px; text-align:center; cursor:pointer; transition:border-color 0.2s; }
-        .upload-area:hover { border-color:#7c5cfc; }
-        .upload-area.dragover { border-color:#7c5cfc; background:#f8f5ff; }
-        .upload-area input[type="file"] { display:none; }
-
-        .btn { padding:6px 14px; border-radius:6px; font-size:13px; cursor:pointer; border:1px solid #e1e3e6; background:#fff; color:#5c5f66; transition:all .15s; }
-        .btn:hover { border-color:#7c5cfc; color:#7c5cfc; }
-        .btn-primary { background:#7c5cfc; color:#fff; border-color:#7c5cfc; }
-        .btn-primary:hover { background:#6a4ae0; border-color:#6a4ae0; color:#fff; }
-        .btn-sm { padding:4px 10px; font-size:12px; }
-
-        .toast-box { position:fixed; top:20px; right:20px; z-index:10001; }
-        .toast-item { background:#333; color:#fff; padding:10px 18px; border-radius:8px; margin-bottom:8px; font-size:13px; }
-        .toast-item.success { background:#27ae60; }
-        .toast-item.error { background:#e74c3c; }
-
-        .mapping-table { width:100%; border-collapse:collapse; font-size:13px; margin-top:12px; }
-        .mapping-table th { background:#f5f5f5; padding:8px 12px; text-align:left; font-weight:500; border-bottom:2px solid #e1e3e6; }
-        .mapping-table td { padding:6px 12px; border-bottom:1px solid #f0f0f0; }
-        .mapping-table select { padding:4px 8px; border:1px solid #e1e3e6; border-radius:4px; font-size:12px; }
-
-        .modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.4); z-index:200; justify-content:center; align-items:center; }
-        .modal-overlay.active { display:flex; }
-        .modal { background:#fff; border-radius:12px; padding:24px; width:700px; max-width:92vw; max-height:88vh; overflow-y:auto; box-shadow:0 8px 32px rgba(0,0,0,0.15); }
-        .modal h3 { font-size:16px; margin:0 0 16px; }
-        .modal-actions { display:flex; gap:8px; justify-content:flex-end; margin-top:16px; padding-top:12px; border-top:1px solid #e1e3e6; }
-
-        .import-status { font-size:13px; color:#909296; margin-top:8px; padding:8px 12px; background:#f8f8fa; border-radius:6px; }
-        .import-status.success { color:#27ae60; background:#f0fdf4; }
-        .import-status.error { color:#d32f2f; background:#fff5f5; }
-    </style>
-</head>
-<body>
-<div layout:fragment="content">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
         <h1 style="font-size:22px;font-weight:600;margin:0;">📥 数据</h1>
         <a href="/tools" style="font-size:13px;color:#7c5cfc;text-decoration:none;">🧰 工具箱</a>
     </div>
@@ -360,6 +301,3 @@
 
     loadDatasets();
     </script>
-</div>
-</body>
-</html>

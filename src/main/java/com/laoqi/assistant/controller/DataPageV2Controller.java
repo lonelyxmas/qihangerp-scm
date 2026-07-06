@@ -23,7 +23,9 @@ public class DataPageV2Controller {
             var kb = kbService.getById(kbId);
             if (kb != null) model.addAttribute("currentKb", kb);
         }
-        return "2.0/data";
+        model.addAttribute("pageTitle", "数据中心");
+        model.addAttribute("contentFragment", "2.0/data");
+        return "2.0/layout";
     }
 
     @GetMapping("/data/module/{moduleId}")
@@ -34,6 +36,8 @@ public class DataPageV2Controller {
             var kb = kbService.getById(kbId);
             if (kb != null) model.addAttribute("currentKb", kb);
         }
-        return "2.0/data-module";
+        model.addAttribute("pageTitle", "数据模块");
+        model.addAttribute("contentFragment", "2.0/data-module");
+        return "2.0/layout";
     }
 }

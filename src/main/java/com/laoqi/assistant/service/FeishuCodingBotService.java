@@ -584,7 +584,7 @@ public class FeishuCodingBotService {
     @PreDestroy
     public void destroy() {
         if (wsClient != null) {
-            // GraalVM 兼容：直接调用 SDK 的 close() 方法（如果存在），否则跳过
+            // 直接调用 SDK 的 close() 方法（如果存在），否则跳过
             try {
                 Method method = wsClient.getClass().getDeclaredMethod("stop");
                 method.setAccessible(true);

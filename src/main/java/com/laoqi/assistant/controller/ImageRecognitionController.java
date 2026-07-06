@@ -86,7 +86,9 @@ public class ImageRecognitionController {
                 .filter(p -> p.isMultimodal())
                 .collect(Collectors.toList());
         model.addAttribute("visionModels", visionModels);
-        return "1.0/image";
+        model.addAttribute("pageTitle", "通用识别");
+        model.addAttribute("contentFragment", "1.0/image");
+        return "1.0/layout";
     }
 
     // ========== SQLite CRUD ==========

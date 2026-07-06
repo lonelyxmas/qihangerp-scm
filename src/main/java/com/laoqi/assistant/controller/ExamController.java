@@ -43,7 +43,9 @@ public class ExamController {
                 .filter(LlmProfileEntity::isMultimodal)
                 .collect(Collectors.toList());
         model.addAttribute("visionModels", visionModels);
-        return "1.0/exam";
+        model.addAttribute("pageTitle", "试卷识别");
+        model.addAttribute("contentFragment", "1.0/exam");
+        return "1.0/layout";
     }
 
     @PostMapping("/api/recognize")

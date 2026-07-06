@@ -131,7 +131,9 @@ public class KnowledgeBaseController {
             model.put("kbTotalMessages", 0);
         }
 
-        return "2.0/kb_ai_guide";
+        model.put("pageTitle", "AI 指南");
+        model.put("contentFragment", "2.0/kb_ai_guide");
+        return "2.0/layout";
     }
 
     @GetMapping("/kb/{id}/chat")
@@ -150,7 +152,9 @@ public class KnowledgeBaseController {
         LlmProfileEntity defaultProfile = llmConfigResolver.getDefaultProfile();
         model.put("defaultModel", defaultProfile != null ? defaultProfile.getName() : "");
 
-        return "2.0/index";
+        model.put("pageTitle", kb.getName() + " · 对话");
+        model.put("contentFragment", "2.0/index");
+        return "2.0/layout";
     }
 
     // 任务/提醒页面已迁移到 /planner
@@ -164,7 +168,9 @@ public class KnowledgeBaseController {
         model.put("kbId", id);
         model.put("labels", parseLabels(kb.getLabels()));
 
-        return "1.0/kb_index";
+        model.put("pageTitle", kb.getName() + " · 笔记索引");
+        model.put("contentFragment", "1.0/kb_index");
+        return "1.0/layout";
     }
 
     @GetMapping("/kb/{id}/search")
@@ -175,7 +181,9 @@ public class KnowledgeBaseController {
         model.put("kb", kb);
         model.put("labels", parseLabels(kb.getLabels()));
 
-        return "2.0/kb_search";
+        model.put("pageTitle", kb.getName() + " · 搜索");
+        model.put("contentFragment", "2.0/kb_search");
+        return "2.0/layout";
     }
 
     @GetMapping("/kb/{id}/data")
@@ -187,7 +195,9 @@ public class KnowledgeBaseController {
         model.put("labels", parseLabels(kb.getLabels()));
         model.put("kbId", id);
 
-        return "1.0/kb_data_overview";
+        model.put("pageTitle", kb.getName() + " · 数据概览");
+        model.put("contentFragment", "1.0/kb_data_overview");
+        return "1.0/layout";
     }
 
     @GetMapping("/kb/{id}/data/detail")
@@ -204,7 +214,9 @@ public class KnowledgeBaseController {
         model.put("dir", dir);
         model.put("file", file);
 
-        return "1.0/kb_data_detail";
+        model.put("pageTitle", kb.getName() + " · 数据详情");
+        model.put("contentFragment", "1.0/kb_data_detail");
+        return "1.0/layout";
     }
 
     // ========== 笔记库选择页面 ==========
@@ -212,7 +224,9 @@ public class KnowledgeBaseController {
     public String notesIndex(Map<String, Object> model) {
         var kbList = kbService.getAll();
         model.put("kbList", kbList);
-        return "2.0/notes_select";
+        model.put("pageTitle", "选择笔记库");
+        model.put("contentFragment", "2.0/notes_select");
+        return "2.0/layout";
     }
 
     // ========== 笔记浏览页面（树结构） ==========
@@ -226,7 +240,9 @@ public class KnowledgeBaseController {
         model.put("kb", kb);
         model.put("labels", parseLabels(kb.getLabels()));
         model.put("rel", dir);
-        return "2.0/notes";
+        model.put("pageTitle", kb.getName() + " · 笔记");
+        model.put("contentFragment", "2.0/notes");
+        return "2.0/layout";
     }
 
     @GetMapping("/kb/{id}/notes/view")
@@ -254,7 +270,9 @@ public class KnowledgeBaseController {
         model.put("content", html);
         model.put("parent", parent);
         model.put("breadcrumbLinks", buildBreadcrumbLinks(parent));
-        return "1.0/view";
+        model.put("pageTitle", displayName);
+        model.put("contentFragment", "1.0/view");
+        return "1.0/layout";
     }
 
     // ========== 目录分析 API ==========

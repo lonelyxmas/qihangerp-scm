@@ -83,7 +83,7 @@ public class ReminderService {
     private void insertReminderToDb(Reminder r, Long kbId) {
         try (Connection conn = dataSource.getConnection();
              PreparedStatement ps = conn.prepareStatement(
-                     "INSERT OR REPLACE INTO reminders (id, name, message, type, time, date, day_of_week, day_of_month, month_day, enabled, created_at, last_triggered, kb_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")) {
+                     "INSERT INTO reminders (id, name, message, type, time, date, day_of_week, day_of_month, month_day, enabled, created_at, last_triggered, kb_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE id=VALUES(id), name=VALUES(name), message=VALUES(message), type=VALUES(type), time=VALUES(time), date=VALUES(date), day_of_week=VALUES(day_of_week), day_of_month=VALUES(day_of_month), month_day=VALUES(month_day), enabled=VALUES(enabled), created_at=VALUES(created_at), last_triggered=VALUES(last_triggered), kb_id=VALUES(kb_id)")) {
             ps.setString(1, r.id);
             ps.setString(2, r.name);
             ps.setString(3, r.message);

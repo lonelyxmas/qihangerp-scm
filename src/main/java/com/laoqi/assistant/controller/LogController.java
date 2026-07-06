@@ -17,6 +17,8 @@ public class LogController {
     @GetMapping("/log")
     public String logPage(Model model) {
         model.addAttribute("logs", logService.load());
-        return "1.0/log";
+        model.addAttribute("pageTitle", "日志");
+        model.addAttribute("contentFragment", "1.0/log");
+        return "1.0/layout";
     }
 }

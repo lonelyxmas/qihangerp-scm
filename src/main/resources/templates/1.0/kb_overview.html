@@ -1,12 +1,3 @@
-<html xmlns:th="http://www.thymeleaf.org"
-      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
-      layout:decorate="~{1.0/layout}">
-<head>
-    <title th:text="${kb.name} + ' - 概览 - AI助理'">知识库</title>
-</head>
-<body>
-<th:block layout:fragment="content">
-
 <th:block th:replace="~{1.0/kb_tab_bar :: kb-tabs('overview', ${kb}, ${labels})}" />
 
 <div class="status-bar">
@@ -82,7 +73,3 @@ function savePrompt() {
         .then(r => r.json()).then(data => { if (data.ok) { toast('✅ 提示词已保存'); closePromptModal(); } });
 }
 </script>
-
-</th:block>
-</body>
-</html>

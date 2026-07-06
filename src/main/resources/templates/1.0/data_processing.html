@@ -1,75 +1,4 @@
-<!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org"
-      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
-      layout:decorate="~{1.0/layout}">
-<head>
-    <style>
-        .data-tabs { display:flex; gap:0; border-bottom:2px solid #e1e3e6; margin-bottom:20px; background:#fff; border-radius:12px 12px 0 0; padding:0 20px; }
-        .data-tab { padding:12px 20px; font-size:14px; cursor:pointer; transition:all .15s; border:none; background:transparent; color:#5c5f66; border-bottom:2px solid transparent; margin-bottom:-2px; font-weight:500; }
-        .data-tab:hover { color:#1a1b1e; background:#f5f5f7; border-radius:6px 6px 0 0; }
-        .data-tab.active { color:#7c5cfc; border-bottom-color:#7c5cfc; font-weight:600; }
-
-        .dc-layout { display:flex; gap:0; height:calc(100vh - 200px); overflow:hidden; background:#fff; border:1px solid #e1e3e6; border-radius:12px; }
-        .dc-sidebar { width:260px; min-width:260px; border-right:1px solid #e1e3e6; display:flex; flex-direction:column; background:#fafbfc; }
-        .dc-sidebar-header { padding:14px 16px; border-bottom:1px solid #e1e3e6; display:flex; justify-content:space-between; align-items:center; }
-        .dc-sidebar-header h2 { font-size:15px; font-weight:600; margin:0; }
-        .dc-ds-list { flex:1; overflow-y:auto; padding:4px 0; }
-        .dc-ds-item { display:flex; align-items:center; padding:10px 14px; cursor:pointer; transition:all .1s; gap:8px; border-left:3px solid transparent; }
-        .dc-ds-item:hover { background:#f0edff; }
-        .dc-ds-item.active { background:#f0edff; border-left-color:#7c5cfc; }
-        .dc-ds-item .icon { font-size:16px; flex-shrink:0; }
-        .dc-ds-item .info { flex:1; min-width:0; }
-        .dc-ds-item .name { font-size:13px; font-weight:500; display:block; }
-        .dc-ds-item .meta { font-size:11px; color:#909296; }
-
-        .dc-main { flex:1; display:flex; flex-direction:column; min-width:0; }
-        .dc-header { padding:14px 20px; border-bottom:1px solid #e1e3e6; display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
-        .dc-header-left h2 { margin:0; font-size:16px; font-weight:600; }
-        .dc-header-left .desc { font-size:12px; color:#909296; margin-top:2px; }
-        .dc-header-actions { display:flex; gap:6px; flex-wrap:wrap; }
-        .dc-content { flex:1; overflow-y:auto; padding:14px 20px; }
-
-        .dc-empty { text-align:center; color:#909296; padding:60px; font-size:14px; }
-        .dc-empty .icon { font-size:40px; margin-bottom:8px; }
-
-        .dc-search-bar { display:flex; gap:8px; margin-bottom:12px; }
-        .dc-search-bar input { flex:1; padding:7px 12px; border:1px solid #e1e3e6; border-radius:6px; font-size:13px; outline:none; }
-        .dc-search-bar input:focus { border-color:#7c5cfc; }
-
-        .dc-table-wrap { overflow-x:auto; }
-        .dc-table { width:100%; border-collapse:collapse; font-size:13px; }
-        .dc-table th { text-align:left; padding:8px 12px; border-bottom:2px solid #e1e3e6; color:#5c5f66; font-weight:600; font-size:12px; background:#fafbfc; white-space:nowrap; }
-        .dc-table td { padding:7px 12px; border-bottom:1px solid #f0f0f0; max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-        .dc-table tr:hover td { background:#fafafe; }
-
-        .badge { padding:2px 8px; border-radius:4px; font-size:11px; }
-        .badge-purple { background:#e8dff5; color:#7c5cfc; }
-        .badge-gray { background:#f0f0f0; color:#909296; }
-        .badge-green { background:#d3f9d8; color:#2b8a3e; }
-
-        .modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.4); z-index:200; justify-content:center; align-items:center; }
-        .modal-overlay.active { display:flex; }
-        .modal { background:#fff; border-radius:12px; padding:24px; width:640px; max-width:92vw; max-height:88vh; overflow-y:auto; box-shadow:0 8px 32px rgba(0,0,0,0.15); }
-        .modal h3 { font-size:16px; margin:0 0 16px; }
-        .modal-actions { display:flex; gap:8px; justify-content:flex-end; margin-top:16px; padding-top:12px; border-top:1px solid #e1e3e6; }
-
-        .btn { padding:6px 14px; border-radius:6px; font-size:13px; cursor:pointer; border:1px solid #e1e3e6; background:#fff; color:#5c5f66; transition:all .15s; }
-        .btn:hover { border-color:#7c5cfc; color:#7c5cfc; }
-        .btn-primary { background:#7c5cfc; color:#fff; border-color:#7c5cfc; }
-        .btn-primary:hover { background:#6a4ae0; border-color:#6a4ae0; color:#fff; }
-        .btn-sm { padding:4px 10px; font-size:12px; }
-        .btn-danger { color:#d32f2f; border-color:#ffcdd2; }
-        .btn-danger:hover { background:#ffebee; border-color:#d32f2f; }
-
-        .toast-box { position:fixed; top:20px; right:20px; z-index:10001; }
-        .toast-item { background:#333; color:#fff; padding:10px 18px; border-radius:8px; margin-bottom:8px; font-size:13px; }
-        .toast-item.success { background:#27ae60; }
-        .toast-item.error { background:#e74c3c; }
-    </style>
-</head>
-<body>
-<div layout:fragment="content">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
         <h1 style="font-size:22px;font-weight:600;margin:0;">📋 数据加工</h1>
         <a href="/tools" style="font-size:13px;color:#7c5cfc;text-decoration:none;">🧰 工具箱</a>
     </div>
@@ -483,6 +412,3 @@
 
     loadDatasets();
     </script>
-</div>
-</body>
-</html>

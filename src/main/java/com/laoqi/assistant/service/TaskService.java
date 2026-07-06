@@ -45,7 +45,7 @@ public class TaskService {
     private void insertTaskToDb(TaskItem task, Long kbId) {
         try (Connection conn = dataSource.getConnection();
              PreparedStatement ps = conn.prepareStatement(
-                     "INSERT OR REPLACE INTO tasks (id, title, description, status, priority, due_date, created_at, updated_at, kb_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)")) {
+                     "INSERT INTO tasks (id, title, description, status, priority, due_date, created_at, updated_at, kb_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE id=VALUES(id), title=VALUES(title), description=VALUES(description), status=VALUES(status), priority=VALUES(priority), due_date=VALUES(due_date), created_at=VALUES(created_at), updated_at=VALUES(updated_at), kb_id=VALUES(kb_id)")) {
             ps.setString(1, task.id);
             ps.setString(2, task.title);
             ps.setString(3, task.description);

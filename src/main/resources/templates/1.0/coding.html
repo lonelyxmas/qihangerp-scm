@@ -1,84 +1,3 @@
-<html xmlns:th="http://www.thymeleaf.org"
-      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
-      layout:decorate="~{1.0/layout}">
-<head>
-    <title layout:fragment="title">编程AI</title>
-    <style>
-        .coding-tabs { display:flex; gap:2px; margin-bottom:16px; background:#e8e8ed; border-radius:8px; padding:2px; }
-        .coding-tab { flex:1; padding:10px; text-align:center; border:none; background:transparent; border-radius:6px; font-size:14px; cursor:pointer; color:#5c5f66; transition:all .15s; }
-        .coding-tab:hover { color:#1a1b1e; }
-        .coding-tab.active { background:#fff; color:#7c5cfc; font-weight:600; box-shadow:0 1px 3px rgba(0,0,0,.1); }
-        .coding-panel { display:none; }
-        .coding-panel.active { display:block; }
-        .status-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:12px; margin-bottom:16px; }
-        .status-card { background:#fff; border:1px solid #e1e3e6; border-radius:10px; padding:16px; text-align:center; }
-        .status-card .label { font-size:12px; color:#5c5f66; margin-bottom:6px; }
-        .status-card .value { font-size:20px; font-weight:600; }
-        .status-card .value.ok { color:#2b8a3e; }
-        .status-card .value.no { color:#e03131; }
-        .cfg-form { max-width:600px; }
-        .cfg-form .form-group { margin-bottom:16px; }
-        .cfg-form .form-group label { display:block; font-size:13px; font-weight:500; color:#5c5f66; margin-bottom:4px; }
-        .cfg-form .form-group input,.cfg-form .form-group select { width:100%; padding:10px 12px; border:1px solid #e1e3e6; border-radius:8px; font-size:14px; outline:none; box-sizing:border-box; }
-        .cfg-form .form-group input:focus,.cfg-form .form-group select:focus { border-color:#7c5cfc; }
-        .cfg-form .form-group .desc { font-size:12px; color:#909296; margin-top:4px; }
-        .record-item { padding:14px 16px; background:#f8f9fa; border-radius:8px; margin-bottom:10px; cursor:pointer; transition:background .15s; }
-        .record-item:hover { background:#eef2ff; }
-        .record-item .time { font-size:11px; color:#909296; margin-bottom:4px; }
-        .record-item .msg-preview { display:flex; gap:8px; align-items:flex-start; margin-bottom:2px; }
-        .record-item .msg-preview .label { font-size:11px; padding:2px 8px; border-radius:4px; white-space:nowrap; flex-shrink:0; margin-top:1px; }
-        .record-item .msg-preview .label.msg { background:#f3e8ff; color:#7b1fa2; }
-        .record-item .msg-preview .label.resp { background:#d3f9d8; color:#2b8a3e; }
-        .record-item .msg-preview .label.fail { background:#ffe0e0; color:#c92a2a; }
-        .record-item .msg-preview .text { font-size:13px; color:#1a1b1e; overflow:hidden; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
-        .record-empty { text-align:center; color:#909296; padding:40px 0; font-size:14px; }
-        .help-section { max-width:700px; }
-        .help-section h3 { font-size:15px; margin:20px 0 10px; color:#1a1b1e; }
-        .help-section p,.help-section li { font-size:14px; line-height:1.8; color:#5c5f66; }
-        .help-section ul { padding-left:20px; }
-        .help-section .step { display:flex; gap:14px; margin-bottom:12px; padding:12px 16px; background:#f8f9fa; border-radius:8px; }
-        .help-section .step .num { width:28px; height:28px; background:#7c5cfc; color:#fff; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:14px; font-weight:600; flex-shrink:0; }
-        .help-section .step .content { flex:1; }
-        .help-section .step .content p { margin:0; }
-        .help-section blockquote { border-left:3px solid #7c5cfc; padding:10px 16px; margin:12px 0; background:#f8f9fa; border-radius:0 6px 6px 0; font-size:14px; color:#555; }
-        .help-section code { background:#f0edff; padding:2px 6px; border-radius:4px; font-size:13px; color:#5c3dcf; }
-        .modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.4); z-index:100; justify-content:center; align-items:center; }
-        .modal-overlay.active { display:flex; }
-        .modal-box { background:#fff; border-radius:12px; max-width:720px; width:90%; max-height:80vh; display:flex; flex-direction:column; box-shadow:0 8px 30px rgba(0,0,0,.2); }
-        .modal-header { display:flex; justify-content:space-between; align-items:center; padding:16px 20px; border-bottom:1px solid #eee; }
-        .modal-header h3 { font-size:16px; }
-        .modal-close { background:none; border:none; font-size:22px; cursor:pointer; color:#999; padding:0 4px; }
-        .modal-close:hover { color:#333; }
-        .modal-body { padding:20px; overflow-y:auto; }
-        .modal-body .section { padding:12px 16px; border-radius:8px; margin-bottom:16px; word-break:break-word; font-size:14px; line-height:1.7; max-height:50vh; overflow-y:auto; }
-        .modal-body .section.user { background:#f3e8ff; white-space:pre-wrap; }
-        .modal-body .section.ai { background:#e0f7fa; }
-        .modal-body .elapsed { font-size:12px; color:#909296; text-align:right; }
-        /* markdown 渲染样式（与笔记 /view 页面一致） */
-        .md-body h1 { font-size:22px; font-weight:700; margin:20px 0 12px; padding-bottom:6px; border-bottom:2px solid #7c5cfc; }
-        .md-body h2 { font-size:18px; font-weight:600; margin:18px 0 10px; padding-left:8px; border-left:3px solid #7c5cfc; }
-        .md-body h3 { font-size:16px; font-weight:600; margin:16px 0 8px; }
-        .md-body h4 { font-size:14px; font-weight:600; margin:14px 0 6px; color:#5c3dcf; }
-        .md-body p { margin: 0 0 10px; }
-        .md-body ul, .md-body ol { margin: 8px 0; padding-left: 22px; }
-        .md-body li { margin: 3px 0; line-height: 1.7; }
-        .md-body blockquote { margin:10px 0; padding:8px 14px; background:#f8f7ff; border-left:4px solid #7c5cfc; border-radius:0 6px 6px 0; color:#444; }
-        .md-body blockquote p { margin: 0; }
-        .md-body code { background:#f0edff; padding:2px 6px; border-radius:4px; font-size:13px; color:#5c3dcf; font-family:"SF Mono","Fira Code",monospace; }
-        .md-body pre { background:#1e1e2e; color:#cdd6f4; padding:12px 16px; border-radius:8px; overflow-x:auto; margin:10px 0; font-size:13px; line-height:1.6; }
-        .md-body pre code { background:none; padding:0; color:inherit; font-size:inherit; }
-        .md-body table { width:100%; border-collapse:collapse; margin:10px 0; font-size:13px; }
-        .md-body th, .md-body td { padding:8px 12px; border:1px solid #e1e3e6; text-align:left; }
-        .md-body th { background:#f8f7ff; font-weight:600; color:#5c3dcf; }
-        .md-body tr:nth-child(even) { background:#fafafa; }
-        .md-body hr { border:none; border-top:1px solid #e1e3e6; margin:18px 0; }
-        .md-body strong { font-weight:600; }
-        .md-body em { font-style:italic; }
-    </style>
-</head>
-<body>
-<th:block layout:fragment="content">
-
 <div class="coding-tabs">
     <button class="coding-tab active" onclick="switchTab('dashboard')">📊 概览</button>
     <button class="coding-tab" onclick="switchTab('config')">⚙️ 配置</button>
@@ -259,7 +178,7 @@
         <div class="step"><div class="num">3</div><div class="content"><strong>配置事件订阅</strong><p>在应用详情 → 事件订阅 → 添加 <code>im.message.receive_v1</code> 事件，推送方式选择 <strong>WebSocket</strong>。</p></div></div>
         <div class="step"><div class="num">4</div><div class="content"><strong>启用机器人并发布</strong><p>在应用详情 → 机器人 → 启用机器人能力。发布后将机器人拉入目标群。</p></div></div>
         <div class="step"><div class="num">5</div><div class="content"><strong>配置群 ID</strong><p>在配置页填入群 ID（chat_id），格式 <code>oc_xxxxxxxxxxxx</code>。</p></div></div>
-        <div class="step"><div class="num">6</div><div class="content"><strong>启动服务</strong><p>重启 AI 助理，编程机器人 WebSocket 自动连接。即可在飞书群中 @编程机器人 开始排查代码。</p></div></div>
+        <div class="step"><div class="num">6</div><div class="content"><strong>启动服务</strong><p>重启 笔灵AI助理，编程机器人 WebSocket 自动连接。即可在飞书群中 @编程机器人 开始排查代码。</p></div></div>
     </div>
 
     <div class="card help-section">
@@ -462,7 +381,3 @@ async function refreshRecordsList() {
     } catch (e) {}
 }
 </script>
-
-</th:block>
-</body>
-</html>

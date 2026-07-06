@@ -111,7 +111,8 @@ public class IndexController {
         model.addAttribute("kbSummaries", kbSummaries);
         model.addAttribute("totalTasks", totalTasks);
         model.addAttribute("totalReminders", totalReminders);
-
-        return "1.0/index";
+        model.addAttribute("pageTitle", "工作台");
+        model.addAttribute("contentFragment", "1.0/index");
+        return "1.0/layout";
     }
 }

@@ -1,21 +1,12 @@
-<html xmlns:th="http://www.thymeleaf.org"
-      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
-      layout:decorate="~{1.0/layout}">
-<head>
-    <title layout:fragment="title">帮助</title>
-</head>
-<body>
-<th:block layout:fragment="content">
-
 <div style="margin-bottom:24px;">
     <h1 style="font-size:22px;font-weight:600;margin-bottom:4px;">帮助中心</h1>
-    <p class="text-muted">AI 助理 v1.0 — 功能指南与常见问题</p>
+    <p class="text-muted">笔灵AI助理 v1.0 — 功能指南与常见问题</p>
 </div>
 
 <!-- 快速开始 -->
 <div class="card">
     <h2>🚀 快速开始</h2>
-    <p class="text-muted mb-2">AI 助理基于 Spring AI 2.0 + Spring Boot 4.1，直连 LLM API，无需外部编排服务。启动后访问 <a href="/config" style="color:#7c5cfc;">/config</a> 配置 LLM API Key 和笔记库即可使用全部功能。</p>
+    <p class="text-muted mb-2">笔灵AI助理基于 Spring AI 2.0 + Spring Boot 4.1，直连 LLM API，无需外部编排服务。启动后访问 <a href="/config" style="color:#7c5cfc;">/config</a> 配置 LLM API Key 和笔记库即可使用全部功能。</p>
     <h3 style="font-size:13px;font-weight:600;margin:12px 0 8px;color:#5c5f66;">前置依赖</h3>
     <table class="log-table" style="margin-bottom:12px;">
         <tr><th>依赖</th><th>说明</th><th>必须</th></tr>
@@ -55,7 +46,7 @@ java -jar target/ai-assistant-1.0.0.jar
     <h2>📚 多笔记库系统</h2>
     <p class="text-muted mb-2">v1.0 核心架构——一个实例同时管理多个笔记库（如工作、学习），数据、对话、目录、任务完全隔离。</p>
     <h3 style="font-size:13px;font-weight:600;margin:12px 0 8px;color:#5c5f66;">导航结构</h3>
-    <pre style="background:#1e1e2e;color:#cdd6f4;padding:12px 14px;border-radius:6px;font-size:12px;line-height:1.6;overflow-x:auto;margin:0;">[AI 助理]  💬 对话  🖼️ 识图  🗂️ 数据  📋 计划  📚 笔记库▾  💻 编程AI  ⚙️ 配置  📝 日志
+    <pre style="background:#1e1e2e;color:#cdd6f4;padding:12px 14px;border-radius:6px;font-size:12px;line-height:1.6;overflow-x:auto;margin:0;">[笔灵AI助理]  💬 对话  🖼️ 识图  🗂️ 数据  📋 计划  📚 笔记库▾  💻 编程AI  ⚙️ 配置  📝 日志
                                          │
                               ┌───────────┼───────────┐
                               │ 📊 全部笔记库           │
@@ -299,7 +290,3 @@ export LLM_MODEL=deepseek-chat</pre>
         <tr><td>对话记录丢失</td><td>切换了笔记库</td><td>每个笔记库的对话是独立的，切换回对应笔记库即可</td></tr>
     </table>
 </div>
-
-</th:block>
-</body>
-</html>

@@ -59,6 +59,8 @@ public class PlannerPageController {
             model.addAttribute("reminders", List.of());
             model.addAttribute("error", e.getMessage());
         }
-        return "2.0/planner";
+        model.addAttribute("pageTitle", "计划");
+        model.addAttribute("contentFragment", "2.0/planner");
+        return "2.0/layout";
     }
 }

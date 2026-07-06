@@ -1,12 +1,3 @@
-<html xmlns:th="http://www.thymeleaf.org"
-      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
-      layout:decorate="~{1.0/layout}">
-<head>
-    <title layout:fragment="title" th:text="${title}"></title>
-</head>
-<body>
-<th:block layout:fragment="content">
-
 <div th:if="${kb != null}" style="display:flex;gap:4px;margin-bottom:20px;border-bottom:2px solid #e1e3e6;">
     <a th:href="@{/planner}" style="padding:10px 20px;font-size:14px;text-decoration:none;color:#5c5f66;border-bottom:2px solid transparent;" th:text="'📋 计划'">📋 计划</a>
     <a th:href="@{/kb/{id}/notes(id=${kb.id})}" style="padding:10px 20px;font-size:14px;text-decoration:none;color:#7c5cfc;border-bottom:2px solid #7c5cfc;font-weight:600;" th:text="'📂 ' + ${labels.get('notes')}">📂 笔记</a>
@@ -219,7 +210,3 @@ document.addEventListener('DOMContentLoaded', function() {
     }, 100);
 });
 </script>
-
-</th:block>
-</body>
-</html>

@@ -1,10 +1,9 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org"
-      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout">
+<html xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI 助理</title>
+    <title th:text="${pageTitle} ?: '笔灵AI助理'">笔灵AI助理</title>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -19,7 +18,7 @@
             justify-content: center;
         }
         .nav-inner {
-            width: 100%; max-width: 1000px; padding: 0 24px;
+            width: 100%; max-width: 1200px; padding: 0 24px;
             display: flex; align-items: center; gap: 4px;
         }
         .nav a {
@@ -69,7 +68,7 @@
             border-radius: 4px;
         }
         .port-close:hover { background: #f0d78a; }
-        .container { max-width: 1000px; margin: 0 auto; padding: 24px; }
+        .container { max-width: 1100px; margin: 0 auto; padding: 24px; }
 
         .card {
             background: #fff; border: 1px solid #e1e3e6; border-radius: 12px;
@@ -331,7 +330,7 @@
 
     <nav class="nav">
         <div class="nav-inner">
-        <span class="title">AI 助理</span>
+        <span class="title">笔灵AI助理</span>
         <a th:classappend="${requestURI == '/'} ? 'active' : ''" href="/">🏠 首页</a>
         <a th:classappend="${requestURI == '/chat'} ? 'active' : ''" href="/chat">💬 对话</a>
         <div class="dropdown">
@@ -376,7 +375,7 @@
         </div>
     </nav>
     <div class="container">
-        <th:block layout:fragment="content" />
+        <div th:replace="${contentFragment}">默认内容</div>
     </div>
     <script>
         (function() {

@@ -55,7 +55,9 @@ public class CodingController {
         log.info("[编程AI] 页面加载: connected={}, records={}, dir={}",
                 codingBotService.isConnected(), codingBotService.getRecentRecords(20).size(),
                 config.getCodingProjectDir());
-        return "1.0/coding";
+        model.addAttribute("pageTitle", "编程AI");
+        model.addAttribute("contentFragment", "1.0/coding");
+        return "1.0/layout";
     }
 
     @GetMapping("/records")

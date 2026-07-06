@@ -1,58 +1,3 @@
-<!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org"
-      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
-      layout:decorate="~{2.0/layout}">
-<head><title>数据 - AI 助理</title>
-<style>
-    .data-page { max-width:1200px; margin:0 auto; padding:20px; }
-    .page-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:24px; }
-    .page-header h2 { font-size:20px; font-weight:600; margin:0; }
-    .page-actions { display:flex; gap:8px; }
-    .btn { display:inline-flex; align-items:center; gap:5px; padding:7px 14px; border:none; border-radius:6px; font-size:13px; cursor:pointer; transition:all .15s; }
-    .btn-primary { background:#7c5cfc; color:#fff; }
-    .btn-primary:hover { background:#6a4ae0; }
-    .btn-secondary { background:#f0f0f5; color:#5c5f66; }
-    .btn-secondary:hover { background:#e5e5ea; }
-    .btn-danger { background:#ffe0e0; color:#c92a2a; }
-    .btn-sm { padding:5px 10px; font-size:12px; }
-
-    .modules-list { display:grid; grid-template-columns:repeat(auto-fill, minmax(340px, 1fr)); gap:16px; }
-    .module-card { background:#fff; border:1px solid #e1e3e6; border-radius:12px; overflow:hidden; transition:all .2s; cursor:pointer; text-decoration:none; color:inherit; display:block; }
-    .module-card:hover { border-color:#7c5cfc; box-shadow:0 4px 16px rgba(124,92,252,0.12); transform:translateY(-2px); }
-    .module-card-top { padding:20px; display:flex; align-items:center; gap:14px; }
-    .module-card-icon { font-size:32px; width:52px; height:52px; background:#f8f5ff; border-radius:12px; display:flex; align-items:center; justify-content:center; }
-    .module-card-info { flex:1; }
-    .module-card-name { font-size:16px; font-weight:600; color:#1a1b1e; margin-bottom:4px; }
-    .module-card-desc { font-size:12px; color:#909296; line-height:1.4; }
-    .module-card-bottom { padding:14px 20px; background:#fafbfc; border-top:1px solid #f0f0f5; display:flex; justify-content:space-between; align-items:center; }
-    .module-card-stats { display:flex; gap:16px; }
-    .module-card-stat { font-size:12px; color:#5c5f66; }
-    .module-card-stat strong { color:#7c5cfc; font-size:14px; }
-    .module-card-actions { display:flex; gap:4px; }
-    .module-card-actions .btn { pointer-events:auto; }
-
-    .empty-state { text-align:center; color:#909296; padding:80px 20px; }
-    .empty-state .icon { font-size:48px; margin-bottom:16px; }
-    .empty-state p { font-size:14px; margin-bottom:20px; }
-
-    .modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.45); z-index:1000; justify-content:center; align-items:center; }
-    .modal-box { background:#fff; border-radius:12px; box-shadow:0 8px 32px rgba(0,0,0,0.18); max-width:92vw; }
-    .modal-header { padding:16px 20px; border-bottom:1px solid #eef0f4; display:flex; justify-content:space-between; align-items:center; }
-    .modal-header h3 { margin:0; font-size:16px; }
-    .modal-body { padding:20px; }
-    .modal-footer { padding:12px 20px; border-top:1px solid #eef0f4; display:flex; justify-content:flex-end; gap:8px; }
-    .form-group { display:flex; flex-direction:column; gap:4px; margin-bottom:14px; }
-    .form-group label { font-size:12px; color:#5c5f66; font-weight:500; }
-    .form-group input, .form-group select, .form-group textarea { padding:8px 10px; border:1px solid #e1e3e6; border-radius:6px; font-size:13px; outline:none; }
-    .form-group input:focus, .form-group select:focus { border-color:#7c5cfc; }
-    .msg { padding:8px 12px; border-radius:6px; font-size:13px; margin-bottom:10px; }
-    .msg-success { background:#f0fdf4; color:#27ae60; }
-    .msg-error { background:#fff5f5; color:#d32f2f; }
-</style>
-</head>
-<body>
-<th:block layout:fragment="content">
-
 <div class="data-page">
     <div class="page-header">
         <h2>📦 数据中心</h2>
@@ -159,7 +104,3 @@ function toast(msg, type) {
 
 loadAll();
 </script>
-
-</th:block>
-</body>
-</html>

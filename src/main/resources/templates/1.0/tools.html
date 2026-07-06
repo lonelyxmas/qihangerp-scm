@@ -1,21 +1,4 @@
-<html xmlns:th="http://www.thymeleaf.org"
-      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
-      layout:decorate="~{1.0/layout}">
-<head>
-    <title layout:fragment="title">工具箱 - AI 助理</title>
-    <style>
-        .tools-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:16px; }
-        .tool-card { background:#fff; border:1px solid #e1e3e6; border-radius:12px; padding:24px; transition:all .2s; text-decoration:none; color:inherit; display:block; }
-        .tool-card:hover { border-color:#7c5cfc; box-shadow:0 4px 16px rgba(124,92,252,0.1); transform:translateY(-2px); }
-        .tool-card .icon { font-size:40px; margin-bottom:12px; }
-        .tool-card .name { font-size:16px; font-weight:600; color:#1a1b1e; margin-bottom:6px; }
-        .tool-card .desc { font-size:13px; color:#5c5f66; line-height:1.6; }
-        .tool-card .tag { display:inline-block; background:#f0edff; color:#7c5cfc; padding:2px 8px; border-radius:4px; font-size:11px; margin-top:8px; }
-    </style>
-</head>
-<body>
-<th:block layout:fragment="content">
-    <h1 style="font-size:22px;font-weight:600;margin:0 0 20px;">🧰 工具箱</h1>
+<h1 style="font-size:22px;font-weight:600;margin:0 0 20px;">🧰 工具箱</h1>
 
     <h2 style="font-size:16px;font-weight:600;margin:0 0 12px;color:#5c5f66;">🖼️ 图像识别</h2>
     <div class="tools-grid" style="margin-bottom:24px;">
@@ -64,6 +47,3 @@
             <span class="tag">数据</span>
         </a>
     </div>
-</th:block>
-</body>
-</html>
