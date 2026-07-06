@@ -85,6 +85,7 @@ public class V3Controller {
 
     @GetMapping("/chat")
     public String chatPage(Map<String, Object> model) {
+        model.put("currentNav", "chat");
         List<KnowledgeBaseEntity> kbList = kbService.getAll();
         model.put("kbList", kbList);
         model.put("hasKb", !kbList.isEmpty());
@@ -106,6 +107,7 @@ public class V3Controller {
 
     @GetMapping("/ai")
     public String aiPage(@RequestParam(required = false) Long kbId, Map<String, Object> model) {
+        model.put("currentNav", "ai");
         List<KnowledgeBaseEntity> kbList = kbService.getAll();
         model.put("kbList", kbList);
         
@@ -142,6 +144,7 @@ public class V3Controller {
 
     @GetMapping("/notes")
     public String notesPage(@RequestParam(required = false) Long kbId, Map<String, Object> model) {
+        model.put("currentNav", "notes");
         List<KnowledgeBaseEntity> kbList = kbService.getAll();
         model.put("kbList", kbList);
         
@@ -165,6 +168,7 @@ public class V3Controller {
 
     @GetMapping("/data")
     public String dataPage(@RequestParam(required = false) Long kbId, Map<String, Object> model) {
+        model.put("currentNav", "data");
         List<KnowledgeBaseEntity> kbList = kbService.getAll();
         model.put("kbList", kbList);
         
@@ -188,6 +192,7 @@ public class V3Controller {
 
     @GetMapping("/planner")
     public String plannerPage(@RequestParam(required = false) Long kbId, Map<String, Object> model) {
+        model.put("currentNav", "planner");
         List<KnowledgeBaseEntity> kbList = kbService.getAll();
         model.put("kbList", kbList);
         
@@ -207,6 +212,7 @@ public class V3Controller {
 
     @GetMapping("/tools")
     public String toolsPage(Map<String, Object> model) {
+        model.put("currentNav", "tools");
         List<KnowledgeBaseEntity> kbList = kbService.getAll();
         model.put("kbList", kbList);
         
