@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>笔灵 AI - 任务提醒</title>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --primary: #6366f1;
+            --primary-light: #818cf8;
+            --primary-dark: #4f46e5;
+            --bg-main: #f8fafc;
+            --bg-sidebar: #ffffff;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --text-muted: #94a3b8;
+            --border: #e2e8f0;
+            --hover: #f1f5f9;
+            --radius-sm: 8px;
+            --radius-md: 12px;
+            --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+            --shadow-md: 0 4px 6px rgba(0,0,0,0.05);
+        }
+        html, body { height: 100%; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+        body { display: flex; background: var(--bg-main); color: var(--text-primary); }
+        
+        .sidebar { width: 260px; background: var(--bg-sidebar); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 16px 0; flex-shrink: 0; }
+        .sidebar-header { padding: 0 16px 16px; }
+        .sidebar-title { font-size: 20px; font-weight: 700; color: var(--primary); display: flex; align-items: center; gap: 8px; }
+        .sidebar-title svg { width: 24px; height: 24px; }
+        
+        .nav-menu { flex: 1; overflow-y: auto; padding: 8px 0; }
+        .nav-item { display: flex; align-items: center; gap: 10px; padding: 10px 16px; cursor: pointer; color: var(--text-secondary); font-size: 14px; transition: all 0.2s; border-radius: 0 var(--radius-md) var(--radius-md) 0; }
+        .nav-item:hover { background: var(--hover); color: var(--text-primary); }
+        .nav-item.active { background: rgba(99, 102, 241, 0.1); color: var(--primary); font-weight: 500; }
+        .nav-item svg { width: 20px; height: 20px; flex-shrink: 0; }
+        
+        .sidebar-footer { padding: 16px; border-top: 1px solid var(--border); }
+        .kb-selector { width: 100%; padding: 8px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: white; font-size: 13px; color: var(--text-primary); outline: none; cursor: pointer; }
+        .kb-selector:hover { border-color: var(--primary); }
+        
+        .main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+        
+        .content-header { padding: 16px 24px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; background: white; }
+        .content-title { font-size: 18px; font-weight: 600; color: var(--text-primary); }
+        
+        .content-body { flex: 1; overflow-y: auto; padding: 24px; }
+        
+        .card { background: white; border-radius: var(--radius-md); border: 1px solid var(--border); box-shadow: var(--shadow-sm); padding: 24px; margin-bottom: 24px; }
+        .card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+        .card-title { font-size: 16px; font-weight: 600; }
+        
+        .btn { padding: 8px 16px; border: none; border-radius: var(--radius-sm); font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 6px; }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-primary:hover { background: var(--primary-dark); }
+        .btn-secondary { background: white; color: var(--text-secondary); border: 1px solid var(--border); }
+        .btn-secondary:hover { background: var(--hover); }
+        .btn-danger { background: #ef4444; color: white; }
+        .btn-danger:hover { background: #dc2626; }
+        
+        .task-board { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+        .task-column { background: #f8fafc; border-radius: var(--radius-md); padding: 16px; }
+        .column-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+        .column-title { font-size: 14px; font-weight: 600; }
+        .column-count { padding: 2px 8px; border-radius: 10px; font-size: 12px; font-weight: 500; }
+        .column-pending .column-count { background: rgba(251,146,60,0.1); color: #fb923c; }
+        .column-progress .column-count { background: rgba(59,130,246,0.1); color: #3b82f6; }
+        .column-done .column-count { background: rgba(34,197,94,0.1); color: #22c55e; }
+        
+        .task-card { background: white; border-radius: var(--radius-sm); padding: 14px; margin-bottom: 12px; cursor: pointer; transition: all 0.2s; border: 1px solid var(--border); }
+        .task-card:hover { box-shadow: var(--shadow-md); }
+        .task-title { font-size: 14px; font-weight: 500; margin-bottom: 8px; }
+        .task-meta { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-muted); }
+        .priority-high { color: #ef4444; }
+        .priority-mid { color: #fb923c; }
+        .priority-low { color: #22c55e; }
+        .task-due { display: flex; align-items: center; gap: 2px; }
+        
+        .reminder-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
+        .reminder-card { background: white; border-radius: var(--radius-md); padding: 16px; border: 1px solid var(--border); cursor: pointer; transition: all 0.2s; }
+        .reminder-card:hover { box-shadow: var(--shadow-md); }
+        .reminder-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+        .reminder-name { font-size: 14px; font-weight: 600; }
+        .reminder-toggle { width: 40px; height: 22px; border-radius: 11px; background: #e2e8f0; cursor: pointer; position: relative; transition: all 0.2s; }
+        .reminder-toggle.on { background: var(--primary); }
+        .reminder-toggle::after { content: ''; position: absolute; width: 18px; height: 18px; border-radius: 50%; background: white; top: 2px; left: 2px; transition: all 0.2s; box-shadow: 0 1px 2px rgba(0,0,0,0.1); }
+        .reminder-toggle.on::after { left: 20px; }
+        .reminder-message { font-size: 13px; color: var(--text-secondary); margin-bottom: 8px; }
+        .reminder-schedule { font-size: 12px; color: var(--text-muted); display: flex; align-items: center; gap: 4px; }
+        
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 1000; }
+        .modal-overlay.show { display: flex; }
+        .modal { background: white; border-radius: var(--radius-md); padding: 24px; width: 520px; max-width: 95vw; box-shadow: 0 20px 25px rgba(0,0,0,0.1); }
+        .modal h3 { font-size: 18px; font-weight: 600; margin-bottom: 20px; }
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; font-size: 13px; font-weight: 500; color: var(--text-secondary); margin-bottom: 6px; }
+        .form-control { width: 100%; padding: 10px 14px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 14px; outline: none; }
+        .form-control:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(99,102,241,0.1); }
+        .form-row { display: flex; gap: 12px; }
+        .form-row .form-group { flex: 1; }
+        textarea.form-control { resize: vertical; min-height: 80px; }
+        .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
+        
+        .empty-state { text-align: center; padding: 60px 20px; color: var(--text-muted); }
+        .empty-icon { font-size: 48px; margin-bottom: 16px; opacity: 0.5; }
+        
+        .section-divider { height: 1px; background: var(--border); margin: 24px 0; }
+        
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+    </style>
+</head>
+<body>
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-title">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+                </svg>
+                笔灵 AI
+            </div>
+        </div>
+        
+        <nav class="nav-menu">
+            <div class="nav-item" onclick="navigate('/v3/chat')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                </svg>
+                对话
+            </div>
+            <div class="nav-item" onclick="navigate('/v3/ai')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"/>
+                    <path d="M8 14s1.5-2 4-2 4 2 4 2"/>
+                    <circle cx="9" cy="9" r="1"/>
+                    <circle cx="15" cy="9" r="1"/>
+                </svg>
+                AI 概览
+            </div>
+            <div class="nav-item" onclick="navigate('/v3/notes')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                    <polyline points="14 2 14 8 20 8"/>
+                    <line x1="16" y1="13" x2="8" y2="13"/>
+                    <line x1="16" y1="17" x2="8" y2="17"/>
+                    <polyline points="10 9 9 9 8 9"/>
+                </svg>
+                笔记
+            </div>
+            <div class="nav-item" onclick="navigate('/v3/data')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                    <line x1="9" y1="9" x2="15" y2="9"/>
+                    <line x1="9" y1="15" x2="15" y2="15"/>
+                    <line x1="12" y1="12" x2="12" y2="15"/>
+                    <line x1="12" y1="9" x2="12" y2="12"/>
+                </svg>
+                数据
+            </div>
+            <div class="nav-item active" onclick="navigate('/v3/planner')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                    <line x1="16" y1="2" x2="16" y2="6"/>
+                    <line x1="8" y1="2" x2="8" y2="6"/>
+                    <line x1="3" y1="10" x2="21" y2="10"/>
+                </svg>
+                任务提醒
+            </div>
+        </nav>
+        
+        <div class="sidebar-footer">
+            <select id="kbSelector" class="kb-selector" onchange="onKbChange()">
+                <option value="">全部笔记库</option>
+                <option th:each="kb : ${kbList}" th:value="${kb.id}" th:text="${kb.name}" th:selected="${selectedKb != null && kb.id == selectedKb.id}"></option>
+            </select>
+        </div>
+    </aside>
+    
+    <main class="main-content">
+        <div class="content-header">
+            <h1 class="content-title">任务提醒</h1>
+        </div>
+        
+        <div class="content-body">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">📋 任务看板</h2>
+                    <button class="btn btn-primary" onclick="showAddTaskModal()">+ 添加任务</button>
+                </div>
+                <div id="taskBoard">
+                    <div class="task-board">
+                        <div class="task-column column-pending">
+                            <div class="column-header">
+                                <span class="column-title">📋 待办</span>
+                                <span class="column-count" id="pendingCount">0</span>
+                            </div>
+                            <div id="pendingTasks"></div>
+                        </div>
+                        <div class="task-column column-progress">
+                            <div class="column-header">
+                                <span class="column-title">🔄 进行中</span>
+                                <span class="column-count" id="progressCount">0</span>
+                            </div>
+                            <div id="progressTasks"></div>
+                        </div>
+                        <div class="task-column column-done">
+                            <div class="column-header">
+                                <span class="column-title">✅ 已完成</span>
+                                <span class="column-count" id="doneCount">0</span>
+                            </div>
+                            <div id="doneTasks"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="section-divider"></div>
+            
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">⏰ 定时提醒</h2>
+                    <div style="display:flex;gap:8px;align-items:center;">
+                        <span style="font-size:13px;color:#94a3b8;">已启用: <span id="enabledReminderCount">0</span></span>
+                        <button class="btn btn-primary" onclick="showAddReminderModal()">+ 添加提醒</button>
+                    </div>
+                </div>
+                <div id="reminderGrid"></div>
+                <div id="reminderEmpty" style="display:none;text-align:center;padding:40px 20px;border:2px dashed #e2e8f0;background:#f8fafc;border-radius:var(--radius-md);">
+                    <div style="font-size:48px;margin-bottom:12px;">⏰</div>
+                    <div style="font-size:16px;font-weight:500;margin-bottom:8px;color:#64748b;">暂无提醒</div>
+                    <div style="font-size:14px;color:#94a3b8;">点击上方「添加提醒」按钮创建一个新的定时提醒</div>
+                </div>
+            </div>
+        </div>
+    </main>
+    
+    <div class="modal-overlay" id="task-modal">
+        <div class="modal">
+            <h3 id="task-modal-title">添加任务</h3>
+            <input type="hidden" id="task-id">
+            <div class="form-group"><label>标题 *</label><input type="text" id="task-title" class="form-control" placeholder="任务标题"></div>
+            <div class="form-group"><label>描述</label><textarea id="task-description" class="form-control" rows="3" placeholder="任务描述（可选）"></textarea></div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>优先级</label>
+                    <select id="task-priority" class="form-control">
+                        <option value="high">🔴 高优先级</option>
+                        <option value="mid" selected>🟡 中优先级</option>
+                        <option value="low">🟢 低优先级</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>截止日期</label>
+                    <input type="date" id="task-dueDate" class="form-control">
+                </div>
+            </div>
+            <div class="form-group" id="edit-status-group" style="display:none;">
+                <label>状态</label>
+                <select id="task-status" class="form-control">
+                    <option value="pending">📋 待办</option>
+                    <option value="in_progress">🔄 进行中</option>
+                    <option value="done">✅ 已完成</option>
+                </select>
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closeModal('task-modal')">取消</button>
+                <button class="btn btn-primary" onclick="saveTask()">保存</button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="modal-overlay" id="reminder-modal">
+        <div class="modal">
+            <h3 id="reminder-modal-title">添加提醒</h3>
+            <input type="hidden" id="reminder-id">
+            <div class="form-group"><label>提醒名称 *</label><input type="text" id="reminder-name" class="form-control" placeholder="例如：下班日报提醒"></div>
+            <div class="form-group"><label>提醒消息</label><textarea id="reminder-message" class="form-control" rows="3" placeholder="提醒内容（可选）"></textarea></div>
+            <div class="form-group">
+                <label>提醒类型 *</label>
+                <select id="reminder-type" class="form-control" onchange="onReminderTypeChange()">
+                    <option value="daily">📅 每天 - 每天定时提醒</option>
+                    <option value="once">🔔 一次 - 指定日期提醒</option>
+                    <option value="weekly">📆 每周 - 每周特定星期几提醒</option>
+                    <option value="monthly">📅 每月 - 每月特定几号提醒</option>
+                    <option value="yearly">🎂 每年 - 每年特定日期提醒</option>
+                </select>
+            </div>
+            <div class="form-row">
+                <div class="form-group" style="flex:1;"><label>提醒时间 *</label><input type="time" id="reminder-time" class="form-control" value="09:00"></div>
+                <div class="form-group" id="reminder-weekday-group" style="flex:1;display:none;"><label>星期几</label><select id="reminder-dayOfWeek" class="form-control"><option value="1">周一</option><option value="2">周二</option><option value="3">周三</option><option value="4">周四</option><option value="5">周五</option><option value="6">周六</option><option value="7">周日</option></select></div>
+                <div class="form-group" id="reminder-once-group" style="flex:1;display:none;"><label>日期</label><input type="date" id="reminder-date" class="form-control"></div>
+                <div class="form-group" id="reminder-monthly-group" style="flex:1;display:none;"><label>几号</label><input type="number" id="reminder-dayOfMonth" class="form-control" min="1" max="31" placeholder="1-31"></div>
+                <div class="form-group" id="reminder-yearly-group" style="flex:2;display:none;"><label>几月几号</label><div style="display:flex;gap:8px;align-items:center;"><input type="number" id="reminder-yearMonth" class="form-control" min="1" max="12" placeholder="月" style="width:60px;"><span>月</span><input type="number" id="reminder-yearDay" class="form-control" min="1" max="31" placeholder="日" style="width:60px;"><span>日</span></div></div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closeModal('reminder-modal')">取消</button>
+                <button class="btn btn-primary" onclick="saveReminder()">保存</button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="modal-overlay" id="delete-modal">
+        <div class="modal" style="width:400px;">
+            <h3>确认删除</h3>
+            <p style="color:#94a3b8;font-size:13px;">确定要删除吗？此操作不可撤销。</p>
+            <input type="hidden" id="delete-id">
+            <input type="hidden" id="delete-type">
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closeModal('delete-modal')">取消</button>
+                <button class="btn btn-danger" onclick="confirmDelete()">删除</button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        var currentKbId = [[${selectedKb != null ? selectedKb.id : 'null'}]];
+        var tasks = [];
+        var reminders = [];
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            loadTasks();
+            loadReminders();
+        });
+        
+        function navigate(url) {
+            var kbId = document.getElementById('kbSelector').value;
+            if (kbId) {
+                url += '?kbId=' + kbId;
+            }
+            window.location.href = url;
+        }
+        
+        function onKbChange() {
+            var kbId = document.getElementById('kbSelector').value;
+            currentKbId = kbId ? parseInt(kbId) : null;
+            loadTasks();
+            loadReminders();
+        }
+        
+        function loadTasks() {
+            var url = '/v3/api/tasks';
+            if (currentKbId) url += '?kbId=' + currentKbId;
+            
+            var xhr = new XMLHttpRequest();
+            xhr.open('GET', url);
+            xhr.onload = function() {
+                if (xhr.status === 200) {
+                    var data = JSON.parse(xhr.responseText);
+                    if (data.ok && data.tasks) {
+                        tasks = data.tasks;
+                        renderTasks();
+                    }
+                }
+            };
+            xhr.send();
+        }
+        
+        function renderTasks() {
+            var pending = tasks.filter(function(t) { return t.status === 'pending'; });
+            var progress = tasks.filter(function(t) { return t.status === 'in_progress'; });
+            var done = tasks.filter(function(t) { return t.status === 'done'; });
+            
+            document.getElementById('pendingCount').textContent = pending.length;
+            document.getElementById('progressCount').textContent = progress.length;
+            document.getElementById('doneCount').textContent = done.length;
+            
+            renderTaskColumn('pendingTasks', pending);
+            renderTaskColumn('progressTasks', progress);
+            renderTaskColumn('doneTasks', done);
+        }
+        
+        function renderTaskColumn(containerId, taskList) {
+            var container = document.getElementById(containerId);
+            container.innerHTML = '';
+            
+            if (taskList.length === 0) {
+                container.innerHTML = '<div style="text-align:center;padding:20px;color:#94a3b8;font-size:13px;">暂无任务</div>';
+                return;
+            }
+            
+            taskList.forEach(function(task) {
+                var div = document.createElement('div');
+                div.className = 'task-card';
+                div.onclick = function() { showEditTaskModal(task); };
+                
+                var priorityLabel = task.priority === 'high' ? '🔴' : (task.priority === 'mid' ? '🟡' : '🟢');
+                var dueText = task.dueDate ? '<span class="task-due">📅 ' + formatDate(task.dueDate) + '</span>' : '';
+                
+                div.innerHTML = `
+                    <div class="task-title">${task.title}</div>
+                    <div class="task-meta">
+                        <span class="priority-${task.priority}">${priorityLabel}</span>
+                        ${dueText}
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+        }
+        
+        function loadReminders() {
+            var url = '/v3/api/reminders';
+            if (currentKbId) url += '?kbId=' + currentKbId;
+            
+            var xhr = new XMLHttpRequest();
+            xhr.open('GET', url);
+            xhr.onload = function() {
+                if (xhr.status === 200) {
+                    var data = JSON.parse(xhr.responseText);
+                    if (data.ok && data.reminders) {
+                        reminders = data.reminders;
+                        renderReminders();
+                    }
+                }
+            };
+            xhr.send();
+        }
+        
+        function renderReminders() {
+            var grid = document.getElementById('reminderGrid');
+            var empty = document.getElementById('reminderEmpty');
+            var enabledCount = reminders.filter(function(r) { return r.enabled; }).length;
+            
+            document.getElementById('enabledReminderCount').textContent = enabledCount;
+            
+            if (reminders.length === 0) {
+                grid.innerHTML = '';
+                empty.style.display = 'block';
+                return;
+            }
+            
+            empty.style.display = 'none';
+            grid.innerHTML = '';
+            
+            reminders.forEach(function(reminder) {
+                var div = document.createElement('div');
+                div.className = 'reminder-card';
+                
+                var toggleClass = reminder.enabled ? 'reminder-toggle on' : 'reminder-toggle';
+                var scheduleText = getScheduleText(reminder);
+                
+                div.innerHTML = `
+                    <div class="reminder-header">
+                        <span class="reminder-name">${reminder.name}</span>
+                        <div class="${toggleClass}" onclick="toggleReminder('${reminder.id}')"></div>
+                    </div>
+                    ${reminder.message ? '<div class="reminder-message">' + reminder.message + '</div>' : ''}
+                    <div class="reminder-schedule">
+                        <span>⏰</span>
+                        <span>${scheduleText}</span>
+                    </div>
+                    <div style="margin-top:12px;display:flex;gap:8px;">
+                        <button class="btn btn-secondary" style="padding:4px 10px;font-size:12px;" onclick="showEditReminderModal('${reminder.id}')">编辑</button>
+                        <button class="btn btn-danger" style="padding:4px 10px;font-size:12px;" onclick="showDeleteModal('${reminder.id}', 'reminder')">删除</button>
+                    </div>
+                `;
+                grid.appendChild(div);
+            });
+        }
+        
+        function getScheduleText(reminder) {
+            var time = reminder.time || '09:00';
+            var type = reminder.type || 'daily';
+            
+            switch(type) {
+                case 'daily': return '每天 ' + time;
+                case 'once': return '一次 ' + (reminder.date || '') + ' ' + time;
+                case 'weekly': 
+                    var days = ['', '周一', '周二', '周三', '周四', '周五', '周六', '周日'];
+                    return '每周' + (days[parseInt(reminder.dayOfWeek) || 1]) + ' ' + time;
+                case 'monthly': return '每月' + (reminder.dayOfMonth || 1) + '号 ' + time;
+                case 'yearly': return '每年' + (reminder.monthDay || '1月1日') + ' ' + time;
+                default: return time;
+            }
+        }
+        
+        function showAddTaskModal() {
+            document.getElementById('task-modal-title').textContent = '添加任务';
+            document.getElementById('task-id').value = '';
+            document.getElementById('task-title').value = '';
+            document.getElementById('task-description').value = '';
+            document.getElementById('task-priority').value = 'mid';
+            document.getElementById('task-dueDate').value = '';
+            document.getElementById('edit-status-group').style.display = 'none';
+            document.getElementById('task-modal').classList.add('show');
+        }
+        
+        function showEditTaskModal(task) {
+            document.getElementById('task-modal-title').textContent = '编辑任务';
+            document.getElementById('task-id').value = task.id;
+            document.getElementById('task-title').value = task.title;
+            document.getElementById('task-description').value = task.description || '';
+            document.getElementById('task-priority').value = task.priority || 'mid';
+            document.getElementById('task-dueDate').value = task.dueDate || '';
+            document.getElementById('edit-status-group').style.display = 'block';
+            document.getElementById('task-status').value = task.status || 'pending';
+            document.getElementById('task-modal').classList.add('show');
+        }
+        
+        function saveTask() {
+            var id = document.getElementById('task-id').value;
+            var title = document.getElementById('task-title').value.trim();
+            var description = document.getElementById('task-description').value.trim();
+            var priority = document.getElementById('task-priority').value;
+            var dueDate = document.getElementById('task-dueDate').value;
+            var status = document.getElementById('task-status').value;
+            
+            if (!title) {
+                alert('请输入任务标题');
+                return;
+            }
+            
+            var url = id ? '/v3/api/tasks/update' : '/v3/api/tasks/add';
+            var params = 'title=' + encodeURIComponent(title) + 
+                '&description=' + encodeURIComponent(description) + 
+                '&priority=' + priority + 
+                '&dueDate=' + encodeURIComponent(dueDate);
+            
+            if (id) {
+                params += '&taskId=' + encodeURIComponent(id) + '&status=' + status;
+            }
+            if (currentKbId) {
+                params += '&kbId=' + currentKbId;
+            }
+            
+            var xhr = new XMLHttpRequest();
+            xhr.open('POST', url);
+            xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+            xhr.onload = function() {
+                if (xhr.status === 200) {
+                    closeModal('task-modal');
+                    loadTasks();
+                }
+            };
+            xhr.send(params);
+        }
+        
+        function showAddReminderModal() {
+            document.getElementById('reminder-modal-title').textContent = '添加提醒';
+            document.getElementById('reminder-id').value = '';
+            document.getElementById('reminder-name').value = '';
+            document.getElementById('reminder-message').value = '';
+            document.getElementById('reminder-type').value = 'daily';
+            document.getElementById('reminder-time').value = '09:00';
+            document.getElementById('reminder-date').value = '';
+            document.getElementById('reminder-dayOfWeek').value = '1';
+            document.getElementById('reminder-dayOfMonth').value = '';
+            document.getElementById('reminder-yearMonth').value = '';
+            document.getElementById('reminder-yearDay').value = '';
+            onReminderTypeChange();
+            document.getElementById('reminder-modal').classList.add('show');
+        }
+        
+        function showEditReminderModal(id) {
+            var reminder = reminders.find(function(r) { return r.id === id; });
+            if (!reminder) return;
+            
+            document.getElementById('reminder-modal-title').textContent = '编辑提醒';
+            document.getElementById('reminder-id').value = reminder.id;
+            document.getElementById('reminder-name').value = reminder.name;
+            document.getElementById('reminder-message').value = reminder.message || '';
+            document.getElementById('reminder-type').value = reminder.type || 'daily';
+            document.getElementById('reminder-time').value = reminder.time || '09:00';
+            document.getElementById('reminder-date').value = reminder.date || '';
+            document.getElementById('reminder-dayOfWeek').value = reminder.dayOfWeek || '1';
+            document.getElementById('reminder-dayOfMonth').value = reminder.dayOfMonth || '';
+            
+            var monthDay = (reminder.monthDay || '').split('-');
+            document.getElementById('reminder-yearMonth').value = monthDay[0] || '';
+            document.getElementById('reminder-yearDay').value = monthDay[1] || '';
+            
+            onReminderTypeChange();
+            document.getElementById('reminder-modal').classList.add('show');
+        }
+        
+        function onReminderTypeChange() {
+            var type = document.getElementById('reminder-type').value;
+            document.getElementById('reminder-weekday-group').style.display = type === 'weekly' ? 'block' : 'none';
+            document.getElementById('reminder-once-group').style.display = type === 'once' ? 'block' : 'none';
+            document.getElementById('reminder-monthly-group').style.display = type === 'monthly' ? 'block' : 'none';
+            document.getElementById('reminder-yearly-group').style.display = type === 'yearly' ? 'block' : 'none';
+        }
+        
+        function saveReminder() {
+            var id = document.getElementById('reminder-id').value;
+            var name = document.getElementById('reminder-name').value.trim();
+            var message = document.getElementById('reminder-message').value.trim();
+            var type = document.getElementById('reminder-type').value;
+            var time = document.getElementById('reminder-time').value;
+            var date = document.getElementById('reminder-date').value;
+            var dayOfWeek = document.getElementById('reminder-dayOfWeek').value;
+            var dayOfMonth = document.getElementById('reminder-dayOfMonth').value;
+            var yearMonth = document.getElementById('reminder-yearMonth').value;
+            var yearDay = document.getElementById('reminder-yearDay').value;
+            
+            if (!name) {
+                alert('请输入提醒名称');
+                return;
+            }
+            
+            var monthDay = yearMonth && yearDay ? yearMonth + '-' + yearDay : '';
+            
+            var url = id ? '/v3/api/reminders/update' : '/v3/api/reminders/add';
+            var params = 'name=' + encodeURIComponent(name) + 
+                '&message=' + encodeURIComponent(message) + 
+                '&type=' + type + 
+                '&time=' + encodeURIComponent(time) + 
+                '&date=' + encodeURIComponent(date) + 
+                '&dayOfWeek=' + dayOfWeek + 
+                '&dayOfMonth=' + dayOfMonth + 
+                '&monthDay=' + encodeURIComponent(monthDay);
+            
+            if (id) {
+                params += '&reminderId=' + encodeURIComponent(id);
+            }
+            if (currentKbId) {
+                params += '&kbId=' + currentKbId;
+            }
+            
+            var xhr = new XMLHttpRequest();
+            xhr.open('POST', url);
+            xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+            xhr.onload = function() {
+                if (xhr.status === 200) {
+                    closeModal('reminder-modal');
+                    loadReminders();
+                }
+            };
+            xhr.send(params);
+        }
+        
+        function toggleReminder(id) {
+            var url = '/v3/api/reminders/toggle?reminderId=' + id;
+            if (currentKbId) url += '&kbId=' + currentKbId;
+            
+            var xhr = new XMLHttpRequest();
+            xhr.open('POST', url);
+            xhr.onload = function() {
+                if (xhr.status === 200) {
+                    loadReminders();
+                }
+            };
+            xhr.send();
+        }
+        
+        function showDeleteModal(id, type) {
+            document.getElementById('delete-id').value = id;
+            document.getElementById('delete-type').value = type;
+            document.getElementById('delete-modal').classList.add('show');
+        }
+        
+        function confirmDelete() {
+            var id = document.getElementById('delete-id').value;
+            var type = document.getElementById('delete-type').value;
+            
+            var url = type === 'reminder' ? '/v3/api/reminders/delete' : '/v3/api/tasks/delete';
+            url += '?' + (type === 'reminder' ? 'reminderId' : 'taskId') + '=' + id;
+            if (currentKbId) url += '&kbId=' + currentKbId;
+            
+            var xhr = new XMLHttpRequest();
+            xhr.open('POST', url);
+            xhr.onload = function() {
+                if (xhr.status === 200) {
+                    closeModal('delete-modal');
+                    if (type === 'reminder') loadReminders();
+                    else loadTasks();
+                }
+            };
+            xhr.send();
+        }
+        
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('show');
+        }
+        
+        function formatDate(dateStr) {
+            if (!dateStr) return '';
+            var date = new Date(dateStr);
+            return (date.getMonth() + 1) + '/' + date.getDate();
+        }
+        
+        document.addEventListener('click', function(e) {
+            if (e.target.classList.contains('modal-overlay')) {
+                e.target.classList.remove('show');
+            }
+        });
+    </script>
+</body>
+</html>

@@ -46,3 +46,4 @@ app.log.*.*.gz
 deps.txt
 memory.db-journal
 data.sql
+data_h2.sql

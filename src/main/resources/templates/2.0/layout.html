@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
@@ -267,7 +267,56 @@
         .trace-details-body { display: none; font-size: 11px; color: #5c5f66; padding: 4px 8px; background: #f5f5f7; border-radius: 4px; margin-top: 2px; max-height: 80px; overflow-y: auto; white-space: pre-wrap; word-break: break-all; }
         .trace-step-details.expanded .trace-details-body { display: block; }
 
-        /* 响应式 */
+        /* ========== 通用页面样式 ========== */
+        .page-header { margin-bottom: 20px; }
+        .page-header h2 { font-size: 20px; font-weight: 600; color: #1a1b1e; }
+        .page-desc { font-size: 13px; color: #909296; margin-top: 4px; }
+
+        .section-header {
+            display: flex; align-items: center; justify-content: space-between;
+            margin-bottom: 12px; padding: 0 4px;
+        }
+        .section-header h2 { font-size: 16px; font-weight: 600; color: #1a1b1e; display: flex; align-items: center; gap: 8px; }
+        .section-header .count { font-size: 12px; color: #909296; font-weight: 400; }
+
+        .section-divider {
+            border: none; height: 1px; background: #eef0f4; margin: 20px 0;
+        }
+
+        /* ========== 笔记页样式 ========== */
+        .notes-page { max-width: 1000px; }
+
+        .kb-grid {
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 16px;
+        }
+        .kb-card {
+            background: #fff; border: 1px solid #e1e3e6; border-radius: 12px;
+            padding: 20px; text-decoration: none; color: inherit;
+            transition: all .15s;
+        }
+        .kb-card:hover { border-color: #7c5cfc; box-shadow: 0 2px 8px rgba(124,92,252,0.12); }
+        .kb-card-header { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+        .kb-card-icon { font-size: 28px; }
+        .kb-card-name { font-size: 15px; font-weight: 600; color: #1a1b1e; }
+        .kb-card-desc { font-size: 13px; color: #5c5f66; line-height: 1.5; margin-bottom: 8px; }
+        .kb-card-path { font-size: 12px; color: #909296; }
+        .kb-card-path code {
+            font-family: "SF Mono", "Fira Code", monospace;
+            background: #f5f5f7; padding: 2px 6px; border-radius: 4px; font-size: 11px;
+        }
+
+        .empty-state {
+            text-align: center; padding: 60px 20px; color: #909296;
+        }
+        .empty-state .icon { font-size: 48px; margin-bottom: 16px; }
+        .empty-state p { font-size: 14px; margin-bottom: 16px; }
+        .empty-state .btn { font-size: 13px; padding: 8px 20px; }
+
+        /* ========== 计划页样式 ========== */
+        .planner-page { max-width: 1000px; }
+
+        /* ========== 响应式 ========== */
         @media (max-width: 768px) {
             .sidebar { width: 60px; min-width: 60px; }
             .sidebar-header .app-title span,

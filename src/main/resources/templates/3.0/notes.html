@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>笔灵 AI - 笔记</title>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --primary: #6366f1;
+            --primary-light: #818cf8;
+            --primary-dark: #4f46e5;
+            --bg-main: #f8fafc;
+            --bg-sidebar: #ffffff;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --text-muted: #94a3b8;
+            --border: #e2e8f0;
+            --hover: #f1f5f9;
+            --radius-sm: 8px;
+            --radius-md: 12px;
+            --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+            --shadow-md: 0 4px 6px rgba(0,0,0,0.05);
+        }
+        html, body { height: 100%; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+        body { display: flex; background: var(--bg-main); color: var(--text-primary); }
+        
+        .sidebar { width: 260px; background: var(--bg-sidebar); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 16px 0; flex-shrink: 0; }
+        .sidebar-header { padding: 0 16px 16px; }
+        .sidebar-title { font-size: 20px; font-weight: 700; color: var(--primary); display: flex; align-items: center; gap: 8px; }
+        .sidebar-title svg { width: 24px; height: 24px; }
+        
+        .nav-menu { flex: 1; overflow-y: auto; padding: 8px 0; }
+        .nav-item { display: flex; align-items: center; gap: 10px; padding: 10px 16px; cursor: pointer; color: var(--text-secondary); font-size: 14px; transition: all 0.2s; border-radius: 0 var(--radius-md) var(--radius-md) 0; }
+        .nav-item:hover { background: var(--hover); color: var(--text-primary); }
+        .nav-item.active { background: rgba(99, 102, 241, 0.1); color: var(--primary); font-weight: 500; }
+        .nav-item svg { width: 20px; height: 20px; flex-shrink: 0; }
+        
+        .sidebar-footer { padding: 16px; border-top: 1px solid var(--border); }
+        .kb-selector { width: 100%; padding: 8px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: white; font-size: 13px; color: var(--text-primary); outline: none; cursor: pointer; }
+        .kb-selector:hover { border-color: var(--primary); }
+        
+        .main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+        
+        .content-header { padding: 16px 24px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; background: white; }
+        .content-title { font-size: 18px; font-weight: 600; color: var(--text-primary); }
+        
+        .content-body { flex: 1; overflow-y: auto; padding: 24px; }
+        
+        .notes-container { display: flex; gap: 24px; height: 100%; }
+        
+        .file-tree { width: 300px; background: white; border-radius: var(--radius-md); border: 1px solid var(--border); padding: 16px; overflow-y: auto; flex-shrink: 0; }
+        .tree-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
+        .tree-title { font-size: 14px; font-weight: 600; }
+        .tree-item { display: flex; align-items: center; gap: 6px; padding: 6px 8px; cursor: pointer; border-radius: var(--radius-sm); font-size: 13px; }
+        .tree-item:hover { background: var(--hover); }
+        .tree-item.active { background: rgba(99, 102, 241, 0.1); color: var(--primary); }
+        .tree-item.folder { font-weight: 500; }
+        .tree-item.file { color: var(--text-secondary); }
+        .tree-indent { padding-left: 16px; }
+        
+        .note-preview { flex: 1; display: flex; flex-direction: column; background: white; border-radius: var(--radius-md); border: 1px solid var(--border); overflow: hidden; }
+        .preview-header { padding: 16px 24px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+        .preview-title { font-size: 16px; font-weight: 600; }
+        .preview-content { flex: 1; overflow-y: auto; padding: 24px; font-size: 14px; line-height: 1.8; color: var(--text-primary); }
+        .preview-content h1 { font-size: 24px; margin-bottom: 16px; }
+        .preview-content h2 { font-size: 20px; margin-bottom: 12px; }
+        .preview-content h3 { font-size: 16px; margin-bottom: 8px; }
+        .preview-content p { margin-bottom: 12px; }
+        .preview-content ul, .preview-content ol { padding-left: 24px; margin-bottom: 12px; }
+        .preview-content li { margin-bottom: 4px; }
+        .preview-content code { background: rgba(0,0,0,0.05); padding: 2px 6px; border-radius: 4px; font-family: monospace; font-size: 13px; }
+        .preview-content pre { background: #1e293b; color: #e2e8f0; padding: 16px; border-radius: var(--radius-sm); overflow-x: auto; margin-bottom: 12px; }
+        .preview-content blockquote { border-left: 3px solid var(--primary); padding-left: 16px; color: var(--text-secondary); margin-bottom: 12px; }
+        
+        .empty-state { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 60px 20px; color: var(--text-muted); }
+        .empty-icon { font-size: 48px; margin-bottom: 16px; opacity: 0.5; }
+        
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+    </style>
+</head>
+<body>
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-title">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+                </svg>
+                笔灵 AI
+            </div>
+        </div>
+        
+        <nav class="nav-menu">
+            <div class="nav-item" onclick="navigate('/v3/chat')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                </svg>
+                对话
+            </div>
+            <div class="nav-item" onclick="navigate('/v3/ai')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"/>
+                    <path d="M8 14s1.5-2 4-2 4 2 4 2"/>
+                    <circle cx="9" cy="9" r="1"/>
+                    <circle cx="15" cy="9" r="1"/>
+                </svg>
+                AI 概览
+            </div>
+            <div class="nav-item active" onclick="navigate('/v3/notes')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                    <polyline points="14 2 14 8 20 8"/>
+                    <line x1="16" y1="13" x2="8" y2="13"/>
+                    <line x1="16" y1="17" x2="8" y2="17"/>
+                    <polyline points="10 9 9 9 8 9"/>
+                </svg>
+                笔记
+            </div>
+            <div class="nav-item" onclick="navigate('/v3/data')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                    <line x1="9" y1="9" x2="15" y2="9"/>
+                    <line x1="9" y1="15" x2="15" y2="15"/>
+                    <line x1="12" y1="12" x2="12" y2="15"/>
+                    <line x1="12" y1="9" x2="12" y2="12"/>
+                </svg>
+                数据
+            </div>
+            <div class="nav-item" onclick="navigate('/v3/planner')">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                    <line x1="16" y1="2" x2="16" y2="6"/>
+                    <line x1="8" y1="2" x2="8" y2="6"/>
+                    <line x1="3" y1="10" x2="21" y2="10"/>
+                </svg>
+                任务提醒
+            </div>
+        </nav>
+        
+        <div class="sidebar-footer">
+            <select id="kbSelector" class="kb-selector" onchange="onKbChange()">
+                <option value="">全部笔记库</option>
+                <option th:each="kb : ${kbList}" th:value="${kb.id}" th:text="${kb.name}" th:selected="${selectedKb != null && kb.id == selectedKb.id}"></option>
+            </select>
+        </div>
+    </aside>
+    
+    <main class="main-content">
+        <div class="content-header">
+            <h1 class="content-title">笔记</h1>
+        </div>
+        
+        <div class="content-body">
+            <div th:if="${selectedKb != null}" class="notes-container">
+                <div class="file-tree">
+                    <div class="tree-header">
+                        <span class="tree-title">📁 [[${selectedKb.name}]]</span>
+                        <button onclick="refreshTree()" style="border:none;background:none;cursor:pointer;color:#64748b;">🔄</button>
+                    </div>
+                    <div id="fileTree"></div>
+                </div>
+                
+                <div class="note-preview">
+                    <div class="preview-header">
+                        <span class="preview-title" id="previewTitle">选择文件查看</span>
+                    </div>
+                    <div class="preview-content" id="previewContent">
+                        <div class="empty-state">
+                            <div class="empty-icon">📄</div>
+                            <div style="font-size:16px;font-weight:500;margin-bottom:8px;color:#64748b;">选择笔记文件</div>
+                            <div style="font-size:14px;color:#94a3b8;">在左侧文件树中选择一个 Markdown 文件查看内容</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div th:if="${selectedKb == null}" class="empty-state">
+                <div class="empty-icon">📚</div>
+                <div style="font-size:16px;font-weight:500;margin-bottom:8px;color:#64748b;">选择一个笔记库</div>
+                <div style="font-size:14px;color:#94a3b8;">在左侧底部选择笔记库，查看该笔记库的文件结构</div>
+            </div>
+        </div>
+    </main>
+    
+    <script>
+        var currentKbId = [[${selectedKb != null ? selectedKb.id : 'null'}]];
+        
+        function navigate(url) {
+            var kbId = document.getElementById('kbSelector').value;
+            if (kbId) {
+                url += '?kbId=' + kbId;
+            }
+            window.location.href = url;
+        }
+        
+        function onKbChange() {
+            navigate('/v3/notes');
+        }
+        
+        function refreshTree() {
+            if (!currentKbId) return;
+            loadFileTree();
+        }
+        
+        function loadFileTree() {
+            if (!currentKbId) return;
+            
+            var xhr = new XMLHttpRequest();
+            xhr.open('GET', '/v3/api/notes/tree?kbId=' + currentKbId);
+            xhr.onload = function() {
+                if (xhr.status === 200) {
+                    var data = JSON.parse(xhr.responseText);
+                    if (data.ok && data.tree) {
+                        renderTree(data.tree, 'fileTree');
+                    }
+                }
+            };
+            xhr.send();
+        }
+        
+        function renderTree(tree, containerId) {
+            var container = document.getElementById(containerId);
+            container.innerHTML = '';
+            
+            function renderNode(node, parentEl, indent) {
+                if (node.dirs) {
+                    node.dirs.forEach(function(dir) {
+                        var div = document.createElement('div');
+                        div.className = 'tree-item folder';
+                        if (indent) div.style.paddingLeft = (indent * 16) + 'px';
+                        div.innerHTML = '<span>📁</span><span>' + dir.name + '</span>';
+                        div.onclick = function(e) {
+                            e.stopPropagation();
+                            var children = div.nextElementSibling;
+                            if (children) {
+                                children.style.display = children.style.display === 'none' ? 'block' : 'none';
+                            }
+                        };
+                        parentEl.appendChild(div);
+                        
+                        var childContainer = document.createElement('div');
+                        childContainer.style.display = 'none';
+                        parentEl.appendChild(childContainer);
+                        
+                        renderNode(dir, childContainer, (indent || 0) + 1);
+                    });
+                }
+                
+                if (node.files) {
+                    node.files.forEach(function(file) {
+                        var div = document.createElement('div');
+                        div.className = 'tree-item file';
+                        if (indent) div.style.paddingLeft = (indent * 16) + 'px';
+                        div.innerHTML = '<span>📄</span><span>' + file.name + '</span>';
+                        div.onclick = function(e) {
+                            e.stopPropagation();
+                            document.querySelectorAll('.tree-item').forEach(function(el) {
+                                el.classList.remove('active');
+                            });
+                            div.classList.add('active');
+                            loadNote(file.path);
+                        };
+                        parentEl.appendChild(div);
+                    });
+                }
+            }
+            
+            renderNode(tree, container, 0);
+        }
+        
+        function loadNote(path) {
+            if (!currentKbId || !path) return;
+            
+            var xhr = new XMLHttpRequest();
+            xhr.open('GET', '/v3/api/notes/read?kbId=' + currentKbId + '&path=' + encodeURIComponent(path));
+            xhr.onload = function() {
+                if (xhr.status === 200) {
+                    var data = JSON.parse(xhr.responseText);
+                    if (data.ok && data.content) {
+                        document.getElementById('previewTitle').textContent = path.split('/').pop().replace('.md', '');
+                        document.getElementById('previewContent').innerHTML = parseMarkdown(data.content);
+                    }
+                }
+            };
+            xhr.send();
+        }
+        
+        function parseMarkdown(text) {
+            if (!text) return '';
+            try {
+                return marked.parse(text);
+            } catch (e) {
+                return text.replace(/\n/g, '<br>');
+            }
+        }
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            if (currentKbId) {
+                loadFileTree();
+            }
+        });
+    </script>
+</body>
+</html>
