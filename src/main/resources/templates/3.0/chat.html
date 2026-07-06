@@ -44,11 +44,6 @@
         .nav-item.active { background: rgba(99, 102, 241, 0.1); color: var(--primary); font-weight: 500; }
         .nav-item svg { width: 20px; height: 20px; flex-shrink: 0; }
         
-        .sidebar-footer { padding: 16px; border-top: 1px solid var(--border); }
-        .kb-selector { width: 100%; padding: 8px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: white; font-size: 13px; color: var(--text-primary); outline: none; cursor: pointer; }
-        .kb-selector:hover { border-color: var(--primary); }
-        .kb-selector:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1); }
-        
         /* Main Content */
         .main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
         .content-header { padding: 16px 24px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
@@ -209,13 +204,6 @@
                 任务提醒
             </div>
         </nav>
-        
-        <div class="sidebar-footer">
-            <select id="kbSelector" class="kb-selector" onchange="onKbChange()">
-                <option value="">全部笔记库</option>
-                <option th:each="kb : ${kbList}" th:value="${kb.id}" th:text="${kb.name}" th:selected="${kb.id == defaultKbId}"></option>
-            </select>
-        </div>
     </aside>
     
     <main class="main-content">
@@ -269,7 +257,7 @@
                     </div>
                     
                     <div id="mentionDropdown" class="dropdown-menu">
-                        <div th:each="kb : ${kbList}" class="dropdown-item" th:data-name="${kb.name}" onclick="insertMention(this.getAttribute('data-name'))">
+                        <div th:each="kb : ${kbList}" class="dropdown-item" th:data-name="${kb.name}" th:data-kb-id="${kb.id}" onclick="insertMention(this.getAttribute('data-name'))">
                             <div class="dropdown-item-icon">📚</div>
                             <span th:text="${kb.name}"></span>
                         </div>
@@ -286,43 +274,33 @@
     </main>
     
     <script>
-        var currentKbId = null;
+        var currentKbId = /*[[${defaultKbId}]]*/ null;
         var kbList = [];
         var currentModel = '';
         
         document.addEventListener('DOMContentLoaded', function() {
-            var kbOptions = document.querySelectorAll('#kbSelector option');
-            kbOptions.forEach(function(opt) {
-                if (opt.value) {
-                    kbList.push({ id: parseInt(opt.value), name: opt.textContent });
+            var mentionItems = document.querySelectorAll('#mentionDropdown .dropdown-item');
+            mentionItems.forEach(function(item) {
+                var name = item.getAttribute('data-name');
+                var id = parseInt(item.getAttribute('data-kb-id'));
+                if (name && id) {
+                    kbList.push({ id: id, name: name });
                 }
             });
-
-            var selectedOption = document.querySelector('#kbSelector option[selected]');
-            if (selectedOption && selectedOption.value) {
-                currentKbId = parseInt(selectedOption.value);
-            }
 
             if (!currentKbId && kbList.length > 0) {
                 currentKbId = kbList[0].id;
             }
 
-            currentModel = document.getElementById('currentModel').textContent;
+            currentModel = document.getElementById('currentModel')?.textContent || '';
             loadMessages();
         });
         
         function navigate(url) {
-            var kbId = document.getElementById('kbSelector').value;
-            if (kbId) {
-                url += '?kbId=' + kbId;
-            }
             window.location.href = url;
         }
         
         function onKbChange() {
-            var kbId = document.getElementById('kbSelector').value;
-            currentKbId = kbId ? parseInt(kbId) : null;
-            loadMessages();
         }
         
         function toggleModelDropdown() {
