@@ -186,7 +186,7 @@
     </main>
     
     <script>
-        var currentKbId = [[${selectedKb != null ? selectedKb.id : 'null'}]];
+        var currentKbId = /*[[${selectedKb != null ? selectedKb.id : null}]]*/ null;
         
         function navigate(url) {
             var kbId = document.getElementById('kbSelector').value;

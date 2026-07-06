@@ -11,9 +11,9 @@
             --primary: #6366f1;
             --primary-light: #818cf8;
             --primary-dark: #4f46e5;
-            --bg-main: #f8fafc;
-            --bg-sidebar: #ffffff;
-            --bg-card: #ffffff;
+            --bg-main: #ffffff;
+            --bg-sidebar: #f8fafc;
+            --bg-card: #f8fafc;
             --text-primary: #1e293b;
             --text-secondary: #64748b;
             --text-muted: #94a3b8;
@@ -24,10 +24,12 @@
             --radius-lg: 16px;
             --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
             --shadow-md: 0 4px 6px rgba(0,0,0,0.05);
+            --shadow-lg: 0 10px 15px rgba(0,0,0,0.05);
         }
         html, body { height: 100%; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
         body { display: flex; background: var(--bg-main); color: var(--text-primary); }
         
+        /* Sidebar */
         .sidebar { width: 260px; background: var(--bg-sidebar); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 16px 0; flex-shrink: 0; }
         .sidebar-header { padding: 0 16px 16px; }
         .sidebar-title { font-size: 20px; font-weight: 700; color: var(--primary); display: flex; align-items: center; gap: 8px; }
@@ -42,70 +44,100 @@
         .sidebar-footer { padding: 16px; border-top: 1px solid var(--border); }
         .kb-selector { width: 100%; padding: 8px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: white; font-size: 13px; color: var(--text-primary); outline: none; cursor: pointer; }
         .kb-selector:hover { border-color: var(--primary); }
+        .kb-selector:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1); }
         
+        /* Main Content */
         .main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+        .content-header { padding: 16px 24px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+        .content-title { font-size: 18px; font-weight: 600; color: var(--text-primary); }
+        .content-actions { display: flex; gap: 8px; }
         
-        .chat-container { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+        .content-body { flex: 1; overflow-y: auto; padding: 20px; display: flex; justify-content: center; background: #f5f5f5; }
         
-        .chat-header { padding: 16px 24px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; background: white; }
-        .chat-title { font-size: 18px; font-weight: 600; color: var(--text-primary); }
-        .chat-actions { display: flex; align-items: center; gap: 8px; }
-        .model-select { padding: 6px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 12px; outline: none; background: white; }
+        .chat-wrapper { width: 100%; max-width: 900px; display: flex; flex-direction: column; background: white; border-radius: var(--radius-lg); box-shadow: var(--shadow-md); overflow: hidden; }
         
-        .chat-messages { flex: 1; overflow-y: auto; padding: 24px; display: flex; flex-direction: column; gap: 16px; background: var(--bg-main); }
+        /* Buttons */
+        .btn { padding: 8px 16px; border: none; border-radius: var(--radius-sm); font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 6px; }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-primary:hover { background: var(--primary-dark); }
+        .btn-secondary { background: white; color: var(--text-secondary); border: 1px solid var(--border); }
+        .btn-secondary:hover { background: var(--hover); }
+        .btn-sm { padding: 6px 12px; font-size: 12px; }
         
-        .message { display: flex; gap: 12px; max-width: 100%; }
+        .form-control { width: 100%; padding: 10px 14px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 14px; outline: none; transition: all 0.2s; background: white; }
+        .form-control:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1); }
+        
+        /* Chat */
+        .chat-container { height: 100%; display: flex; flex-direction: column; }
+        
+        .chat-messages { flex: 1; overflow-y: auto; padding: 20px 24px; display: flex; flex-direction: column; gap: 16px; background: #ffffff; }
+        
+        .message { display: flex; gap: 12px; max-width: 100%; animation: fadeIn 0.2s ease-out; margin-bottom: 8px; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
         .message.user { flex-direction: row-reverse; }
-        .message-avatar { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
-        .message.user .message-avatar { background: var(--primary); color: white; }
-        .message.assistant .message-avatar { background: #e2e8f0; color: var(--text-secondary); }
-        .message-content { max-width: 70%; padding: 12px 16px; border-radius: var(--radius-md); line-height: 1.6; font-size: 14px; }
-        .message.user .message-content { background: var(--primary); color: white; border-radius: var(--radius-md) var(--radius-md) 0 var(--radius-md); }
-        .message.assistant .message-content { background: white; color: var(--text-primary); border-radius: var(--radius-md) var(--radius-md) var(--radius-md) 0; box-shadow: var(--shadow-sm); }
-        .message-time { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+        .message-avatar { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; flex-shrink: 0; }
+        .message.user .message-avatar { background: #5c5c5c; color: white; }
+        .message.assistant .message-avatar { background: linear-gradient(135deg, #8b5cf6, #6366f1); color: white; }
+        .message-content-wrapper { display: flex; flex-direction: column; gap: 6px; max-width: 75%; }
+        .message-header { display: flex; align-items: center; gap: 8px; }
+        .message-author { font-size: 13px; font-weight: 500; }
+        .message.user .message-author { color: #64748b; }
+        .message.assistant .message-author { color: #6366f1; }
+        .message-content { padding: 14px 18px; border-radius: 16px; line-height: 1.7; font-size: 14px; word-wrap: break-word; }
+        .message.user .message-content { background: #f1f5f9; color: #1e293b; }
+        .message.assistant .message-content { background: #ffffff; color: #1e293b; border: 1px solid #e2e8f0; }
+        .message-time { font-size: 11px; color: #94a3b8; }
         .message.user .message-time { text-align: right; }
         
-        .typing-indicator { display: flex; align-items: center; gap: 4px; padding: 4px 0; }
-        .typing-dot { width: 6px; height: 6px; background: var(--text-muted); border-radius: 50%; animation: typing 1.4s infinite ease-in-out both; }
+        .status-message { display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; background: rgba(99, 102, 241, 0.08); color: #6366f1; border-radius: 20px; font-size: 12px; margin-bottom: 8px; align-self: flex-start; border: 1px solid rgba(99, 102, 241, 0.15); }
+        
+        .mention-tag { display: inline-block; padding: 1px 6px; background: rgba(99, 102, 241, 0.1); color: #6366f1; font-size: 12px; border-radius: 4px; margin-right: 4px; }
+        
+        .typing-indicator { display: flex; align-items: center; gap: 4px; padding: 14px 18px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 16px; }
+        .typing-dot { width: 6px; height: 6px; background: #94a3b8; border-radius: 50%; animation: typing 1.4s infinite ease-in-out both; }
         .typing-dot:nth-child(1) { animation-delay: -0.32s; }
         .typing-dot:nth-child(2) { animation-delay: -0.16s; }
-        @keyframes typing { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1); } }
+        @keyframes typing { 0%, 80%, 100% { transform: scale(0.6); opacity: 0.5; } 40% { transform: scale(1); opacity: 1; } }
         
-        .chat-input-area { padding: 16px 24px; border-top: 1px solid var(--border); background: white; flex-shrink: 0; }
-        .input-wrapper { display: flex; gap: 12px; align-items: flex-end; }
-        .mention-btn { padding: 8px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); background: white; color: var(--text-secondary); font-size: 13px; cursor: pointer; transition: all 0.2s; }
-        .mention-btn:hover { border-color: var(--primary); color: var(--primary); }
-        .chat-input { flex: 1; padding: 12px 16px; border: 1px solid var(--border); border-radius: var(--radius-md); font-size: 14px; outline: none; resize: none; min-height: 44px; max-height: 150px; line-height: 1.5; }
-        .chat-input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1); }
-        .send-btn { padding: 12px 24px; background: var(--primary); color: white; border: none; border-radius: var(--radius-md); font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.2s; flex-shrink: 0; }
-        .send-btn:hover { background: var(--primary-dark); }
+        .chat-input-area { padding: 12px 20px; border-top: 1px solid #e2e8f0; background: #f8fafc; flex-shrink: 0; }
+        .input-wrapper { display: flex; gap: 8px; align-items: flex-end; background: white; border-radius: 16px; padding: 4px; border: 1px solid #e2e8f0; }
+        .model-select-btn { padding: 6px 12px; border: none; background: transparent; color: #64748b; border-radius: 12px; font-size: 12px; cursor: pointer; display: flex; align-items: center; gap: 4px; transition: all 0.2s; }
+        .model-select-btn:hover { background: #f1f5f9; }
+        .chat-input { flex: 1; padding: 10px 12px; border: none; background: transparent; font-size: 14px; outline: none; resize: none; min-height: 32px; max-height: 120px; line-height: 1.5; }
+        .chat-input::placeholder { color: #94a3b8; }
+        .input-actions { display: flex; align-items: center; gap: 4px; }
+        .action-btn { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 12px; cursor: pointer; color: #64748b; transition: all 0.2s; }
+        .action-btn:hover { background: #f1f5f9; color: #1e293b; }
+        .send-btn { width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 12px; cursor: pointer; background: #6366f1; color: white; transition: all 0.2s; }
+        .send-btn:hover { background: #4f46e5; }
         .send-btn:disabled { background: #cbd5e1; cursor: not-allowed; }
         
-        .mention-dropdown { position: absolute; bottom: 100%; left: 0; background: white; border: 1px solid var(--border); border-radius: var(--radius-md); box-shadow: var(--shadow-lg); padding: 8px; width: 240px; max-height: 200px; overflow-y: auto; display: none; z-index: 100; }
-        .mention-item { padding: 8px 12px; border-radius: var(--radius-sm); cursor: pointer; font-size: 13px; display: flex; align-items: center; gap: 8px; }
-        .mention-item:hover { background: var(--hover); }
-        .mention-item-icon { width: 24px; height: 24px; background: rgba(99, 102, 241, 0.1); border-radius: 6px; display: flex; align-items: center; justify-content: center; color: var(--primary); font-size: 12px; }
+        .empty-state { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 60px 20px; color: #94a3b8; }
+        .empty-icon { font-size: 64px; margin-bottom: 16px; opacity: 0.3; }
+        .empty-title { font-size: 18px; font-weight: 600; margin-bottom: 8px; color: #1e293b; }
+        .empty-desc { font-size: 14px; line-height: 1.6; color: #64748b; }
+        .empty-action { margin-top: 20px; padding: 8px 20px; background: #6366f1; color: white; border: none; border-radius: 12px; font-size: 14px; cursor: pointer; }
         
-        .empty-state { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 60px 20px; color: var(--text-muted); }
-        .empty-icon { font-size: 64px; margin-bottom: 20px; opacity: 0.3; }
-        .empty-title { font-size: 20px; font-weight: 600; margin-bottom: 8px; color: var(--text-primary); }
-        .empty-desc { font-size: 14px; line-height: 1.6; color: var(--text-secondary); }
-        .empty-action { margin-top: 24px; padding: 10px 24px; background: var(--primary); color: white; border: none; border-radius: var(--radius-md); font-size: 14px; font-weight: 500; cursor: pointer; }
-        
-        .status-message { padding: 8px 16px; background: rgba(99, 102, 241, 0.08); color: var(--primary); border-radius: var(--radius-sm); font-size: 13px; margin-bottom: 8px; }
-        
-        .markdown-content { white-space: pre-wrap; }
+        .markdown-content { white-space: pre-wrap; word-break: break-word; }
         .markdown-content p { margin-bottom: 8px; }
         .markdown-content ul, .markdown-content ol { padding-left: 20px; margin-bottom: 8px; }
         .markdown-content li { margin-bottom: 4px; }
-        .markdown-content code { background: rgba(0,0,0,0.05); padding: 2px 6px; border-radius: 4px; font-family: monospace; font-size: 13px; }
-        .markdown-content pre { background: #1e293b; color: #e2e8f0; padding: 12px; border-radius: var(--radius-sm); overflow-x: auto; margin-bottom: 8px; }
-        .markdown-content blockquote { border-left: 3px solid var(--primary); padding-left: 12px; color: var(--text-secondary); margin-bottom: 8px; }
+        .markdown-content code { background: rgba(0,0,0,0.04); padding: 2px 6px; border-radius: 4px; font-family: monospace; font-size: 13px; }
+        .markdown-content pre { background: #1e293b; color: #e2e8f0; padding: 12px; border-radius: 8px; overflow-x: auto; margin-bottom: 8px; font-family: monospace; font-size: 13px; }
+        .markdown-content blockquote { border-left: 3px solid #6366f1; padding-left: 10px; color: #64748b; margin-bottom: 8px; }
+        .markdown-content strong { font-weight: 600; }
+        .markdown-content a { color: #6366f1; text-decoration: none; }
+        .markdown-content a:hover { text-decoration: underline; }
         
+        /* Scrollbar */
         ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
         ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+        
+        .model-item, .kb-item { padding: 8px 12px; border-radius: 8px; cursor: pointer; font-size: 13px; color: #64748b; transition: all 0.15s; }
+        .model-item:hover, .kb-item:hover { background: #f1f5f9; color: #1e293b; }
+        .model-item.selected { background: rgba(99, 102, 241, 0.08); color: #6366f1; }
     </style>
 </head>
 <body>
@@ -169,57 +201,80 @@
         <div class="sidebar-footer">
             <select id="kbSelector" class="kb-selector" onchange="onKbChange()">
                 <option value="">全部笔记库</option>
-                <option th:each="kb : ${kbList}" th:value="${kb.id}" th:text="${kb.name}"></option>
+                <option th:each="kb : ${kbList}" th:value="${kb.id}" th:text="${kb.name}" th:selected="${kb.id == defaultKbId}"></option>
             </select>
         </div>
     </aside>
     
     <main class="main-content">
-        <div class="chat-container">
-            <div class="chat-header">
-                <h1 class="chat-title">对话</h1>
-                <div class="chat-actions">
-                    <select id="modelSelector" class="model-select">
-                        <option th:each="model : ${chatModels}" th:value="${model.name}" th:text="${model.name}" th:selected="${model.name == defaultModel}"></option>
-                    </select>
-                    <button class="btn btn-sm btn-secondary" onclick="clearChat()" style="border:none;background:#f1f5f9;padding:6px 12px;border-radius:8px;font-size:12px;">清空</button>
-                </div>
+        <div class="content-header">
+            <h1 class="content-title">对话</h1>
+            <div class="content-actions">
+                <select id="modelSelector" class="form-control" style="width:auto;padding:6px 12px;font-size:12px;">
+                    <option th:each="model : ${chatModels}" th:value="${model.name}" th:text="${model.name}" th:selected="${model.name == defaultModel}"></option>
+                </select>
+                <button class="btn btn-secondary btn-sm" onclick="clearChat()">清空</button>
             </div>
-            
-            <div id="chatMessages" class="chat-messages">
-                <div th:if="${!hasKb}" class="empty-state">
-                    <div class="empty-icon">💬</div>
-                    <div class="empty-title">开始对话</div>
-                    <div class="empty-desc">
-                        你还没有添加任何笔记库。<br>
-                        可以直接与 AI 对话，或在配置页添加笔记库后使用 @笔记库名 进行知识库问答。
+        </div>
+        
+        <div class="content-body">
+            <div class="chat-wrapper">
+                <div id="chatMessages" class="chat-messages">
+                    <div th:if="${!hasKb}" class="empty-state">
+                        <div class="empty-icon">💬</div>
+                        <div class="empty-title">开始对话</div>
+                        <div class="empty-desc">你还没有添加任何笔记库。<br>可以直接与 AI 对话，或添加笔记库后使用 @笔记库名 进行知识库问答。</div>
+                        <button class="empty-action" onclick="window.location.href='/config'">去配置笔记库</button>
                     </div>
-                    <button class="empty-action" onclick="window.location.href='/config'">去配置笔记库</button>
+                    <div th:if="${hasKb}" id="messagesList"></div>
                 </div>
-                <div th:if="${hasKb}" id="messagesList"></div>
-            </div>
-            
-            <div class="chat-input-area">
-                <div class="input-wrapper" style="position:relative;">
-                    <button class="mention-btn" onclick="showMentionDropdown()">@</button>
-                    <textarea id="chatInput" class="chat-input" placeholder="输入消息... 使用 @笔记库名 进行知识库问答"
-                              onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChat();}"
-                              oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,150)+'px';"></textarea>
-                    <button id="sendBtn" class="send-btn" onclick="sendChat()">发送</button>
-                    <div id="mentionDropdown" class="mention-dropdown">
-                        <div th:each="kb : ${kbList}" class="mention-item" onclick="insertMention('[[${kb.name}]]')">
-                            <div class="mention-item-icon">📚</div>
-                            <span>[[${kb.name}]]</span>
+                
+                <div class="chat-input-area">
+                    <div class="input-wrapper">
+                        <button class="model-select-btn" onclick="toggleModelDropdown()">
+                            <span id="currentModel">[[${defaultModel} ? ${defaultModel} : '默认模型']]</span>
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12">
+                                <path d="M6 9l6 6 6-6"/>
+                            </svg>
+                        </button>
+                        <textarea id="chatInput" class="chat-input" placeholder="有问题尽管问"
+                                  onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChat();}"
+                                  oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,120)+'px';"></textarea>
+                        <div class="input-actions">
+                            <div class="action-btn" onclick="showMentionDropdown()" title="@笔记库">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                    <polyline points="14 2 14 8 20 8"/>
+                                </svg>
+                            </div>
+                            <button id="sendBtn" class="send-btn" onclick="sendChat()">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16">
+                                    <line x1="22" y1="2" x2="11" y2="13"/>
+                                    <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                                </svg>
+                            </button>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
     </main>
+
+    <div id="modelDropdown" style="display:none;position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:white;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,0.15);padding:8px;z-index:100;width:200px;">
+        <div th:each="model : ${chatModels}" class="model-item" onclick="selectModel('[[${model.name}]]')" th:classappend="${model.name == defaultModel} ? 'selected'">
+            [[${model.name}]]
+        </div>
+    </div>
+
+    <div id="kbDropdown" style="display:none;position:fixed;bottom:90px;right:20px;background:white;border-radius:12px;box-shadow:0 4px 20px rgba(0,0,0,0.15);padding:8px;z-index:100;width:180px;">
+        <div class="kb-item" onclick="selectKb(null)">全部笔记库</div>
+        <div th:each="kb : ${kbList}" class="kb-item" onclick="selectKb([[${kb.id}]])">[[${kb.name}]]</div>
+    </div>
     
     <script>
         var currentKbId = null;
         var kbList = [];
+        var currentModel = '';
         
         document.addEventListener('DOMContentLoaded', function() {
             var kbOptions = document.querySelectorAll('#kbSelector option');
@@ -228,12 +283,17 @@
                     kbList.push({ id: parseInt(opt.value), name: opt.textContent });
                 }
             });
-            
+
             var selectedOption = document.querySelector('#kbSelector option[selected]');
             if (selectedOption && selectedOption.value) {
                 currentKbId = parseInt(selectedOption.value);
             }
-            
+
+            if (!currentKbId && kbList.length > 0) {
+                currentKbId = kbList[0].id;
+            }
+
+            currentModel = document.getElementById('currentModel').textContent;
             loadMessages();
         });
         
@@ -246,8 +306,27 @@
         }
         
         function onKbChange() {
-            var kbId = document.getElementById('kbSelector').value;
-            currentKbId = kbId ? parseInt(kbId) : null;
+            var path = window.location.pathname;
+            if (path.startsWith('/v3/')) {
+                navigate(path);
+            }
+        }
+        
+        function toggleModelDropdown() {
+            var dropdown = document.getElementById('modelDropdown');
+            dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
+        }
+        
+        function selectModel(modelName) {
+            currentModel = modelName;
+            document.getElementById('currentModel').textContent = modelName;
+            document.getElementById('modelSelector').value = modelName;
+            document.getElementById('modelDropdown').style.display = 'none';
+        }
+        
+        function selectKb(kbId) {
+            currentKbId = kbId;
+            document.getElementById('kbDropdown').style.display = 'none';
             loadMessages();
         }
         
@@ -278,180 +357,6 @@
             scrollToBottom();
         }
         
-        function addMessage(role, content, time) {
-            var container = document.getElementById('messagesList');
-            var div = document.createElement('div');
-            div.className = 'message ' + role;
-            
-            var avatar = role === 'user' ? '👤' : '🤖';
-            var timeStr = time ? formatTime(time) : '';
-            
-            div.innerHTML = `
-                <div class="message-avatar">${avatar}</div>
-                <div>
-                    <div class="message-content">${parseMarkdown(content)}</div>
-                    ${timeStr ? '<div class="message-time">' + timeStr + '</div>' : ''}
-                </div>
-            `;
-            
-            container.appendChild(div);
-            scrollToBottom();
-        }
-        
-        function scrollToBottom() {
-            var container = document.getElementById('chatMessages');
-            container.scrollTop = container.scrollHeight;
-        }
-        
-        function sendChat() {
-            var input = document.getElementById('chatInput');
-            var message = input.value.trim();
-            if (!message) return;
-            
-            addMessage('user', message, new Date().toISOString());
-            input.value = '';
-            input.style.height = 'auto';
-            
-            var sendBtn = document.getElementById('sendBtn');
-            sendBtn.disabled = true;
-            
-            addTypingIndicator();
-            
-            var modelName = document.getElementById('modelSelector').value;
-            var mentionedKbId = parseMentionedKb(message);
-            var sendKbId = mentionedKbId !== null ? mentionedKbId : currentKbId;
-            
-            var eventSource = new EventSource('/v3/api/chat/send?message=' + encodeURIComponent(message) + 
-                (sendKbId ? '&kbId=' + sendKbId : '') + 
-                '&modelName=' + encodeURIComponent(modelName));
-            
-            var replyContent = '';
-            var replyDiv = null;
-            
-            eventSource.onmessage = function(e) {
-                try {
-                    var data = JSON.parse(e.data);
-                    
-                    if (data.type === 'text') {
-                        removeTypingIndicator();
-                        if (!replyDiv) {
-                            replyDiv = document.createElement('div');
-                            replyDiv.className = 'message assistant';
-                            replyDiv.innerHTML = `
-                                <div class="message-avatar">🤖</div>
-                                <div>
-                                    <div class="message-content markdown-content"></div>
-                                </div>
-                            `;
-                            document.getElementById('messagesList').appendChild(replyDiv);
-                        }
-                        replyContent += data.content;
-                        replyDiv.querySelector('.message-content').innerHTML = parseMarkdown(replyContent);
-                        scrollToBottom();
-                    } else if (data.type === 'status') {
-                        addStatusMessage(data.content);
-                    } else if (data.type === 'done') {
-                        eventSource.close();
-                        sendBtn.disabled = false;
-                        scrollToBottom();
-                    } else if (data.type === 'error') {
-                        removeTypingIndicator();
-                        addMessage('assistant', '❌ ' + data.content, new Date().toISOString());
-                        eventSource.close();
-                        sendBtn.disabled = false;
-                    }
-                } catch (err) {
-                    console.error('Parse error:', err);
-                }
-            };
-            
-            eventSource.onerror = function() {
-                eventSource.close();
-                sendBtn.disabled = false;
-                removeTypingIndicator();
-            };
-        }
-        
-        function addTypingIndicator() {
-            var container = document.getElementById('messagesList');
-            var div = document.createElement('div');
-            div.className = 'message assistant';
-            div.id = 'typingIndicator';
-            div.innerHTML = `
-                <div class="message-avatar">🤖</div>
-                <div>
-                    <div class="message-content">
-                        <div class="typing-indicator">
-                            <div class="typing-dot"></div>
-                            <div class="typing-dot"></div>
-                            <div class="typing-dot"></div>
-                        </div>
-                    </div>
-                </div>
-            `;
-            container.appendChild(div);
-            scrollToBottom();
-        }
-        
-        function removeTypingIndicator() {
-            var el = document.getElementById('typingIndicator');
-            if (el) el.remove();
-        }
-        
-        function addStatusMessage(text) {
-            var container = document.getElementById('chatMessages');
-            var div = document.createElement('div');
-            div.className = 'status-message';
-            div.textContent = text;
-            container.appendChild(div);
-            scrollToBottom();
-        }
-        
-        function clearChat() {
-            if (!currentKbId) {
-                alert('请先选择一个笔记库');
-                return;
-            }
-            if (!confirm('确定要清空对话记录吗？')) return;
-            
-            var xhr = new XMLHttpRequest();
-            xhr.open('DELETE', '/v3/api/chat/clear?kbId=' + currentKbId);
-            xhr.onload = function() {
-                if (xhr.status === 200) {
-                    document.getElementById('messagesList').innerHTML = '';
-                }
-            };
-            xhr.send();
-        }
-        
-        function showMentionDropdown() {
-            var dropdown = document.getElementById('mentionDropdown');
-            dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
-        }
-        
-        function insertMention(name) {
-            var input = document.getElementById('chatInput');
-            var start = input.selectionStart;
-            var end = input.selectionEnd;
-            var value = input.value;
-            input.value = value.substring(0, start) + '@' + name + ' ' + value.substring(end);
-            input.focus();
-            document.getElementById('mentionDropdown').style.display = 'none';
-        }
-        
-        function parseMentionedKb(message) {
-            var match = message.match(/@(\S+)/);
-            if (match) {
-                var kbName = match[1];
-                for (var i = 0; i < kbList.length; i++) {
-                    if (kbList[i].name === kbName || kbList[i].name.includes(kbName)) {
-                        return kbList[i].id;
-                    }
-                }
-            }
-            return null;
-        }
-        
         function formatTime(timeStr) {
             if (!timeStr) return '';
             var date = new Date(timeStr);
@@ -478,9 +383,240 @@
             }
         }
         
+        function addMessage(role, content, time) {
+            var container = document.getElementById('messagesList');
+            var div = document.createElement('div');
+            div.className = 'message ' + role;
+            
+            var avatar = role === 'user' ? '👤' : '🤖';
+            var author = role === 'user' ? '我' : '笔灵 AI';
+            var timeStr = time ? formatTime(time) : '';
+            
+            var displayContent = role === 'user' ? highlightMentions(content) : parseMarkdown(content);
+            
+            div.innerHTML = `
+                <div class="message-avatar">${avatar}</div>
+                <div class="message-content-wrapper">
+                    <div class="message-header">
+                        <span class="message-author">${author}</span>
+                        ${timeStr ? '<span class="message-time">' + timeStr + '</span>' : ''}
+                    </div>
+                    <div class="message-content ${role === 'assistant' ? 'markdown-content' : ''}">${displayContent}</div>
+                </div>
+            `;
+            
+            container.appendChild(div);
+            scrollToBottom();
+        }
+        
+        function highlightMentions(text) {
+            return text.replace(/@(\S+)/g, '<span class="mention-tag">@$1</span>');
+        }
+        
+        function scrollToBottom() {
+            var container = document.getElementById('chatMessages');
+            container.scrollTop = container.scrollHeight;
+        }
+        
+        function sendChat() {
+            var input = document.getElementById('chatInput');
+            var message = input.value.trim();
+            if (!message) return;
+            
+            addMessage('user', message, new Date().toISOString());
+            input.value = '';
+            input.style.height = 'auto';
+            
+            var sendBtn = document.getElementById('sendBtn');
+            sendBtn.disabled = true;
+            
+            addTypingIndicator();
+            
+            var mentionedKbId = parseMentionedKb(message);
+            var sendKbId = mentionedKbId !== null ? mentionedKbId : currentKbId;
+            
+            var formData = new FormData();
+            formData.append('message', message);
+            if (sendKbId) formData.append('kbId', sendKbId);
+            formData.append('modelName', currentModel);
+            
+            fetch('/v3/api/chat/send', {
+                method: 'POST',
+                body: formData
+            }).then(function(response) {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok');
+                }
+                
+                var reader = response.body.getReader();
+                var decoder = new TextDecoder();
+                var replyContent = '';
+                var replyDiv = null;
+                
+                function readChunk() {
+                    reader.read().then(function(result) {
+                        if (result.done) {
+                            sendBtn.disabled = false;
+                            removeTypingIndicator();
+                            scrollToBottom();
+                            return;
+                        }
+                        
+                        var chunk = decoder.decode(result.value, { stream: true });
+                        var lines = chunk.split('\n');
+                        
+                        lines.forEach(function(line) {
+                            if (!line.trim()) return;
+                            if (line.startsWith('data:')) {
+                                line = line.substring(5).trim();
+                            }
+                            
+                            try {
+                                var data = JSON.parse(line);
+                                
+                                if (data.type === 'text') {
+                                    removeTypingIndicator();
+                                    if (!replyDiv) {
+                                        replyDiv = document.createElement('div');
+                                        replyDiv.className = 'message assistant';
+                                        replyDiv.innerHTML = `
+                                            <div class="message-avatar">🤖</div>
+                                            <div class="message-content-wrapper">
+                                                <div class="message-header">
+                                                    <span class="message-author">笔灵 AI</span>
+                                                </div>
+                                                <div class="message-content markdown-content"></div>
+                                            </div>
+                                        `;
+                                        document.getElementById('messagesList').appendChild(replyDiv);
+                                    }
+                                    replyContent += data.content;
+                                    replyDiv.querySelector('.message-content').innerHTML = parseMarkdown(replyContent);
+                                    scrollToBottom();
+                                } else if (data.type === 'status') {
+                                    addStatusMessage(data.content);
+                                } else if (data.type === 'done') {
+                                    sendBtn.disabled = false;
+                                    removeStatusMessage();
+                                    scrollToBottom();
+                                } else if (data.type === 'error') {
+                                    removeTypingIndicator();
+                                    removeStatusMessage();
+                                    addMessage('assistant', '❌ ' + data.content, new Date().toISOString());
+                                    sendBtn.disabled = false;
+                                }
+                            } catch (err) {
+                                console.warn('Parse error:', err, line);
+                            }
+                        });
+                        
+                        readChunk();
+                    }).catch(function(err) {
+                        console.error('Read error:', err);
+                        sendBtn.disabled = false;
+                        removeTypingIndicator();
+                    });
+                }
+                
+                readChunk();
+            }).catch(function(err) {
+                console.error('Fetch error:', err);
+                sendBtn.disabled = false;
+                removeTypingIndicator();
+                addMessage('assistant', '❌ 发送失败: ' + err.message, new Date().toISOString());
+            });
+        }
+        
+        function addTypingIndicator() {
+            var container = document.getElementById('messagesList');
+            var div = document.createElement('div');
+            div.className = 'message assistant';
+            div.id = 'typingIndicator';
+            div.innerHTML = `
+                <div class="message-avatar">🤖</div>
+                <div class="message-content-wrapper">
+                    <div class="message-header">
+                        <span class="message-author">笔灵 AI</span>
+                    </div>
+                    <div class="message-content">
+                        <div class="typing-indicator">
+                            <div class="typing-dot"></div>
+                            <div class="typing-dot"></div>
+                            <div class="typing-dot"></div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            container.appendChild(div);
+            scrollToBottom();
+        }
+        
+        function removeTypingIndicator() {
+            var el = document.getElementById('typingIndicator');
+            if (el) el.remove();
+        }
+        
+        function addStatusMessage(text) {
+            var existing = document.getElementById('currentStatus');
+            if (existing) {
+                existing.textContent = text;
+            } else {
+                var container = document.getElementById('messagesList');
+                var div = document.createElement('div');
+                div.className = 'status-message';
+                div.id = 'currentStatus';
+                div.textContent = text;
+                container.appendChild(div);
+            }
+            scrollToBottom();
+        }
+        
+        function removeStatusMessage() {
+            var el = document.getElementById('currentStatus');
+            if (el) el.remove();
+        }
+        
+        function clearChat() {
+            if (!currentKbId) {
+                alert('请先选择一个笔记库');
+                return;
+            }
+            if (!confirm('确定要清空对话记录吗？')) return;
+            
+            var xhr = new XMLHttpRequest();
+            xhr.open('DELETE', '/v3/api/chat/clear?kbId=' + currentKbId);
+            xhr.onload = function() {
+                if (xhr.status === 200) {
+                    document.getElementById('messagesList').innerHTML = '';
+                }
+            };
+            xhr.send();
+        }
+        
+        function showMentionDropdown() {
+            var dropdown = document.getElementById('kbDropdown');
+            dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
+        }
+        
+        function parseMentionedKb(message) {
+            var match = message.match(/@(\S+)/);
+            if (match) {
+                var kbName = match[1];
+                for (var i = 0; i < kbList.length; i++) {
+                    if (kbList[i].name === kbName || kbList[i].name.includes(kbName)) {
+                        return kbList[i].id;
+                    }
+                }
+            }
+            return null;
+        }
+        
         document.addEventListener('click', function(e) {
-            if (!e.target.closest('.input-wrapper')) {
-                document.getElementById('mentionDropdown').style.display = 'none';
+            if (!e.target.closest('.model-select-btn')) {
+                document.getElementById('modelDropdown').style.display = 'none';
+            }
+            if (!e.target.closest('.action-btn') && !e.target.closest('#kbDropdown')) {
+                document.getElementById('kbDropdown').style.display = 'none';
             }
         });
     </script>

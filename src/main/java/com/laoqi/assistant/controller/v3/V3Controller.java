@@ -88,6 +88,10 @@ public class V3Controller {
         List<KnowledgeBaseEntity> kbList = kbService.getAll();
         model.put("kbList", kbList);
         model.put("hasKb", !kbList.isEmpty());
+        
+        if (!kbList.isEmpty()) {
+            model.put("defaultKbId", kbList.get(0).getId());
+        }
 
         List<LlmProfileEntity> chatModels = llmConfigResolver.getAllProfiles()
                 .stream()
@@ -104,6 +108,14 @@ public class V3Controller {
     public String aiPage(@RequestParam(required = false) Long kbId, Map<String, Object> model) {
         List<KnowledgeBaseEntity> kbList = kbService.getAll();
         model.put("kbList", kbList);
+        
+        if (!kbList.isEmpty()) {
+            model.put("defaultKbId", kbList.get(0).getId());
+        }
+
+        if (kbId == null && !kbList.isEmpty()) {
+            kbId = kbList.get(0).getId();
+        }
 
         if (kbId != null) {
             KnowledgeBaseEntity kb = kbService.getById(kbId);
@@ -132,6 +144,14 @@ public class V3Controller {
     public String notesPage(@RequestParam(required = false) Long kbId, Map<String, Object> model) {
         List<KnowledgeBaseEntity> kbList = kbService.getAll();
         model.put("kbList", kbList);
+        
+        if (!kbList.isEmpty()) {
+            model.put("defaultKbId", kbList.get(0).getId());
+        }
+
+        if (kbId == null && !kbList.isEmpty()) {
+            kbId = kbList.get(0).getId();
+        }
 
         if (kbId != null) {
             KnowledgeBaseEntity kb = kbService.getById(kbId);
@@ -147,6 +167,14 @@ public class V3Controller {
     public String dataPage(@RequestParam(required = false) Long kbId, Map<String, Object> model) {
         List<KnowledgeBaseEntity> kbList = kbService.getAll();
         model.put("kbList", kbList);
+        
+        if (!kbList.isEmpty()) {
+            model.put("defaultKbId", kbList.get(0).getId());
+        }
+
+        if (kbId == null && !kbList.isEmpty()) {
+            kbId = kbList.get(0).getId();
+        }
 
         if (kbId != null) {
             KnowledgeBaseEntity kb = kbService.getById(kbId);
@@ -162,6 +190,10 @@ public class V3Controller {
     public String plannerPage(@RequestParam(required = false) Long kbId, Map<String, Object> model) {
         List<KnowledgeBaseEntity> kbList = kbService.getAll();
         model.put("kbList", kbList);
+        
+        if (!kbList.isEmpty()) {
+            model.put("defaultKbId", kbList.get(0).getId());
+        }
 
         if (kbId != null) {
             KnowledgeBaseEntity kb = kbService.getById(kbId);
