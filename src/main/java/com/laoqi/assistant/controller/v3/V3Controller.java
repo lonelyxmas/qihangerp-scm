@@ -205,6 +205,18 @@ public class V3Controller {
         return "3.0/planner";
     }
 
+    @GetMapping("/tools")
+    public String toolsPage(Map<String, Object> model) {
+        List<KnowledgeBaseEntity> kbList = kbService.getAll();
+        model.put("kbList", kbList);
+        
+        if (!kbList.isEmpty()) {
+            model.put("defaultKbId", kbList.get(0).getId());
+        }
+
+        return "3.0/tools";
+    }
+
     // ========== API: 获取笔记库列表 ==========
 
     @ResponseBody
