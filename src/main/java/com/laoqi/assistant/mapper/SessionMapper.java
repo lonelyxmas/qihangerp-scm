@@ -16,8 +16,8 @@ public interface SessionMapper extends BaseMapper<SessionEntity> {
     List<SessionEntity> listBySourceOrderByUpdate(String source);
 
     @Select("SELECT * FROM sessions WHERE source = 'web' AND kb_id = #{kbId} ORDER BY updated_at DESC LIMIT 1")
-    SessionEntity findLatestByKb(@Param("kbId") Integer kbId);
+    SessionEntity findLatestByKb(@Param("kbId") Long kbId);
 
     @Select("SELECT * FROM sessions WHERE source = 'web' AND kb_id = #{kbId} ORDER BY updated_at ASC")
-    List<SessionEntity> listByKb(@Param("kbId") Integer kbId);
+    List<SessionEntity> listByKb(@Param("kbId") Long kbId);
 }

@@ -17,8 +17,11 @@ spring:
     default-property-inclusion: non_null
     time-zone: Asia/Shanghai
   datasource:
-    url: jdbc:sqlite:${ASSISTANT_CONFIG_DIR:${user.dir}}/memory.db
-    driver-class-name: org.sqlite.JDBC
+    # GraalVM Native Image: 使用 H2 替代 SQLite（纯 Java 实现，无 JNI 依赖）
+    url: jdbc:h2:file:${ASSISTANT_CONFIG_DIR:${user.dir}}/memory;DB_CLOSE_DELAY=-1;MODE=MySQL
+    driver-class-name: org.h2.Driver
+    # H2 兼容模式：MODE=MySQL 使 H2 支持 SQLite 类似的 SQL 语法
+    # DB_CLOSE_DELAY=-1 确保 JVM 退出时才关闭数据库
   ai:
     deepseek:
       # 仅用于满足 starter 启动校验，实际 API Key / Model 由 config.json 动态管理

@@ -27,12 +27,12 @@ public class SessionDbServiceImpl extends ServiceImpl<SessionMapper, SessionEnti
     }
 
     @Override
-    public SessionEntity findLatestByKb(Integer kbId) {
+    public SessionEntity findLatestByKb(Long kbId) {
         return sessionMapper.findLatestByKb(kbId);
     }
 
     @Override
-    public List<SessionEntity> listByKb(Integer kbId) {
+    public List<SessionEntity> listByKb(Long kbId) {
         return sessionMapper.listByKb(kbId);
     }
 }

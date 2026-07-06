@@ -8,7 +8,7 @@ import com.baomidou.mybatisplus.annotation.TableName;
 public class DataModuleEntity {
 
     @TableId(type = IdType.AUTO)
-    private Integer id;
+    private Long id;
     private String moduleId;
     private String name;
     private String description;
@@ -17,8 +17,8 @@ public class DataModuleEntity {
     private String createdAt;
     private String updatedAt;
 
-    public Integer getId() { return id; }
-    public void setId(Integer id) { this.id = id; }
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
     public String getModuleId() { return moduleId; }
     public void setModuleId(String moduleId) { this.moduleId = moduleId; }
     public String getName() { return name; }

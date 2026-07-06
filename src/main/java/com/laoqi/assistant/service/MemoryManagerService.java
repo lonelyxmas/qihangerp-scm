@@ -13,7 +13,7 @@ import java.util.List;
 
 /**
  * Agent 记忆管理器 — 持久化存储用户画像、关键事实、项目里程碑等语义记忆（L3/L4）。
- * 数据存储在 SQLite 的 agent_memories 表中，按知识库隔离。
+ * 数据存储在 agent_memories 表中，按知识库隔离。
  */
 @Service
 public class MemoryManagerService {
@@ -35,14 +35,14 @@ public class MemoryManagerService {
         try (Connection conn = dataSource.getConnection(); Statement stmt = conn.createStatement()) {
             stmt.execute("""
                 CREATE TABLE IF NOT EXISTS agent_memories (
-                    id          INTEGER PRIMARY KEY AUTOINCREMENT,
-                    kb_id       INTEGER NOT NULL DEFAULT 0,
-                    category    TEXT NOT NULL DEFAULT 'general',
-                    key_name    TEXT NOT NULL,
+                    id          BIGINT AUTO_INCREMENT PRIMARY KEY,
+                    kb_id       BIGINT NOT NULL DEFAULT 0,
+                    category    VARCHAR(64) NOT NULL DEFAULT 'general',
+                    key_name    VARCHAR(255) NOT NULL,
                     value       TEXT NOT NULL,
                     importance  INTEGER NOT NULL DEFAULT 1,
-                    created_at  TEXT NOT NULL,
-                    updated_at  TEXT NOT NULL
+                    created_at  VARCHAR(32) NOT NULL,
+                    updated_at  VARCHAR(32) NOT NULL
                 )
                 """);
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_memories_kb ON agent_memories(kb_id, category)");
@@ -58,7 +58,7 @@ public class MemoryManagerService {
         String now = TimeUtil.nowStr();
         try (Connection conn = dataSource.getConnection();
              PreparedStatement ps = conn.prepareStatement(
-                     "INSERT OR REPLACE INTO agent_memories (kb_id, category, key_name, value, importance, created_at, updated_at) "
+                     "UPSERT INTO agent_memories (kb_id, category, key_name, value, importance, created_at, updated_at) "
                    + "VALUES (?, ?, ?, ?, ?, COALESCE((SELECT created_at FROM agent_memories WHERE kb_id=? AND key_name=?), ?), ?)")) {
             ps.setLong(1, kbId != null ? kbId : 0);
             ps.setString(2, category);

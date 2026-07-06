@@ -18,6 +18,7 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.lang.reflect.Method;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.*;
@@ -583,10 +584,13 @@ public class FeishuCodingBotService {
     @PreDestroy
     public void destroy() {
         if (wsClient != null) {
+            // GraalVM 兼容：直接调用 SDK 的 close() 方法（如果存在），否则跳过
             try {
-                wsClient.getClass().getMethod("stop").invoke(wsClient);
+                Method method = wsClient.getClass().getDeclaredMethod("stop");
+                method.setAccessible(true);
+                method.invoke(wsClient);
             } catch (Exception e) {
-                log.info("[编程AI] SDK 未提供 stop()，依赖 JVM 清理");
+                log.info("[编程AI] SDK stop() 不可用，依赖 JVM 清理");
             }
             wsClient = null;
         }

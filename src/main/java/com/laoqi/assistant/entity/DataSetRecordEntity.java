@@ -8,7 +8,7 @@ import com.baomidou.mybatisplus.annotation.TableName;
 public class DataSetRecordEntity {
 
     @TableId(type = IdType.AUTO)
-    private Integer id;
+    private Long id;
     private String recordId;
     private String datasetId;
     private String dataJson;
@@ -20,8 +20,8 @@ public class DataSetRecordEntity {
     private String createdAt;
     private String updatedAt;
 
-    public Integer getId() { return id; }
-    public void setId(Integer id) { this.id = id; }
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
     public String getRecordId() { return recordId; }
     public void setRecordId(String recordId) { this.recordId = recordId; }
     public String getDatasetId() { return datasetId; }

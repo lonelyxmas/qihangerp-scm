@@ -15,9 +15,9 @@ import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 /**
- * 数据中心工具集 — 让 AI 可以通过对话操作数据集（SQLite数据库）。
+ * 数据中心工具集 — 让 AI 可以通过对话操作数据集。
  * 支持查询、新增、修改、删除数据记录。
- * 注意：数据保存在SQLite数据库中，不是笔记库JSON文件。
+ * 注意：数据保存在数据库中，不是笔记库JSON文件。
  */
 @Component
 public class DataTools {

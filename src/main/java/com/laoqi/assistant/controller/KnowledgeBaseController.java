@@ -126,7 +126,7 @@ public class KnowledgeBaseController {
             model.put("kbIndexCount", 0);
         }
         try {
-            model.put("kbTotalMessages", messageDbService.countByKb(id.intValue()));
+            model.put("kbTotalMessages", messageDbService.countByKb(id));
         } catch (Exception e) {
             model.put("kbTotalMessages", 0);
         }

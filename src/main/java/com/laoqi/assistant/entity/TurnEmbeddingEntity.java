@@ -8,14 +8,14 @@ import com.baomidou.mybatisplus.annotation.TableName;
 public class TurnEmbeddingEntity {
 
     @TableId(type = IdType.AUTO)
-    private Integer id;
+    private Long id;
     private String sessionId;
     private Integer turnOrder;
     private String embedding;
     private String createdAt;
 
-    public Integer getId() { return id; }
-    public void setId(Integer id) { this.id = id; }
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
     public String getSessionId() { return sessionId; }
     public void setSessionId(String sessionId) { this.sessionId = sessionId; }
     public Integer getTurnOrder() { return turnOrder; }

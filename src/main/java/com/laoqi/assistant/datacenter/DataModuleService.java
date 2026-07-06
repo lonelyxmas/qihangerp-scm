@@ -40,14 +40,14 @@ public class DataModuleService {
         try (Connection conn = dataSource.getConnection(); Statement stmt = conn.createStatement()) {
             stmt.execute("""
                 CREATE TABLE IF NOT EXISTS data_center_modules (
-                    id              INTEGER PRIMARY KEY AUTOINCREMENT,
-                    module_id       TEXT NOT NULL UNIQUE,
-                    name            TEXT NOT NULL,
+                    id              BIGINT AUTO_INCREMENT PRIMARY KEY,
+                    module_id       VARCHAR(128) NOT NULL UNIQUE,
+                    name            VARCHAR(255) NOT NULL,
                     description     TEXT,
-                    icon            TEXT,
+                    icon            VARCHAR(64),
                     sort_order      INTEGER DEFAULT 0,
-                    created_at      TEXT NOT NULL,
-                    updated_at      TEXT NOT NULL
+                    created_at      VARCHAR(32) NOT NULL,
+                    updated_at      VARCHAR(32) NOT NULL
                 )
                 """);
             log.info("Data center modules table initialized");

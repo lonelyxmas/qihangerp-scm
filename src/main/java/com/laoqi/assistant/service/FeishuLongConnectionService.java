@@ -17,6 +17,7 @@ import com.laoqi.assistant.model.Config;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import java.lang.reflect.Method;
 
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
@@ -382,11 +383,13 @@ public class FeishuLongConnectionService {
     @PreDestroy
     public void destroy() {
         if (wsClient != null) {
+            // GraalVM 兼容：直接调用 SDK 的 close() 方法（如果存在），否则跳过
             try {
-                // 尝试调用 SDK 的关闭方法
-                wsClient.getClass().getMethod("stop").invoke(wsClient);
+                Method method = wsClient.getClass().getDeclaredMethod("stop");
+                method.setAccessible(true);
+                method.invoke(wsClient);
             } catch (Exception e) {
-                log.info("[飞书长连接] SDK 未提供 stop() 方法，依赖 JVM 清理连接");
+                log.info("[飞书长连接] SDK stop() 不可用，依赖 JVM 清理连接");
             }
             wsClient = null;
         }
@@ -401,7 +404,9 @@ public class FeishuLongConnectionService {
     private void closeWsOnly() {
         if (wsClient != null) {
             try {
-                wsClient.getClass().getMethod("stop").invoke(wsClient);
+                Method method = wsClient.getClass().getDeclaredMethod("stop");
+                method.setAccessible(true);
+                method.invoke(wsClient);
             } catch (Exception e) {
                 // ignore
             }

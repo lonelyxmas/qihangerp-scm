@@ -98,8 +98,8 @@ public class ChatController {
     public Map<String, Object> kbMessages(@PathVariable Long kbId,
                                            @RequestParam(defaultValue = "0") int offset,
                                            @RequestParam(defaultValue = "60") int limit) {
-        List<MessageEntity> msgs = messageDbService.listByKb(kbId.intValue(), offset, limit);
-        long total = messageDbService.countByKb(kbId.intValue());
+        List<MessageEntity> msgs = messageDbService.listByKb(kbId, offset, limit);
+        long total = messageDbService.countByKb(kbId);
 
         // 翻转时间顺序（DB 返回 DESC，转成 ASC 给前端）
         List<Map<String, Object>> messages = new ArrayList<>();
@@ -126,7 +126,7 @@ public class ChatController {
         if (q == null || q.isBlank()) {
             return Map.of("ok", true, "messages", List.of());
         }
-        List<MessageEntity> msgs = messageDbService.searchByKb(kbId.intValue(), q, limit);
+        List<MessageEntity> msgs = messageDbService.searchByKb(kbId, q, limit);
         List<Map<String, Object>> messages = new ArrayList<>();
         for (MessageEntity me : msgs) {
             Map<String, Object> m = new LinkedHashMap<>();
@@ -292,7 +292,7 @@ public class ChatController {
     @DeleteMapping("/api/kb/{kbId}/clear")
     @ResponseBody
     public Map<String, Object> clearKbMessages(@PathVariable Long kbId) {
-        List<SessionEntity> sessions = sessionDbService.listByKb(kbId.intValue());
+        List<SessionEntity> sessions = sessionDbService.listByKb(kbId);
         for (SessionEntity se : sessions) {
             sessionService.deleteSession(se.getId());
         }
@@ -305,7 +305,7 @@ public class ChatController {
     @GetMapping("/api/kb/{kbId}/export")
     @ResponseBody
     public Map<String, Object> exportKbMessages(@PathVariable Long kbId) {
-        List<MessageEntity> msgs = messageDbService.listByKb(kbId.intValue(), 0, 99999);
+        List<MessageEntity> msgs = messageDbService.listByKb(kbId, 0, 99999);
         List<Map<String, Object>> messages = new ArrayList<>();
         for (MessageEntity me : msgs) {
             Map<String, Object> m = new LinkedHashMap<>();
@@ -334,7 +334,7 @@ public class ChatController {
     // ========== 辅助方法 ==========
 
     private String getOrCreateKbSession(Long kbId, String mode) {
-        SessionEntity latest = sessionDbService.findLatestByKb(kbId.intValue());
+        SessionEntity latest = sessionDbService.findLatestByKb(kbId);
         if (latest != null) return latest.getId();
 
         String id = UUID.randomUUID().toString().substring(0, 12);
@@ -344,7 +344,7 @@ public class ChatController {
         se.setSource("web");
         se.setTitle("连续对话");
         se.setMode(mode != null ? mode : "knowledge");
-        se.setKbId(kbId.intValue());
+        se.setKbId(kbId);
         se.setCreatedAt(now);
         se.setUpdatedAt(now);
         sessionDbService.save(se);

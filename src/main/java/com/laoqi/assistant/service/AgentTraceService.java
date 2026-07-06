@@ -14,7 +14,7 @@ import java.util.List;
 
 /**
  * Agent 决策追踪 — 记录每次对话的思考链、工具调用、结果，支持回溯查看 AI 推理过程。
- * 数据存储在 SQLite 的 agent_traces 表中。
+ * 数据存储在 agent_traces 表中。
  */
 @Service
 public class AgentTraceService {
@@ -36,14 +36,14 @@ public class AgentTraceService {
         try (Connection conn = dataSource.getConnection(); Statement stmt = conn.createStatement()) {
             stmt.execute("""
                 CREATE TABLE IF NOT EXISTS agent_traces (
-                    id          INTEGER PRIMARY KEY AUTOINCREMENT,
-                    session_id  TEXT NOT NULL,
+                    id          BIGINT AUTO_INCREMENT PRIMARY KEY,
+                    session_id  VARCHAR(255) NOT NULL,
                     step_index  INTEGER NOT NULL,
-                    step_type   TEXT NOT NULL,
+                    step_type   VARCHAR(64) NOT NULL,
                     content     TEXT NOT NULL,
                     details     TEXT,
-                    duration_ms INTEGER DEFAULT 0,
-                    created_at  TEXT NOT NULL
+                    duration_ms BIGINT DEFAULT 0,
+                    created_at  VARCHAR(32) NOT NULL
                 )
                 """);
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_traces_session ON agent_traces(session_id)");

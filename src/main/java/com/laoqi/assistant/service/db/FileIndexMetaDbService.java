@@ -36,14 +36,14 @@ public class FileIndexMetaDbService extends ServiceImpl<FileIndexMetaMapper, Fil
         try (Connection conn = dataSource.getConnection(); Statement stmt = conn.createStatement()) {
             stmt.execute("""
                 CREATE TABLE IF NOT EXISTS file_index_meta (
-                    id              INTEGER PRIMARY KEY AUTOINCREMENT,
-                    kb_id           INTEGER NOT NULL,
-                    file_path       TEXT NOT NULL,
-                    last_modified   INTEGER NOT NULL DEFAULT 0,
-                    file_size       INTEGER NOT NULL DEFAULT 0,
-                    content_hash    TEXT,
-                    last_indexed_at TEXT,
-                    created_at      TEXT
+                    id              BIGINT AUTO_INCREMENT PRIMARY KEY,
+                    kb_id           BIGINT NOT NULL,
+                    file_path       VARCHAR(1024) NOT NULL,
+                    last_modified   BIGINT NOT NULL DEFAULT 0,
+                    file_size       BIGINT NOT NULL DEFAULT 0,
+                    content_hash    VARCHAR(64),
+                    last_indexed_at VARCHAR(32),
+                    created_at      VARCHAR(32)
                 )
                 """);
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_file_meta_kb ON file_index_meta(kb_id)");

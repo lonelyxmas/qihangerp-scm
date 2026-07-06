@@ -32,17 +32,17 @@ public class MessageDbServiceImpl extends ServiceImpl<MessageMapper, MessageEnti
     }
 
     @Override
-    public List<MessageEntity> listByKb(Integer kbId, int offset, int limit) {
+    public List<MessageEntity> listByKb(Long kbId, int offset, int limit) {
         return messageMapper.listByKb(kbId, offset, limit);
     }
 
     @Override
-    public long countByKb(Integer kbId) {
+    public long countByKb(Long kbId) {
         return messageMapper.countByKb(kbId);
     }
 
     @Override
-    public List<MessageEntity> searchByKb(Integer kbId, String q, int limit) {
+    public List<MessageEntity> searchByKb(Long kbId, String q, int limit) {
         return messageMapper.searchByKb(kbId, q, limit);
     }
 }

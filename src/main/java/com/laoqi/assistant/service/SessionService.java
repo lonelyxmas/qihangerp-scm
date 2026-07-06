@@ -68,65 +68,65 @@ public class SessionService {
         try (Connection conn = dataSource.getConnection(); Statement stmt = conn.createStatement()) {
             stmt.execute("""
                 CREATE TABLE IF NOT EXISTS sessions (
-                    id         TEXT PRIMARY KEY,
-                    source     TEXT NOT NULL DEFAULT 'web',
-                    title      TEXT NOT NULL DEFAULT '新对话',
-                    chat_id    TEXT NOT NULL DEFAULT '',
-                    chat_type  TEXT NOT NULL DEFAULT '',
-                    mode       TEXT NOT NULL DEFAULT 'knowledge',
-                    kb_id      INTEGER NOT NULL DEFAULT 1,
-                    created_at TEXT NOT NULL,
-                    updated_at TEXT NOT NULL
+                    id         VARCHAR(255) PRIMARY KEY,
+                    source     VARCHAR(64) NOT NULL DEFAULT 'web',
+                    title      VARCHAR(255) NOT NULL DEFAULT '新对话',
+                    chat_id    VARCHAR(255) NOT NULL DEFAULT '',
+                    chat_type  VARCHAR(64) NOT NULL DEFAULT '',
+                    mode       VARCHAR(64) NOT NULL DEFAULT 'knowledge',
+                    kb_id      BIGINT NOT NULL DEFAULT 1,
+                    created_at VARCHAR(32) NOT NULL,
+                    updated_at VARCHAR(32) NOT NULL
                 )
                 """);
             // 迁移：为 sessions 补充 kb_id 列（兼容旧数据库）
-            try { stmt.execute("ALTER TABLE sessions ADD COLUMN kb_id INTEGER NOT NULL DEFAULT 1"); } catch (Exception ignored) {}
+            try { stmt.execute("ALTER TABLE sessions ADD COLUMN kb_id BIGINT DEFAULT 1"); } catch (Exception ignored) {}
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_sessions_kb ON sessions(kb_id)");
             stmt.execute("""
                 CREATE TABLE IF NOT EXISTS messages (
-                    id          INTEGER PRIMARY KEY AUTOINCREMENT,
-                    session_id  TEXT NOT NULL,
-                    source      TEXT NOT NULL DEFAULT 'web',
-                    role        TEXT NOT NULL,
+                    id          BIGINT AUTO_INCREMENT PRIMARY KEY,
+                    session_id  VARCHAR(255) NOT NULL,
+                    source      VARCHAR(64) NOT NULL DEFAULT 'web',
+                    role        VARCHAR(64) NOT NULL,
                     content     TEXT NOT NULL,
-                    mode        TEXT NOT NULL DEFAULT 'knowledge',
-                    kb_id       INTEGER,
-                    created_at  TEXT NOT NULL,
+                    mode        VARCHAR(64) NOT NULL DEFAULT 'knowledge',
+                    kb_id       BIGINT,
+                    created_at  VARCHAR(32) NOT NULL,
                     FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE
                 )
                 """);
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_messages_session ON messages(session_id, created_at)");
             // 迁移：为 messages 补充 kb_id 列（兼容旧数据库）
-            try { stmt.execute("ALTER TABLE messages ADD COLUMN kb_id INTEGER"); } catch (Exception ignored) {}
+            try { stmt.execute("ALTER TABLE messages ADD COLUMN kb_id BIGINT"); } catch (Exception ignored) {}
             try { stmt.execute("UPDATE messages SET kb_id = (SELECT kb_id FROM sessions WHERE sessions.id = messages.session_id) WHERE kb_id IS NULL"); } catch (Exception ignored) {}
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_messages_kb ON messages(kb_id)");
             stmt.execute("""
                 CREATE TABLE IF NOT EXISTS turn_embeddings (
-                    id          INTEGER PRIMARY KEY AUTOINCREMENT,
-                    session_id  TEXT NOT NULL,
+                    id          BIGINT AUTO_INCREMENT PRIMARY KEY,
+                    session_id  VARCHAR(255) NOT NULL,
                     turn_order  INTEGER NOT NULL,
                     embedding   TEXT NOT NULL,
-                    created_at  TEXT NOT NULL,
+                    created_at  VARCHAR(32) NOT NULL,
                     FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE
                 )
                 """);
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_turn_embeddings_session ON turn_embeddings(session_id)");
             stmt.execute("""
                 CREATE TABLE IF NOT EXISTS llm_profiles (
-                    id              INTEGER PRIMARY KEY AUTOINCREMENT,
-                    name            TEXT NOT NULL UNIQUE,
-                    api_key         TEXT NOT NULL DEFAULT '',
-                    base_url        TEXT NOT NULL DEFAULT 'https://api.deepseek.com',
-                    model           TEXT NOT NULL DEFAULT 'deepseek-chat',
+                    id              BIGINT AUTO_INCREMENT PRIMARY KEY,
+                    name            VARCHAR(128) NOT NULL UNIQUE,
+                    api_key         VARCHAR(512) NOT NULL DEFAULT '',
+                    base_url        VARCHAR(512) NOT NULL DEFAULT 'https://api.deepseek.com',
+                    model           VARCHAR(128) NOT NULL DEFAULT 'deepseek-chat',
                     timeout         INTEGER NOT NULL DEFAULT 600,
                     is_default      INTEGER NOT NULL DEFAULT 0,
                     vision_support  INTEGER NOT NULL DEFAULT 0,
-                    model_type      TEXT NOT NULL DEFAULT 'text'
+                    model_type      VARCHAR(32) NOT NULL DEFAULT 'text'
                 )
                 """);
             // 迁移：为旧数据填充 model_type
             try {
-                stmt.execute("ALTER TABLE llm_profiles ADD COLUMN model_type TEXT NOT NULL DEFAULT 'text'");
+                stmt.execute("ALTER TABLE llm_profiles ADD COLUMN model_type VARCHAR(32) DEFAULT 'text'");
             } catch (Exception ignored) {
                 // column already exists
             }
@@ -135,36 +135,36 @@ public class SessionService {
             log.info("New tables (sessions, messages, turn_embeddings, llm_profiles) initialized");
             stmt.execute("""
                 CREATE TABLE IF NOT EXISTS coding_records (
-                    id           INTEGER PRIMARY KEY AUTOINCREMENT,
-                    time         TEXT NOT NULL,
-                    start_time   TEXT NOT NULL DEFAULT '',
-                    end_time     TEXT NOT NULL DEFAULT '',
+                    id           BIGINT AUTO_INCREMENT PRIMARY KEY,
+                    time         VARCHAR(32) NOT NULL,
+                    start_time   VARCHAR(32) NOT NULL DEFAULT '',
+                    end_time     VARCHAR(32) NOT NULL DEFAULT '',
                     duration     INTEGER NOT NULL DEFAULT 0,
-                    ai_engine    TEXT NOT NULL DEFAULT 'pi',
+                    ai_engine    VARCHAR(64) NOT NULL DEFAULT 'pi',
                     message      TEXT NOT NULL,
                     response     TEXT NOT NULL DEFAULT '',
-                    elapsed      TEXT NOT NULL DEFAULT '',
+                    elapsed      VARCHAR(64) NOT NULL DEFAULT '',
                     success      INTEGER NOT NULL DEFAULT 0,
-                    source       TEXT NOT NULL DEFAULT 'feishu',
-                    project_dir  TEXT NOT NULL DEFAULT ''
+                    source       VARCHAR(64) NOT NULL DEFAULT 'feishu',
+                    project_dir  VARCHAR(512) NOT NULL DEFAULT ''
                 )
                 """);
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_coding_records_time ON coding_records(id DESC)");
             log.info("Table coding_records initialized");
             // 迁移：补充新字段（兼容旧数据库）
-            try { stmt.execute("ALTER TABLE coding_records ADD COLUMN start_time TEXT NOT NULL DEFAULT ''"); } catch (Exception ignored) {}
-            try { stmt.execute("ALTER TABLE coding_records ADD COLUMN end_time TEXT NOT NULL DEFAULT ''"); } catch (Exception ignored) {}
-            try { stmt.execute("ALTER TABLE coding_records ADD COLUMN duration INTEGER NOT NULL DEFAULT 0"); } catch (Exception ignored) {}
-            try { stmt.execute("ALTER TABLE coding_records ADD COLUMN ai_engine TEXT NOT NULL DEFAULT 'pi'"); } catch (Exception ignored) {}
+            try { stmt.execute("ALTER TABLE coding_records ADD COLUMN start_time VARCHAR(32) DEFAULT ''"); } catch (Exception ignored) {}
+            try { stmt.execute("ALTER TABLE coding_records ADD COLUMN end_time VARCHAR(32) DEFAULT ''"); } catch (Exception ignored) {}
+            try { stmt.execute("ALTER TABLE coding_records ADD COLUMN duration INTEGER DEFAULT 0"); } catch (Exception ignored) {}
+            try { stmt.execute("ALTER TABLE coding_records ADD COLUMN ai_engine VARCHAR(64) DEFAULT 'pi'"); } catch (Exception ignored) {}
 
             stmt.execute("""
                 CREATE TABLE IF NOT EXISTS knowledge_bases (
-                    id           INTEGER PRIMARY KEY AUTOINCREMENT,
-                    name         TEXT NOT NULL,
-                    notes_dir    TEXT NOT NULL,
+                    id           BIGINT AUTO_INCREMENT PRIMARY KEY,
+                    name         VARCHAR(255) NOT NULL,
+                    notes_dir    VARCHAR(512) NOT NULL,
                     labels       TEXT NOT NULL DEFAULT '{}',
                     sort_order   INTEGER NOT NULL DEFAULT 0,
-                    created_at   TEXT NOT NULL,
+                    created_at   VARCHAR(32) NOT NULL,
                     dir_settings TEXT NOT NULL DEFAULT '',
                     ignore_dirs  TEXT NOT NULL DEFAULT '',
                     ignore_files TEXT NOT NULL DEFAULT '',
@@ -172,27 +172,27 @@ public class SessionService {
                     feishu_push  INTEGER NOT NULL DEFAULT 1
                 )
                 """);
-            try { stmt.execute("ALTER TABLE knowledge_bases ADD COLUMN dir_settings TEXT NOT NULL DEFAULT ''"); } catch (Exception ignored) {}
-            try { stmt.execute("ALTER TABLE knowledge_bases ADD COLUMN ignore_dirs TEXT NOT NULL DEFAULT ''"); } catch (Exception ignored) {}
-            try { stmt.execute("ALTER TABLE knowledge_bases ADD COLUMN ignore_files TEXT NOT NULL DEFAULT ''"); } catch (Exception ignored) {}
-            try { stmt.execute("ALTER TABLE knowledge_bases ADD COLUMN auto_report INTEGER NOT NULL DEFAULT 1"); } catch (Exception ignored) {}
-            try { stmt.execute("ALTER TABLE knowledge_bases ADD COLUMN feishu_push INTEGER NOT NULL DEFAULT 1"); } catch (Exception ignored) {}
+            try { stmt.execute("ALTER TABLE knowledge_bases ADD COLUMN dir_settings TEXT DEFAULT ''"); } catch (Exception ignored) {}
+            try { stmt.execute("ALTER TABLE knowledge_bases ADD COLUMN ignore_dirs TEXT DEFAULT ''"); } catch (Exception ignored) {}
+            try { stmt.execute("ALTER TABLE knowledge_bases ADD COLUMN ignore_files TEXT DEFAULT ''"); } catch (Exception ignored) {}
+            try { stmt.execute("ALTER TABLE knowledge_bases ADD COLUMN auto_report INTEGER DEFAULT 1"); } catch (Exception ignored) {}
+            try { stmt.execute("ALTER TABLE knowledge_bases ADD COLUMN feishu_push INTEGER DEFAULT 1"); } catch (Exception ignored) {}
             log.info("Table knowledge_bases initialized");
 
             stmt.execute("""
                 CREATE TABLE IF NOT EXISTS collector_tasks (
-                    id             INTEGER PRIMARY KEY AUTOINCREMENT,
-                    task_id        TEXT NOT NULL UNIQUE,
-                    name           TEXT NOT NULL,
-                    task_type      TEXT NOT NULL DEFAULT 'ai_prompt',
-                    prompt_key     TEXT,
-                    url            TEXT,
-                    cron_expression TEXT,
+                    id             BIGINT AUTO_INCREMENT PRIMARY KEY,
+                    task_id        VARCHAR(128) NOT NULL UNIQUE,
+                    name           VARCHAR(255) NOT NULL,
+                    task_type      VARCHAR(64) NOT NULL DEFAULT 'ai_prompt',
+                    prompt_key     VARCHAR(128),
+                    url            VARCHAR(512),
+                    cron_expression VARCHAR(64),
                     enabled        INTEGER NOT NULL DEFAULT 1,
-                    dataset_id     TEXT,
+                    dataset_id     VARCHAR(128),
                     params_json    TEXT,
-                    created_at     TEXT NOT NULL,
-                    updated_at     TEXT NOT NULL
+                    created_at     VARCHAR(32) NOT NULL,
+                    updated_at     VARCHAR(32) NOT NULL
                 )
                 """);
             log.info("Table collector_tasks initialized");
@@ -202,18 +202,18 @@ public class SessionService {
             // 识图分析记录表
             stmt.execute("""
                 CREATE TABLE IF NOT EXISTS image_analyses (
-                    id           INTEGER PRIMARY KEY AUTOINCREMENT,
-                    image_name   TEXT NOT NULL,
-                    image_path   TEXT DEFAULT '',
-                    image_type   TEXT NOT NULL,
+                    id           BIGINT AUTO_INCREMENT PRIMARY KEY,
+                    image_name   VARCHAR(512) NOT NULL,
+                    image_path   VARCHAR(512) DEFAULT '',
+                    image_type   VARCHAR(64) NOT NULL,
                     prompt       TEXT NOT NULL,
                     result       TEXT DEFAULT '',
-                    model        TEXT DEFAULT '',
-                    source       TEXT NOT NULL DEFAULT 'upload',
-                    kb_id        INTEGER DEFAULT NULL,
-                    status       TEXT NOT NULL DEFAULT 'pending',
-                    created_at   TEXT NOT NULL,
-                    completed_at TEXT DEFAULT ''
+                    model        VARCHAR(128) DEFAULT '',
+                    source       VARCHAR(64) NOT NULL DEFAULT 'upload',
+                    kb_id        BIGINT DEFAULT NULL,
+                    status       VARCHAR(32) NOT NULL DEFAULT 'pending',
+                    created_at   VARCHAR(32) NOT NULL,
+                    completed_at VARCHAR(32) DEFAULT ''
                 )
                 """);
             log.info("Table image_analyses initialized");
@@ -221,15 +221,15 @@ public class SessionService {
             // 任务表
             stmt.execute("""
                 CREATE TABLE IF NOT EXISTS tasks (
-                    id          TEXT PRIMARY KEY,
-                    title       TEXT NOT NULL,
+                    id          VARCHAR(128) PRIMARY KEY,
+                    title       VARCHAR(512) NOT NULL,
                     description TEXT DEFAULT '',
-                    status      TEXT NOT NULL DEFAULT 'pending',
-                    priority    TEXT NOT NULL DEFAULT 'mid',
-                    due_date    TEXT DEFAULT '',
-                    created_at  TEXT NOT NULL,
-                    updated_at  TEXT NOT NULL,
-                    kb_id       INTEGER DEFAULT NULL
+                    status      VARCHAR(32) NOT NULL DEFAULT 'pending',
+                    priority    VARCHAR(32) NOT NULL DEFAULT 'mid',
+                    due_date    VARCHAR(32) DEFAULT '',
+                    created_at  VARCHAR(32) NOT NULL,
+                    updated_at  VARCHAR(32) NOT NULL,
+                    kb_id       BIGINT DEFAULT NULL
                 )
                 """);
             log.info("Table tasks initialized");
@@ -237,19 +237,19 @@ public class SessionService {
             // 提醒表
             stmt.execute("""
                 CREATE TABLE IF NOT EXISTS reminders (
-                    id             TEXT PRIMARY KEY,
-                    name           TEXT NOT NULL,
+                    id             VARCHAR(128) PRIMARY KEY,
+                    name           VARCHAR(255) NOT NULL,
                     message        TEXT DEFAULT '',
-                    type           TEXT NOT NULL,
-                    time           TEXT DEFAULT '09:00',
-                    date           TEXT DEFAULT '',
+                    type           VARCHAR(64) NOT NULL,
+                    time           VARCHAR(32) DEFAULT '09:00',
+                    date           VARCHAR(32) DEFAULT '',
                     day_of_week    INTEGER DEFAULT 0,
                     day_of_month   INTEGER DEFAULT 1,
-                    month_day      TEXT DEFAULT '',
+                    month_day      VARCHAR(64) DEFAULT '',
                     enabled        INTEGER DEFAULT 1,
-                    created_at     TEXT NOT NULL,
-                    last_triggered TEXT DEFAULT '',
-                    kb_id          INTEGER DEFAULT NULL
+                    created_at     VARCHAR(32) NOT NULL,
+                    last_triggered VARCHAR(32) DEFAULT '',
+                    kb_id          BIGINT DEFAULT NULL
                 )
                 """);
             log.info("Table reminders initialized");
@@ -257,40 +257,40 @@ public class SessionService {
             // 试卷识别表
             stmt.execute("""
                 CREATE TABLE IF NOT EXISTS exam_papers (
-                    id          INTEGER PRIMARY KEY AUTOINCREMENT,
-                    name        TEXT NOT NULL DEFAULT '',
-                    image_path  TEXT NOT NULL DEFAULT '',
-                    image_type  TEXT NOT NULL DEFAULT 'image/jpeg',
-                    kb_id       INTEGER,
-                    model       TEXT NOT NULL DEFAULT '',
-                    status      TEXT NOT NULL DEFAULT 'pending',
-                    created_at  TEXT NOT NULL
+                    id          BIGINT AUTO_INCREMENT PRIMARY KEY,
+                    name        VARCHAR(512) NOT NULL DEFAULT '',
+                    image_path  VARCHAR(512) NOT NULL DEFAULT '',
+                    image_type  VARCHAR(64) NOT NULL DEFAULT 'image/jpeg',
+                    kb_id       BIGINT,
+                    model       VARCHAR(128) NOT NULL DEFAULT '',
+                    status      VARCHAR(32) NOT NULL DEFAULT 'pending',
+                    created_at  VARCHAR(32) NOT NULL
                 )
                 """);
             stmt.execute("""
                 CREATE TABLE IF NOT EXISTS exam_questions (
-                    id              INTEGER PRIMARY KEY AUTOINCREMENT,
-                    paper_id        INTEGER NOT NULL,
+                    id              BIGINT AUTO_INCREMENT PRIMARY KEY,
+                    paper_id        BIGINT NOT NULL,
                     seq_num         INTEGER NOT NULL DEFAULT 0,
-                    question_type   TEXT NOT NULL DEFAULT '未知',
+                    question_type   VARCHAR(64) NOT NULL DEFAULT '未知',
                     content         TEXT NOT NULL DEFAULT '',
                     options         TEXT NOT NULL DEFAULT '',
                     answer          TEXT NOT NULL DEFAULT '',
                     explanation     TEXT NOT NULL DEFAULT '',
                     knowledge_tags  TEXT NOT NULL DEFAULT '',
                     difficulty      INTEGER NOT NULL DEFAULT 0,
-                    created_at      TEXT NOT NULL
+                    created_at      VARCHAR(32) NOT NULL
                 )
                 """);
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_exam_questions_paper ON exam_questions(paper_id)");
             stmt.execute("""
                 CREATE TABLE IF NOT EXISTS exam_practices (
-                    id          INTEGER PRIMARY KEY AUTOINCREMENT,
-                    question_id INTEGER NOT NULL,
+                    id          BIGINT AUTO_INCREMENT PRIMARY KEY,
+                    question_id BIGINT NOT NULL,
                     user_answer TEXT NOT NULL DEFAULT '',
                     is_correct  INTEGER NOT NULL DEFAULT 0,
                     used_time   INTEGER NOT NULL DEFAULT 0,
-                    created_at  TEXT NOT NULL
+                    created_at  VARCHAR(32) NOT NULL
                 )
                 """);
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_exam_practices_question ON exam_practices(question_id)");
@@ -299,68 +299,68 @@ public class SessionService {
             // 识题记录表
             stmt.execute("""
                 CREATE TABLE IF NOT EXISTS solve_sessions (
-                    id          INTEGER PRIMARY KEY AUTOINCREMENT,
-                    title       TEXT NOT NULL DEFAULT '新识题',
-                    image_name  TEXT NOT NULL DEFAULT '',
-                    image_path  TEXT NOT NULL DEFAULT '',
-                    image_type  TEXT NOT NULL DEFAULT 'image/jpeg',
+                    id          BIGINT AUTO_INCREMENT PRIMARY KEY,
+                    title       VARCHAR(512) NOT NULL DEFAULT '新识题',
+                    image_name  VARCHAR(512) NOT NULL DEFAULT '',
+                    image_path  VARCHAR(512) NOT NULL DEFAULT '',
+                    image_type  VARCHAR(64) NOT NULL DEFAULT 'image/jpeg',
                     image_data  BLOB,
-                    model       TEXT NOT NULL DEFAULT '',
+                    model       VARCHAR(128) NOT NULL DEFAULT '',
                     prompt      TEXT NOT NULL DEFAULT '',
                     answer      TEXT NOT NULL DEFAULT '',
-                    status      TEXT NOT NULL DEFAULT 'pending',
-                    created_at  TEXT NOT NULL
+                    status      VARCHAR(32) NOT NULL DEFAULT 'pending',
+                    created_at  VARCHAR(32) NOT NULL
                 )
                 """);
             stmt.execute("""
                 CREATE TABLE IF NOT EXISTS solve_follow_ups (
-                    id          INTEGER PRIMARY KEY AUTOINCREMENT,
-                    session_id  INTEGER NOT NULL,
+                    id          BIGINT AUTO_INCREMENT PRIMARY KEY,
+                    session_id  BIGINT NOT NULL,
                     question    TEXT NOT NULL DEFAULT '',
                     answer      TEXT NOT NULL DEFAULT '',
                     sort_order  INTEGER NOT NULL DEFAULT 0,
-                    created_at  TEXT NOT NULL
+                    created_at  VARCHAR(32) NOT NULL
                 )
                 """);
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_solve_follow_ups_session ON solve_follow_ups(session_id)");
             log.info("Table solve_sessions, solve_follow_ups initialized");
-            try { stmt.execute("ALTER TABLE solve_sessions ADD COLUMN image_type TEXT NOT NULL DEFAULT 'image/jpeg'"); } catch (Exception ignored) {}
+            try { stmt.execute("ALTER TABLE solve_sessions ADD COLUMN image_type VARCHAR(64) DEFAULT 'image/jpeg'"); } catch (Exception ignored) {}
             try { stmt.execute("ALTER TABLE solve_sessions ADD COLUMN image_data BLOB"); } catch (Exception ignored) {}
-            try { stmt.execute("ALTER TABLE solve_sessions ADD COLUMN prompt TEXT NOT NULL DEFAULT ''"); } catch (Exception ignored) {}
+            try { stmt.execute("ALTER TABLE solve_sessions ADD COLUMN prompt TEXT DEFAULT ''"); } catch (Exception ignored) {}
 
             // 笔记内容索引表
             stmt.execute("""
                 CREATE TABLE IF NOT EXISTS note_embeddings (
-                    id           INTEGER PRIMARY KEY AUTOINCREMENT,
-                    kb_id        INTEGER NOT NULL,
-                    file_path    TEXT NOT NULL,
+                    id           BIGINT AUTO_INCREMENT PRIMARY KEY,
+                    kb_id        BIGINT NOT NULL,
+                    file_path    VARCHAR(1024) NOT NULL,
                     chunk_index  INTEGER NOT NULL DEFAULT 0,
                     path_context TEXT NOT NULL DEFAULT '',
                     content      TEXT NOT NULL,
                     embedding    TEXT NOT NULL,
-                    content_hash TEXT NOT NULL,
-                    created_at   TEXT NOT NULL,
-                    updated_at   TEXT NOT NULL,
+                    content_hash VARCHAR(64) NOT NULL,
+                    created_at   VARCHAR(32) NOT NULL,
+                    updated_at   VARCHAR(32) NOT NULL,
                     UNIQUE(kb_id, file_path, chunk_index)
                 )
                 """);
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_note_embeddings_kb ON note_embeddings(kb_id)");
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_note_embeddings_path ON note_embeddings(kb_id, file_path)");
-            try { stmt.execute("ALTER TABLE note_embeddings ADD COLUMN path_context TEXT NOT NULL DEFAULT ''"); } catch (Exception ignored) {}
+            try { stmt.execute("ALTER TABLE note_embeddings ADD COLUMN path_context TEXT DEFAULT ''"); } catch (Exception ignored) {}
             log.info("Table note_embeddings initialized");
 
             // AI 分析结果与提示词表
             stmt.execute("""
                 CREATE TABLE IF NOT EXISTS ai_analysis (
-                    id          INTEGER PRIMARY KEY AUTOINCREMENT,
-                    kb_id       INTEGER NOT NULL,
-                    type        TEXT NOT NULL,
+                    id          BIGINT AUTO_INCREMENT PRIMARY KEY,
+                    kb_id       BIGINT NOT NULL,
+                    type        VARCHAR(64) NOT NULL,
                     content     TEXT NOT NULL,
                     prompt      TEXT,
-                    dir_path    TEXT,
-                    report_date TEXT,
-                    created_at  TEXT NOT NULL,
-                    updated_at  TEXT
+                    dir_path    VARCHAR(512),
+                    report_date VARCHAR(32),
+                    created_at  VARCHAR(32) NOT NULL,
+                    updated_at  VARCHAR(32)
                 )
                 """);
             // 迁移：为旧表补充 prompt 列（兼容旧数据库）

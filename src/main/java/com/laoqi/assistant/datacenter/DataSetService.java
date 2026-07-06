@@ -62,44 +62,44 @@ public class DataSetService {
         try (Connection conn = dataSource.getConnection(); Statement stmt = conn.createStatement()) {
             stmt.execute("""
                 CREATE TABLE IF NOT EXISTS data_center_datasets (
-                    id              INTEGER PRIMARY KEY AUTOINCREMENT,
-                    dataset_id      TEXT NOT NULL UNIQUE,
-                    name            TEXT NOT NULL,
+                    id              BIGINT AUTO_INCREMENT PRIMARY KEY,
+                    dataset_id      VARCHAR(128) NOT NULL UNIQUE,
+                    name            VARCHAR(255) NOT NULL,
                     description     TEXT,
-                    type            TEXT,
-                    status          TEXT,
+                    type            VARCHAR(64),
+                    status          VARCHAR(64),
                     schema_json     TEXT,
                     import_configs_json TEXT,
-                    module_id       TEXT,
-                    created_at      TEXT NOT NULL,
-                    updated_at      TEXT NOT NULL
+                    module_id       VARCHAR(128),
+                    created_at      VARCHAR(32) NOT NULL,
+                    updated_at      VARCHAR(32) NOT NULL
                 )
                 """);
             stmt.execute("""
                 CREATE TABLE IF NOT EXISTS data_center_records (
-                    id              INTEGER PRIMARY KEY AUTOINCREMENT,
-                    record_id       TEXT NOT NULL,
-                    dataset_id      TEXT NOT NULL,
+                    id              BIGINT AUTO_INCREMENT PRIMARY KEY,
+                    record_id       VARCHAR(128) NOT NULL,
+                    dataset_id      VARCHAR(128) NOT NULL,
                     data_json       TEXT NOT NULL,
-                    source          TEXT,
-                    content_hash    TEXT,
-                    record_num     TEXT,
-                    record_type     TEXT,
-                    record_status   TEXT,
-                    created_at      TEXT NOT NULL,
-                    updated_at      TEXT NOT NULL
+                    source          VARCHAR(64),
+                    content_hash    VARCHAR(64),
+                    record_num     VARCHAR(64),
+                    record_type     VARCHAR(64),
+                    record_status   VARCHAR(64),
+                    created_at      VARCHAR(32) NOT NULL,
+                    updated_at      VARCHAR(32) NOT NULL
                 )
                 """);
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_records_dataset ON data_center_records(dataset_id)");
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_records_hash ON data_center_records(dataset_id, content_hash)");
 
-            try { stmt.execute("ALTER TABLE data_center_datasets ADD COLUMN module_id TEXT"); } catch (Exception ignored) {}
-            try { stmt.execute("ALTER TABLE data_center_datasets ADD COLUMN type TEXT"); } catch (Exception ignored) {}
-            try { stmt.execute("ALTER TABLE data_center_datasets ADD COLUMN status TEXT"); } catch (Exception ignored) {}
-            try { stmt.execute("ALTER TABLE data_center_records ADD COLUMN record_num TEXT"); } catch (Exception ignored) {}
-            try { stmt.execute("ALTER TABLE data_center_records ADD COLUMN record_type TEXT"); } catch (Exception ignored) {}
-            try { stmt.execute("ALTER TABLE data_center_records ADD COLUMN record_status TEXT"); } catch (Exception ignored) {}
-            try { stmt.execute("ALTER TABLE data_center_records ADD COLUMN updated_at TEXT"); } catch (Exception ignored) {}
+            try { stmt.execute("ALTER TABLE data_center_datasets ADD COLUMN module_id VARCHAR(128)"); } catch (Exception ignored) {}
+            try { stmt.execute("ALTER TABLE data_center_datasets ADD COLUMN type VARCHAR(64)"); } catch (Exception ignored) {}
+            try { stmt.execute("ALTER TABLE data_center_datasets ADD COLUMN status VARCHAR(64)"); } catch (Exception ignored) {}
+            try { stmt.execute("ALTER TABLE data_center_records ADD COLUMN record_num VARCHAR(64)"); } catch (Exception ignored) {}
+            try { stmt.execute("ALTER TABLE data_center_records ADD COLUMN record_type VARCHAR(64)"); } catch (Exception ignored) {}
+            try { stmt.execute("ALTER TABLE data_center_records ADD COLUMN record_status VARCHAR(64)"); } catch (Exception ignored) {}
+            try { stmt.execute("ALTER TABLE data_center_records ADD COLUMN updated_at VARCHAR(32)"); } catch (Exception ignored) {}
 
             log.info("Data center tables initialized");
         } catch (Exception e) {
