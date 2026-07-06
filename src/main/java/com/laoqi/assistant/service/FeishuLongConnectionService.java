@@ -66,7 +66,7 @@ public class FeishuLongConnectionService {
     @PostConstruct
     public void init() {
         Config config = configService.load();
-        if (!config.isFeishuPollingEnabled()) {
+        if (!Boolean.TRUE.equals(config.isFeishuPollingEnabled())) {
             log.info("[飞书长连接] 未启用，跳过初始化");
             return;
         }

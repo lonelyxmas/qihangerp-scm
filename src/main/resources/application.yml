@@ -17,7 +17,7 @@ spring:
     default-property-inclusion: non_null
     time-zone: Asia/Shanghai
   datasource:
-    url: jdbc:sqlite:${ASSISTANT_CONFIG_DIR:.}/memory.db
+    url: jdbc:sqlite:${ASSISTANT_CONFIG_DIR:${user.dir}}/memory.db
     driver-class-name: org.sqlite.JDBC
   ai:
     deepseek:
@@ -29,7 +29,9 @@ spring:
         initial-interval: 2s
 
 app:
-  config-dir: ${ASSISTANT_CONFIG_DIR:.}
+  # 配置目录：默认当前工作目录（user.dir）
+  # 可通过环境变量 ASSISTANT_CONFIG_DIR 或 jpackage cfg 覆盖
+  config-dir: ${ASSISTANT_CONFIG_DIR:${user.dir}}
   timezone: Asia/Shanghai
   max-history-chars: 6000
 

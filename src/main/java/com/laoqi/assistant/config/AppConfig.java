@@ -15,8 +15,27 @@ public class AppConfig {
     private int maxHistoryChars = 6000;
 
     public Path getConfigDirPath() {
-        String dir = configDir != null ? configDir : ".";
+        String dir = configDir;
+        if (dir == null || dir.isEmpty()) {
+            dir = System.getProperty("user.dir", ".");
+        }
+        // 如果配置了 %XXX% 格式的环境变量，直接解析
+        if (dir.contains("%")) {
+            dir = resolveEnvVars(dir);
+        }
         return Paths.get(dir);
+    }
+
+    /** 解析字符串中的 %VAR% 环境变量 */
+    private static String resolveEnvVars(String s) {
+        int start = s.indexOf('%');
+        if (start < 0) return s;
+        int end = s.indexOf('%', start + 1);
+        if (end < 0) return s;
+        String varName = s.substring(start + 1, end);
+        String value = System.getenv(varName);
+        if (value == null) value = "";
+        return resolveEnvVars(s.substring(0, start) + value + s.substring(end + 1));
     }
 
     public Path getConfigFile() {

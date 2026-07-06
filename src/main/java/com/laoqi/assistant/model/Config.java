@@ -15,7 +15,7 @@ public class Config {
     private String feishuAppId;
     private String feishuAppSecret;
     private String feishuChatId;
-    private Boolean feishuPollingEnabled;
+    private Boolean feishuPollingEnabled = false;
     
     private String logFile;
     private Map<String, Map<String, List<String>>> columnSettings = new HashMap<>();
