@@ -1,4 +1,4 @@
-package com.laoqi.assistant.controller;
+package com.laoqi.assistant.controller.api;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -24,9 +24,9 @@ import java.util.regex.Pattern;
 
 @RestController
 @RequestMapping("/api/datacenter")
-public class DataSetController {
+public class DataApiController {
 
-    private static final Logger log = LoggerFactory.getLogger(DataSetController.class);
+    private static final Logger log = LoggerFactory.getLogger(DataApiController.class);
     private static final ObjectMapper mapper = new ObjectMapper();
     private static final Pattern JSON_BLOCK = Pattern.compile("```(?:json)?\\s*([\\s\\S]*?)\\s*```");
 
@@ -37,7 +37,7 @@ public class DataSetController {
     private final ConfigService configService;
     private final AiAnalysisCache analysisCache;
 
-    public DataSetController(DataSetService dataSetService,
+    public DataApiController(DataSetService dataSetService,
                              DataModuleService moduleService,
                              DataSetImportService importService,
                              LlmService llmService,
@@ -103,7 +103,6 @@ public class DataSetController {
                         summary.append("字段：").append(ds.get("fields")).append("\n");
                     }
 
-                    // 状态分布
                     if (ds.get("statusCount") != null) {
                         @SuppressWarnings("unchecked")
                         Map<String, Object> statusCount = (Map<String, Object>) ds.get("statusCount");
@@ -114,12 +113,10 @@ public class DataSetController {
                         summary.append("\n");
                     }
 
-                    // 趋势描述
                     if (ds.get("trendDesc") != null) {
                         summary.append("时间趋势：").append(ds.get("trendDesc")).append("\n");
                     }
 
-                    // 字段枚举分布
                     if (ds.get("fieldDistributions") != null) {
                         @SuppressWarnings("unchecked")
                         Map<String, Object> fieldDistributions = (Map<String, Object>) ds.get("fieldDistributions");

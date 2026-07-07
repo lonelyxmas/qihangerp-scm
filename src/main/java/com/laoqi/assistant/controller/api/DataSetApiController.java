@@ -1,4 +1,4 @@
-package com.laoqi.assistant.controller;
+package com.laoqi.assistant.controller.api;
 
 import com.laoqi.assistant.config.AppConfig;
 import com.laoqi.assistant.dto.ApiResult;
@@ -21,14 +21,14 @@ import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/data")
-public class DataController {
+public class DataSetApiController {
 
-    private static final Logger log = LoggerFactory.getLogger(DataController.class);
+    private static final Logger log = LoggerFactory.getLogger(DataSetApiController.class);
 
     private final ConfigService configService;
     private final AppConfig appConfig;
 
-    public DataController(ConfigService configService, AppConfig appConfig) {
+    public DataSetApiController(ConfigService configService, AppConfig appConfig) {
         this.configService = configService;
         this.appConfig = appConfig;
     }
