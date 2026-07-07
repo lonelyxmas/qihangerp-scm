@@ -243,8 +243,12 @@ public class DataSetService {
     }
 
     public List<Map<String, Object>> loadRecords(String datasetId) {
+        return loadRecords(datasetId, 0, Integer.MAX_VALUE);
+    }
+
+    public List<Map<String, Object>> loadRecords(String datasetId, int page, int size) {
         List<Map<String, Object>> result = new ArrayList<>();
-        List<DataSetRecordEntity> entities = recordDbService.listByDataset(datasetId);
+        List<DataSetRecordEntity> entities = recordDbService.listByDataset(datasetId, page, size);
         DataSet ds = getDataset(datasetId);
         for (DataSetRecordEntity entity : entities) {
             try {
@@ -273,6 +277,10 @@ public class DataSetService {
             }
         }
         return result;
+    }
+
+    public int countRecords(String datasetId) {
+        return recordDbService.countByDataset(datasetId);
     }
 
     public int addRecords(String datasetId, List<Map<String, Object>> newRecords, String source) {

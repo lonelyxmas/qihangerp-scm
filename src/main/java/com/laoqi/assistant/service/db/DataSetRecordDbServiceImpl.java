@@ -22,6 +22,11 @@ public class DataSetRecordDbServiceImpl extends ServiceImpl<DataSetRecordMapper,
     }
 
     @Override
+    public List<DataSetRecordEntity> listByDataset(String datasetId, int page, int size) {
+        return recordMapper.listByDatasetPage(datasetId, page, size);
+    }
+
+    @Override
     public int countByDataset(String datasetId) {
         return recordMapper.countByDataset(datasetId);
     }

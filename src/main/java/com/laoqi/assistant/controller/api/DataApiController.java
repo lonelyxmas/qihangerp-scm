@@ -270,15 +270,26 @@ public class DataApiController {
     @GetMapping("/datasets/{id}/records")
     public ResponseEntity<Map<String, Object>> getRecords(
             @PathVariable String id,
-            @RequestParam(required = false) String keyword) {
+            @RequestParam(required = false) String keyword,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
         try {
             List<Map<String, Object>> records;
+            int total;
             if (keyword != null && !keyword.isBlank()) {
                 records = dataSetService.searchRecords(id, keyword);
+                total = records.size();
+                int offset = page * size;
+                if (offset < records.size()) {
+                    records = records.subList(offset, Math.min(offset + size, records.size()));
+                } else {
+                    records = new ArrayList<>();
+                }
             } else {
-                records = dataSetService.loadRecords(id);
+                total = dataSetService.countRecords(id);
+                records = dataSetService.loadRecords(id, page * size, size);
             }
-            return ResponseEntity.ok(Map.of("ok", true, "data", records, "total", records.size()));
+            return ResponseEntity.ok(Map.of("ok", true, "data", records, "total", total, "page", page, "size", size));
         } catch (Exception e) {
             return ResponseEntity.ok(Map.of("ok", false, "error", e.getMessage()));
         }
