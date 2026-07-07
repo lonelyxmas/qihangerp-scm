@@ -219,61 +219,6 @@ public class KnowledgeBaseController {
         return "1.0/layout";
     }
 
-    // ========== 笔记库选择页面 ==========
-    @GetMapping("/notes")
-    public String notesIndex(Map<String, Object> model) {
-        var kbList = kbService.getAll();
-        model.put("kbList", kbList);
-        model.put("pageTitle", "选择笔记库");
-        model.put("contentFragment", "2.0/notes_select");
-        return "2.0/layout";
-    }
-
-    // ========== 笔记浏览页面（树结构） ==========
-    @GetMapping("/kb/{id}/notes")
-    public String notesTree(@PathVariable Long id,
-                            @RequestParam(required = false, defaultValue = "") String dir,
-                            Map<String, Object> model) {
-        KnowledgeBaseEntity kb = kbService.getById(id);
-        if (kb == null) return "redirect:/config";
-
-        model.put("kb", kb);
-        model.put("labels", parseLabels(kb.getLabels()));
-        model.put("rel", dir);
-        model.put("pageTitle", kb.getName() + " · 笔记");
-        model.put("contentFragment", "2.0/notes");
-        return "2.0/layout";
-    }
-
-    @GetMapping("/kb/{id}/notes/view")
-    public String viewFile(@PathVariable Long id, @RequestParam(defaultValue = "") String path,
-                           Map<String, Object> model) {
-        KnowledgeBaseEntity kb = kbService.getById(id);
-        if (kb == null) return "redirect:/config";
-
-        model.put("kb", kb);
-        model.put("labels", parseLabels(kb.getLabels()));
-
-        if (path.isEmpty()) return "redirect:/kb/" + id + "/notes";
-
-        Path target = safeResolve(kbDir(kb), path);
-        if (!Files.isRegularFile(target) || !target.toString().endsWith(".md"))
-            return "redirect:/kb/" + id + "/notes";
-
-        String content = FileUtil.readText(target);
-        content = MarkdownUtil.stripFrontmatter(content);
-        String html = MarkdownUtil.toHtml(content);
-        String displayName = target.getFileName().toString().replace(".md", "");
-        String parent = path.contains("/") ? path.substring(0, path.lastIndexOf('/')) : "";
-
-        model.put("title", displayName);
-        model.put("content", html);
-        model.put("parent", parent);
-        model.put("breadcrumbLinks", buildBreadcrumbLinks(parent));
-        model.put("pageTitle", displayName);
-        model.put("contentFragment", "1.0/view");
-        return "1.0/layout";
-    }
 
     // ========== 目录分析 API ==========
 
