@@ -9,7 +9,7 @@ import java.util.List;
 import java.util.Map;
 
 @Controller
-@RequestMapping("/v3")
+//@RequestMapping("/v3")
 public class ToolsController {
 
     private final KnowledgeBaseService kbService;
