@@ -161,7 +161,6 @@
 
         if (!title) { toast('请填写任务标题', 'error'); return; }
 
-<<<<<<< HEAD
         var params = new URLSearchParams();
         params.append('title', title);
         params.append('description', description);
@@ -173,27 +172,13 @@
             var url = '/api/tasks/update';
         } else {
             var url = '/api/tasks/add';
-=======
-        var data = { title: title, description: description, priority: priority, dueDate: dueDate };
-        if (id) {
-            data.id = id;
-            data.status = status;
-            var url = '/api/tasks/update';
-        } else {
-            var url = '/api/tasks/save';
->>>>>>> 346d844f0bb3ca71529f29145e2dd3c07e4aa325
         }
 
         try {
             var resp = await fetch(url, {
                 method: 'POST',
-<<<<<<< HEAD
                 headers: {'Content-Type': 'application/x-www-form-urlencoded'},
                 body: params.toString()
-=======
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify(data)
->>>>>>> 346d844f0bb3ca71529f29145e2dd3c07e4aa325
             });
             var result = await resp.json();
             if (result.ok) {
@@ -211,11 +196,7 @@
     async function deleteTask(id) {
         if (!confirm('确定要删除这个任务吗？')) return;
         try {
-<<<<<<< HEAD
             var resp = await fetch('/api/tasks/delete?id=' + encodeURIComponent(id), { method: 'POST' });
-=======
-            var resp = await fetch('/api/tasks/delete/' + id, { method: 'DELETE' });
->>>>>>> 346d844f0bb3ca71529f29145e2dd3c07e4aa325
             var result = await resp.json();
             if (result.ok) {
                 toast('任务已删除');
@@ -282,7 +263,6 @@
         if (!name) { toast('请填写提醒名称', 'error'); return; }
         if (!time) { toast('请选择提醒时间', 'error'); return; }
 
-<<<<<<< HEAD
         var params = new URLSearchParams();
         params.append('name', name);
         params.append('message', message);
@@ -298,23 +278,10 @@
             var dayOfMonth = parseInt(document.getElementById('reminder-dayOfMonth').value);
             if (!dayOfMonth || dayOfMonth < 1 || dayOfMonth > 31) { toast('请输入有效的日期(1-31)', 'error'); return; }
             params.append('dayOfMonth', dayOfMonth);
-=======
-        var data = { name: name, message: message, type: type, time: time };
-
-        if (type === 'once') {
-            data.date = document.getElementById('reminder-date').value;
-            if (!data.date) { toast('请选择日期', 'error'); return; }
-        } else if (type === 'weekly') {
-            data.dayOfWeek = parseInt(document.getElementById('reminder-dayOfWeek').value);
-        } else if (type === 'monthly') {
-            data.dayOfMonth = parseInt(document.getElementById('reminder-dayOfMonth').value);
-            if (!data.dayOfMonth || data.dayOfMonth < 1 || data.dayOfMonth > 31) { toast('请输入有效的日期(1-31)', 'error'); return; }
->>>>>>> 346d844f0bb3ca71529f29145e2dd3c07e4aa325
         } else if (type === 'yearly') {
             var month = parseInt(document.getElementById('reminder-yearMonth').value);
             var day = parseInt(document.getElementById('reminder-yearDay').value);
             if (!month || !day || month < 1 || month > 12 || day < 1 || day > 31) { toast('请输入有效的月份和日期', 'error'); return; }
-<<<<<<< HEAD
             params.append('monthDay', month + '-' + day);
         }
 
@@ -323,28 +290,13 @@
             var url = '/api/reminders/update';
         } else {
             var url = '/api/reminders/add';
-=======
-            data.monthDay = month + '-' + day;
-        }
-
-        if (id) {
-            data.id = id;
-            var url = '/api/reminders/update';
-        } else {
-            var url = '/api/reminders/save';
->>>>>>> 346d844f0bb3ca71529f29145e2dd3c07e4aa325
         }
 
         try {
             var resp = await fetch(url, {
                 method: 'POST',
-<<<<<<< HEAD
                 headers: {'Content-Type': 'application/x-www-form-urlencoded'},
                 body: params.toString()
-=======
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify(data)
->>>>>>> 346d844f0bb3ca71529f29145e2dd3c07e4aa325
             });
             var result = await resp.json();
             if (result.ok) {
@@ -368,11 +320,7 @@
         var id = document.getElementById('delete-id').value;
         if (!id) return;
         try {
-<<<<<<< HEAD
             var resp = await fetch('/api/reminders/delete?id=' + encodeURIComponent(id), { method: 'POST' });
-=======
-            var resp = await fetch('/api/reminders/delete/' + id, { method: 'DELETE' });
->>>>>>> 346d844f0bb3ca71529f29145e2dd3c07e4aa325
             var result = await resp.json();
             if (result.ok) {
                 toast('提醒已删除');
@@ -499,11 +447,7 @@
 
     async function toggleReminder(id, currentEnabled) {
         try {
-<<<<<<< HEAD
-            var resp = await fetch('/api/reminders/toggle?id=' +encodeURIComponent(id), { method: 'POST' });
-=======
-            var resp = await fetch('/api/reminders/toggle/' + id + '/' + (!currentEnabled), { method: 'PUT' });
->>>>>>> 346d844f0bb3ca71529f29145e2dd3c07e4aa325
+            var resp = await fetch('/api/reminders/toggle?id=' + encodeURIComponent(id), { method: 'POST' });
             var result = await resp.json();
             if (result.ok) {
                 toast(currentEnabled ? '提醒已暂停' : '提醒已启用');
@@ -528,20 +472,9 @@
         return text.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '\\"');
     }
 
-<<<<<<< HEAD
-    // 页面加载后渲染（始终调用，包括空数据时显示空状态）
+// 页面加载后渲染（始终调用，包括空数据时显示空状态）
     document.addEventListener('DOMContentLoaded', function() {
         renderTaskBoard(serverTasks || []);
         renderReminders(serverReminders || []);
-=======
-    // 页面加载后渲染
-    document.addEventListener('DOMContentLoaded', function() {
-        if (serverTasks && serverTasks.length > 0) {
-            renderTaskBoard(serverTasks);
-        }
-        if (serverReminders && serverReminders.length > 0) {
-            renderReminders(serverReminders);
-        }
->>>>>>> 346d844f0bb3ca71529f29145e2dd3c07e4aa325
     });
     </script>

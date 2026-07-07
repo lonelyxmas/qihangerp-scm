@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>笔灵 AI - 任务提醒</title>
-    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         :root {
@@ -122,34 +122,70 @@
             <h1 class="content-title">任务提醒</h1>
         </div>
         
-        <div class="content-body">
+        <div class="content-body" id="app">
             <div class="card">
                 <div class="card-header">
-                    <h2 class="card-title">📋 任务看板</h2>
-                    <button class="btn btn-primary" onclick="showAddTaskModal()">+ 添加任务</button>
+                    <h2 class="card-title">📋 任务i看板</h2>
+                    <button class="btn btn-primary" @click="showAddTaskModal()">+ 添加任务</button>
                 </div>
                 <div id="taskBoard">
                     <div class="task-board">
                         <div class="task-column column-pending">
                             <div class="column-header">
                                 <span class="column-title">📋 待办</span>
-                                <span class="column-count" id="pendingCount">0</span>
+                                <span class="column-count">{{ pendingTasks.length }}</span>
                             </div>
-                            <div id="pendingTasks"></div>
+                            <div v-if="pendingTasks.length === 0" style="text-align:center;padding:20px;color:#94a3b8;font-size:13px;">暂无任务</div>
+                            <div v-else>
+                                <div v-for="task in pendingTasks" :key="task.id" 
+                                     class="task-card" @click="showEditTaskModal(task)">
+                                    <div class="task-title">{{ task.title }}</div>
+                                    <div class="task-meta">
+                                        <span :class="'priority-' + task.priority">
+                                            {{ task.priority === 'high' ? '🔴' : (task.priority === 'mid' ? '🟡' : '🟢') }}
+                                        </span>
+                                        <span v-if="task.dueDate" class="task-due">📅 {{ formatDate(task.dueDate) }}</span>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                         <div class="task-column column-progress">
                             <div class="column-header">
                                 <span class="column-title">🔄 进行中</span>
-                                <span class="column-count" id="progressCount">0</span>
+                                <span class="column-count">{{ progressTasks.length }}</span>
                             </div>
-                            <div id="progressTasks"></div>
+                            <div v-if="progressTasks.length === 0" style="text-align:center;padding:20px;color:#94a3b8;font-size:13px;">暂无任务</div>
+                            <div v-else>
+                                <div v-for="task in progressTasks" :key="task.id" 
+                                     class="task-card" @click="showEditTaskModal(task)">
+                                    <div class="task-title">{{ task.title }}</div>
+                                    <div class="task-meta">
+                                        <span :class="'priority-' + task.priority">
+                                            {{ task.priority === 'high' ? '🔴' : (task.priority === 'mid' ? '🟡' : '🟢') }}
+                                        </span>
+                                        <span v-if="task.dueDate" class="task-due">📅 {{ formatDate(task.dueDate) }}</span>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                         <div class="task-column column-done">
                             <div class="column-header">
                                 <span class="column-title">✅ 已完成</span>
-                                <span class="column-count" id="doneCount">0</span>
+                                <span class="column-count">{{ doneTasks.length }}</span>
                             </div>
-                            <div id="doneTasks"></div>
+                            <div v-if="doneTasks.length === 0" style="text-align:center;padding:20px;color:#94a3b8;font-size:13px;">暂无任务</div>
+                            <div v-else>
+                                <div v-for="task in doneTasks" :key="task.id" 
+                                     class="task-card" @click="showEditTaskModal(task)">
+                                    <div class="task-title">{{ task.title }}</div>
+                                    <div class="task-meta">
+                                        <span :class="'priority-' + task.priority">
+                                            {{ task.priority === 'high' ? '🔴' : (task.priority === 'mid' ? '🟡' : '🟢') }}
+                                        </span>
+                                        <span v-if="task.dueDate" class="task-due">📅 {{ formatDate(task.dueDate) }}</span>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -161,30 +197,46 @@
                 <div class="card-header">
                     <h2 class="card-title">⏰ 定时提醒</h2>
                     <div style="display:flex;gap:8px;align-items:center;">
-                        <span style="font-size:13px;color:#94a3b8;">已启用: <span id="enabledReminderCount">0</span></span>
-                        <button class="btn btn-primary" onclick="showAddReminderModal()">+ 添加提醒</button>
+                        <span style="font-size:13px;color:#94a3b8;">已启用: {{ enabledReminderCount }}</span>
+                        <button class="btn btn-primary" @click="showAddReminderModal()">+ 添加提醒</button>
                     </div>
                 </div>
-                <div id="reminderGrid"></div>
-                <div id="reminderEmpty" style="display:none;text-align:center;padding:40px 20px;border:2px dashed #e2e8f0;background:#f8fafc;border-radius:var(--radius-md);">
+                <div v-if="reminders.length === 0" style="text-align:center;padding:40px 20px;border:2px dashed #e2e8f0;background:#f8fafc;border-radius:var(--radius-md);">
                     <div style="font-size:48px;margin-bottom:12px;">⏰</div>
                     <div style="font-size:16px;font-weight:500;margin-bottom:8px;color:#64748b;">暂无提醒</div>
                     <div style="font-size:14px;color:#94a3b8;">点击上方「添加提醒」按钮创建一个新的定时提醒</div>
+                </div>
+                <div v-else class="reminder-grid">
+                    <div v-for="reminder in reminders" :key="reminder.id" class="reminder-card">
+                        <div class="reminder-header">
+                            <span class="reminder-name">{{ reminder.name }}</span>
+                            <div :class="['reminder-toggle', { on: reminder.enabled }]" @click="toggleReminder(reminder.id)"></div>
+                        </div>
+                        <div v-if="reminder.message" class="reminder-message">{{ reminder.message }}</div>
+                        <div class="reminder-schedule">
+                            <span>⏰</span>
+                            <span>{{ getScheduleText(reminder) }}</span>
+                        </div>
+                        <div style="margin-top:12px;display:flex;gap:8px;">
+                            <button class="btn btn-secondary" style="padding:4px 10px;font-size:12px;" @click="showEditReminderModal(reminder.id)">编辑</button>
+                            <button class="btn btn-danger" style="padding:4px 10px;font-size:12px;" @click="openDeleteModal(reminder.id, 'reminder')">删除</button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </main>
     
-    <div class="modal-overlay" id="task-modal">
+    <div class="modal-overlay" :class="{ show: showTaskModal }" @click.self="showTaskModal = false">
         <div class="modal">
-            <h3 id="task-modal-title">添加任务</h3>
-            <input type="hidden" id="task-id">
-            <div class="form-group"><label>标题 *</label><input type="text" id="task-title" class="form-control" placeholder="任务标题"></div>
-            <div class="form-group"><label>描述</label><textarea id="task-description" class="form-control" rows="3" placeholder="任务描述（可选）"></textarea></div>
+            <h3>{{ isEditingTask ? '编辑任务' : '添加任务' }}</h3>
+            <input type="hidden" v-model="editingTask.id">
+            <div class="form-group"><label>标题 *</label><input type="text" v-model="editingTask.title" class="form-control" placeholder="任务标题"></div>
+            <div class="form-group"><label>描述</label><textarea v-model="editingTask.description" class="form-control" rows="3" placeholder="任务描述（可选）"></textarea></div>
             <div class="form-row">
                 <div class="form-group">
                     <label>优先级</label>
-                    <select id="task-priority" class="form-control">
+                    <select v-model="editingTask.priority" class="form-control">
                         <option value="high">🔴 高优先级</option>
                         <option value="mid" selected>🟡 中优先级</option>
                         <option value="low">🟢 低优先级</option>
@@ -192,33 +244,33 @@
                 </div>
                 <div class="form-group">
                     <label>截止日期</label>
-                    <input type="date" id="task-dueDate" class="form-control">
+                    <input type="date" v-model="editingTask.dueDate" class="form-control">
                 </div>
             </div>
-            <div class="form-group" id="edit-status-group" style="display:none;">
+            <div class="form-group" v-if="isEditingTask">
                 <label>状态</label>
-                <select id="task-status" class="form-control">
+                <select v-model="editingTask.status" class="form-control">
                     <option value="pending">📋 待办</option>
                     <option value="in_progress">🔄 进行中</option>
                     <option value="done">✅ 已完成</option>
                 </select>
             </div>
             <div class="modal-actions">
-                <button class="btn btn-secondary" onclick="closeModal('task-modal')">取消</button>
-                <button class="btn btn-primary" onclick="saveTask()">保存</button>
+                <button class="btn btn-secondary" @click="showTaskModal = false">取消</button>
+                <button class="btn btn-primary" @click="saveTask()">保存</button>
             </div>
         </div>
     </div>
     
-    <div class="modal-overlay" id="reminder-modal">
+    <div class="modal-overlay" :class="{ show: showReminderModal }" @click.self="showReminderModal = false">
         <div class="modal">
-            <h3 id="reminder-modal-title">添加提醒</h3>
-            <input type="hidden" id="reminder-id">
-            <div class="form-group"><label>提醒名称 *</label><input type="text" id="reminder-name" class="form-control" placeholder="例如：下班日报提醒"></div>
-            <div class="form-group"><label>提醒消息</label><textarea id="reminder-message" class="form-control" rows="3" placeholder="提醒内容（可选）"></textarea></div>
+            <h3>{{ isEditingReminder ? '编辑提醒' : '添加提醒' }}</h3>
+            <input type="hidden" v-model="editingReminder.id">
+            <div class="form-group"><label>提醒名称 *</label><input type="text" v-model="editingReminder.name" class="form-control" placeholder="例如：下班日报提醒"></div>
+            <div class="form-group"><label>提醒消息</label><textarea v-model="editingReminder.message" class="form-control" rows="3" placeholder="提醒内容（可选）"></textarea></div>
             <div class="form-group">
                 <label>提醒类型 *</label>
-                <select id="reminder-type" class="form-control" onchange="onReminderTypeChange()">
+                <select v-model="editingReminder.type" class="form-control" @change="onReminderTypeChange()">
                     <option value="daily">📅 每天 - 每天定时提醒</option>
                     <option value="once">🔔 一次 - 指定日期提醒</option>
                     <option value="weekly">📆 每周 - 每周特定星期几提醒</option>
@@ -227,395 +279,273 @@
                 </select>
             </div>
             <div class="form-row">
-                <div class="form-group" style="flex:1;"><label>提醒时间 *</label><input type="time" id="reminder-time" class="form-control" value="09:00"></div>
-                <div class="form-group" id="reminder-weekday-group" style="flex:1;display:none;"><label>星期几</label><select id="reminder-dayOfWeek" class="form-control"><option value="1">周一</option><option value="2">周二</option><option value="3">周三</option><option value="4">周四</option><option value="5">周五</option><option value="6">周六</option><option value="7">周日</option></select></div>
-                <div class="form-group" id="reminder-once-group" style="flex:1;display:none;"><label>日期</label><input type="date" id="reminder-date" class="form-control"></div>
-                <div class="form-group" id="reminder-monthly-group" style="flex:1;display:none;"><label>几号</label><input type="number" id="reminder-dayOfMonth" class="form-control" min="1" max="31" placeholder="1-31"></div>
-                <div class="form-group" id="reminder-yearly-group" style="flex:2;display:none;"><label>几月几号</label><div style="display:flex;gap:8px;align-items:center;"><input type="number" id="reminder-yearMonth" class="form-control" min="1" max="12" placeholder="月" style="width:60px;"><span>月</span><input type="number" id="reminder-yearDay" class="form-control" min="1" max="31" placeholder="日" style="width:60px;"><span>日</span></div></div>
+                <div class="form-group" style="flex:1;"><label>提醒时间 *</label><input type="time" v-model="editingReminder.time" class="form-control" value="09:00"></div>
+                <div class="form-group" v-if="editingReminder.type === 'weekly'" style="flex:1;"><label>星期几</label><select v-model="editingReminder.dayOfWeek" class="form-control"><option value="1">周一</option><option value="2">周二</option><option value="3">周三</option><option value="4">周四</option><option value="5">周五</option><option value="6">周六</option><option value="7">周日</option></select></div>
+                <div class="form-group" v-if="editingReminder.type === 'once'" style="flex:1;"><label>日期</label><input type="date" v-model="editingReminder.date" class="form-control"></div>
+                <div class="form-group" v-if="editingReminder.type === 'monthly'" style="flex:1;"><label>几号</label><input type="number" v-model="editingReminder.dayOfMonth" class="form-control" min="1" max="31" placeholder="1-31"></div>
+                <div class="form-group" v-if="editingReminder.type === 'yearly'" style="flex:2;"><label>几月几号</label><div style="display:flex;gap:8px;align-items:center;"><input type="number" v-model="reminderYearMonth" class="form-control" min="1" max="12" placeholder="月" style="width:60px;"><span>月</span><input type="number" v-model="reminderYearDay" class="form-control" min="1" max="31" placeholder="日" style="width:60px;"><span>日</span></div></div>
             </div>
             <div class="modal-actions">
-                <button class="btn btn-secondary" onclick="closeModal('reminder-modal')">取消</button>
-                <button class="btn btn-primary" onclick="saveReminder()">保存</button>
+                <button class="btn btn-secondary" @click="showReminderModal = false">取消</button>
+                <button class="btn btn-primary" @click="saveReminder()">保存</button>
             </div>
         </div>
     </div>
     
-    <div class="modal-overlay" id="delete-modal">
+    <div class="modal-overlay" :class="{ show: showDeleteModal }" @click.self="showDeleteModal = false">
         <div class="modal" style="width:400px;">
             <h3>确认删除</h3>
             <p style="color:#94a3b8;font-size:13px;">确定要删除吗？此操作不可撤销。</p>
-            <input type="hidden" id="delete-id">
-            <input type="hidden" id="delete-type">
+            <input type="hidden" v-model="deleteId">
+            <input type="hidden" v-model="deleteType">
             <div class="modal-actions">
-                <button class="btn btn-secondary" onclick="closeModal('delete-modal')">取消</button>
-                <button class="btn btn-danger" onclick="confirmDelete()">删除</button>
+                <button class="btn btn-secondary" @click="showDeleteModal = false">取消</button>
+                <button class="btn btn-danger" @click="confirmDelete()">删除</button>
             </div>
         </div>
     </div>
     
     <script>
-var currentKbId = /*[[${selectedKb != null ? selectedKb.id : null}]]*/ null;
-        var tasks = [];
-        var reminders = [];
-        
-        document.addEventListener('DOMContentLoaded', function() {
-            loadTasks();
-            loadReminders();
-        });
-        
-        function navigate(url) {
-            window.location.href = url;
-        }
-        
-        function onKbChange() {
-        }
-        
-        function loadTasks() {
-            var url = '/v3/api/tasks';
-            if (currentKbId) url += '?kbId=' + currentKbId;
-            
-            var xhr = new XMLHttpRequest();
-            xhr.open('GET', url);
-            xhr.onload = function() {
-                if (xhr.status === 200) {
-                    var data = JSON.parse(xhr.responseText);
-                    if (data.ok && data.tasks) {
-                        tasks = data.tasks;
-                        renderTasks();
+        const { createApp, ref, computed, onMounted } = Vue;
+
+        createApp({
+            setup() {
+                const currentKbId = ref(/*[[${selectedKb != null ? selectedKb.id : null}]]*/ null);
+                const tasks = ref([]);
+                const reminders = ref([]);
+                
+                const showTaskModal = ref(false);
+                const isEditingTask = ref(false);
+                const editingTask = ref({
+                    id: '',
+                    title: '',
+                    description: '',
+                    priority: 'mid',
+                    dueDate: '',
+                    status: 'pending'
+                });
+                
+                const showReminderModal = ref(false);
+                const isEditingReminder = ref(false);
+                const editingReminder = ref({
+                    id: '',
+                    name: '',
+                    message: '',
+                    type: 'daily',
+                    time: '09:00',
+                    date: '',
+                    dayOfWeek: '1',
+                    dayOfMonth: '',
+                    monthDay: ''
+                });
+                const reminderYearMonth = ref('');
+                const reminderYearDay = ref('');
+                
+                const showDeleteModal = ref(false);
+                const deleteId = ref('');
+                const deleteType = ref('');
+
+                const pendingTasks = computed(() => tasks.value.filter(t => t.status === 'pending'));
+                const progressTasks = computed(() => tasks.value.filter(t => t.status === 'in_progress'));
+                const doneTasks = computed(() => tasks.value.filter(t => t.status === 'done'));
+                const enabledReminderCount = computed(() => reminders.value.filter(r => r.enabled).length);
+
+                async function loadTasks() {
+                    let url = '/api/tasks';
+                    if (currentKbId.value) url += '?kbId=' + currentKbId.value;
+                    
+                    const r = await fetch(url);
+                    const d = await r.json();
+                    if (d.ok && d.tasks) {
+                        tasks.value = d.tasks;
                     }
                 }
-            };
-            xhr.send();
-        }
-        
-        function renderTasks() {
-            var pending = tasks.filter(function(t) { return t.status === 'pending'; });
-            var progress = tasks.filter(function(t) { return t.status === 'in_progress'; });
-            var done = tasks.filter(function(t) { return t.status === 'done'; });
-            
-            document.getElementById('pendingCount').textContent = pending.length;
-            document.getElementById('progressCount').textContent = progress.length;
-            document.getElementById('doneCount').textContent = done.length;
-            
-            renderTaskColumn('pendingTasks', pending);
-            renderTaskColumn('progressTasks', progress);
-            renderTaskColumn('doneTasks', done);
-        }
-        
-        function renderTaskColumn(containerId, taskList) {
-            var container = document.getElementById(containerId);
-            container.innerHTML = '';
-            
-            if (taskList.length === 0) {
-                container.innerHTML = '<div style="text-align:center;padding:20px;color:#94a3b8;font-size:13px;">暂无任务</div>';
-                return;
-            }
-            
-            taskList.forEach(function(task) {
-                var div = document.createElement('div');
-                div.className = 'task-card';
-                div.onclick = function() { showEditTaskModal(task); };
-                
-                var priorityLabel = task.priority === 'high' ? '🔴' : (task.priority === 'mid' ? '🟡' : '🟢');
-                var dueText = task.dueDate ? '<span class="task-due">📅 ' + formatDate(task.dueDate) + '</span>' : '';
-                
-                div.innerHTML = `
-                    <div class="task-title">${task.title}</div>
-                    <div class="task-meta">
-                        <span class="priority-${task.priority}">${priorityLabel}</span>
-                        ${dueText}
-                    </div>
-                `;
-                container.appendChild(div);
-            });
-        }
-        
-        function loadReminders() {
-            var url = '/v3/api/reminders';
-            if (currentKbId) url += '?kbId=' + currentKbId;
-            
-            var xhr = new XMLHttpRequest();
-            xhr.open('GET', url);
-            xhr.onload = function() {
-                if (xhr.status === 200) {
-                    var data = JSON.parse(xhr.responseText);
-                    if (data.ok && data.reminders) {
-                        reminders = data.reminders;
-                        renderReminders();
+
+                async function loadReminders() {
+                    let url = '/api/reminders';
+                    if (currentKbId.value) url += '?kbId=' + currentKbId.value;
+                    
+                    const r = await fetch(url);
+                    const d = await r.json();
+                    reminders.value = d;
+                }
+
+                function showAddTaskModal() {
+                    isEditingTask.value = false;
+                    editingTask.value = { id: '', title: '', description: '', priority: 'mid', dueDate: '', status: 'pending' };
+                    showTaskModal.value = true;
+                }
+
+                function showEditTaskModal(task) {
+                    isEditingTask.value = true;
+                    editingTask.value = { ...task };
+                    showTaskModal.value = true;
+                }
+
+                async function saveTask() {
+                    if (!editingTask.value.title.trim()) {
+                        alert('请输入任务标题');
+                        return;
+                    }
+                    
+                    let url = editingTask.value.id ? '/api/tasks/update' : '/api/tasks/add';
+                    const formData = new FormData();
+                    formData.append('title', editingTask.value.title);
+                    formData.append('description', editingTask.value.description || '');
+                    formData.append('priority', editingTask.value.priority);
+                    formData.append('dueDate', editingTask.value.dueDate || '');
+                    if (editingTask.value.id) {
+                        formData.append('id', editingTask.value.id);
+                        formData.append('status', editingTask.value.status);
+                    }
+                    if (currentKbId.value) {
+                        formData.append('kbId', currentKbId.value);
+                    }
+                    
+                    const r = await fetch(url, { method: 'POST', body: formData });
+                    const d = await r.json();
+                    if (d.ok) {
+                        showTaskModal.value = false;
+                        await loadTasks();
                     }
                 }
-            };
-            xhr.send();
-        }
-        
-        function renderReminders() {
-            var grid = document.getElementById('reminderGrid');
-            var empty = document.getElementById('reminderEmpty');
-            var enabledCount = reminders.filter(function(r) { return r.enabled; }).length;
-            
-            document.getElementById('enabledReminderCount').textContent = enabledCount;
-            
-            if (reminders.length === 0) {
-                grid.innerHTML = '';
-                empty.style.display = 'block';
-                return;
-            }
-            
-            empty.style.display = 'none';
-            grid.innerHTML = '';
-            
-            reminders.forEach(function(reminder) {
-                var div = document.createElement('div');
-                div.className = 'reminder-card';
-                
-                var toggleClass = reminder.enabled ? 'reminder-toggle on' : 'reminder-toggle';
-                var scheduleText = getScheduleText(reminder);
-                
-                div.innerHTML = `
-                    <div class="reminder-header">
-                        <span class="reminder-name">${reminder.name}</span>
-                        <div class="${toggleClass}" onclick="toggleReminder('${reminder.id}')"></div>
-                    </div>
-                    ${reminder.message ? '<div class="reminder-message">' + reminder.message + '</div>' : ''}
-                    <div class="reminder-schedule">
-                        <span>⏰</span>
-                        <span>${scheduleText}</span>
-                    </div>
-                    <div style="margin-top:12px;display:flex;gap:8px;">
-                        <button class="btn btn-secondary" style="padding:4px 10px;font-size:12px;" onclick="showEditReminderModal('${reminder.id}')">编辑</button>
-                        <button class="btn btn-danger" style="padding:4px 10px;font-size:12px;" onclick="showDeleteModal('${reminder.id}', 'reminder')">删除</button>
-                    </div>
-                `;
-                grid.appendChild(div);
-            });
-        }
-        
-        function getScheduleText(reminder) {
-            var time = reminder.time || '09:00';
-            var type = reminder.type || 'daily';
-            
-            switch(type) {
-                case 'daily': return '每天 ' + time;
-                case 'once': return '一次 ' + (reminder.date || '') + ' ' + time;
-                case 'weekly': 
-                    var days = ['', '周一', '周二', '周三', '周四', '周五', '周六', '周日'];
-                    return '每周' + (days[parseInt(reminder.dayOfWeek) || 1]) + ' ' + time;
-                case 'monthly': return '每月' + (reminder.dayOfMonth || 1) + '号 ' + time;
-                case 'yearly': return '每年' + (reminder.monthDay || '1月1日') + ' ' + time;
-                default: return time;
-            }
-        }
-        
-        function showAddTaskModal() {
-            document.getElementById('task-modal-title').textContent = '添加任务';
-            document.getElementById('task-id').value = '';
-            document.getElementById('task-title').value = '';
-            document.getElementById('task-description').value = '';
-            document.getElementById('task-priority').value = 'mid';
-            document.getElementById('task-dueDate').value = '';
-            document.getElementById('edit-status-group').style.display = 'none';
-            document.getElementById('task-modal').classList.add('show');
-        }
-        
-        function showEditTaskModal(task) {
-            document.getElementById('task-modal-title').textContent = '编辑任务';
-            document.getElementById('task-id').value = task.id;
-            document.getElementById('task-title').value = task.title;
-            document.getElementById('task-description').value = task.description || '';
-            document.getElementById('task-priority').value = task.priority || 'mid';
-            document.getElementById('task-dueDate').value = task.dueDate || '';
-            document.getElementById('edit-status-group').style.display = 'block';
-            document.getElementById('task-status').value = task.status || 'pending';
-            document.getElementById('task-modal').classList.add('show');
-        }
-        
-        function saveTask() {
-            var id = document.getElementById('task-id').value;
-            var title = document.getElementById('task-title').value.trim();
-            var description = document.getElementById('task-description').value.trim();
-            var priority = document.getElementById('task-priority').value;
-            var dueDate = document.getElementById('task-dueDate').value;
-            var status = document.getElementById('task-status').value;
-            
-            if (!title) {
-                alert('请输入任务标题');
-                return;
-            }
-            
-            var url = id ? '/v3/api/tasks/update' : '/v3/api/tasks/add';
-            var params = 'title=' + encodeURIComponent(title) + 
-                '&description=' + encodeURIComponent(description) + 
-                '&priority=' + priority + 
-                '&dueDate=' + encodeURIComponent(dueDate);
-            
-            if (id) {
-                params += '&taskId=' + encodeURIComponent(id) + '&status=' + status;
-            }
-            if (currentKbId) {
-                params += '&kbId=' + currentKbId;
-            }
-            
-            var xhr = new XMLHttpRequest();
-            xhr.open('POST', url);
-            xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
-            xhr.onload = function() {
-                if (xhr.status === 200) {
-                    closeModal('task-modal');
+
+                function showAddReminderModal() {
+                    isEditingReminder.value = false;
+                    editingReminder.value = {
+                        id: '', name: '', message: '', type: 'daily',
+                        time: '09:00', date: '', dayOfWeek: '1', dayOfMonth: '', monthDay: ''
+                    };
+                    reminderYearMonth.value = '';
+                    reminderYearDay.value = '';
+                    showReminderModal.value = true;
+                }
+
+                function showEditReminderModal(id) {
+                    const reminder = reminders.value.find(r => r.id === id);
+                    if (!reminder) return;
+                    
+                    isEditingReminder.value = true;
+                    editingReminder.value = { ...reminder };
+                    
+                    const monthDay = (reminder.monthDay || '').split('-');
+                    reminderYearMonth.value = monthDay[0] || '';
+                    reminderYearDay.value = monthDay[1] || '';
+                    
+                    showReminderModal.value = true;
+                }
+
+                function onReminderTypeChange() {}
+
+                async function saveReminder() {
+                    if (!editingReminder.value.name.trim()) {
+                        alert('请输入提醒名称');
+                        return;
+                    }
+                    
+                    const monthDay = reminderYearMonth.value && reminderYearDay.value 
+                        ? reminderYearMonth.value + '-' + reminderYearDay.value 
+                        : '';
+                    
+                    let url = editingReminder.value.id ? '/api/reminders/update' : '/api/reminders/add';
+                    const formData = new FormData();
+                    formData.append('name', editingReminder.value.name);
+                    formData.append('message', editingReminder.value.message || '');
+                    formData.append('type', editingReminder.value.type);
+                    formData.append('time', editingReminder.value.time);
+                    formData.append('date', editingReminder.value.date || '');
+                    formData.append('dayOfWeek', editingReminder.value.dayOfWeek);
+                    formData.append('dayOfMonth', editingReminder.value.dayOfMonth || '');
+                    formData.append('monthDay', monthDay);
+                    if (editingReminder.value.id) {
+                        formData.append('id', editingReminder.value.id);
+                    }
+                    if (currentKbId.value) {
+                        formData.append('kbId', currentKbId.value);
+                    }
+                    
+                    const r = await fetch(url, { method: 'POST', body: formData });
+                    const d = await r.json();
+                    if (d.ok) {
+                        showReminderModal.value = false;
+                        await loadReminders();
+                    }
+                }
+
+                async function toggleReminder(id) {
+                    let url = '/api/reminders/toggle?id=' + id;
+                    if (currentKbId.value) url += '&kbId=' + currentKbId.value;
+                    
+                    const r = await fetch(url, { method: 'POST' });
+                    const d = await r.json();
+                    if (d.ok) {
+                        await loadReminders();
+                    }
+                }
+
+                function openDeleteModal(id, type) {
+                    deleteId.value = id;
+                    deleteType.value = type;
+                    showDeleteModal.value = true;
+                }
+
+                async function confirmDelete() {
+                    let url = deleteType.value === 'reminder' 
+                        ? '/api/reminders/delete' 
+                        : '/api/tasks/delete';
+                    url += '?id=' + deleteId.value;
+                    if (currentKbId.value) url += '&kbId=' + currentKbId.value;
+                    
+                    const r = await fetch(url, { method: 'POST' });
+                    const d = await r.json();
+                    if (d.ok) {
+                        showDeleteModal.value = false;
+                        if (deleteType.value === 'reminder') await loadReminders();
+                        else await loadTasks();
+                    }
+                }
+
+                function getScheduleText(reminder) {
+                    const time = reminder.time || '09:00';
+                    const type = reminder.type || 'daily';
+                    
+                    switch(type) {
+                        case 'daily': return '每天 ' + time;
+                        case 'once': return '一次 ' + (reminder.date || '') + ' ' + time;
+                        case 'weekly': 
+                            const days = ['', '周一', '周二', '周三', '周四', '周五', '周六', '周日'];
+                            return '每周' + (days[parseInt(reminder.dayOfWeek) || 1]) + ' ' + time;
+                        case 'monthly': return '每月' + (reminder.dayOfMonth || 1) + '号 ' + time;
+                        case 'yearly': return '每年' + (reminder.monthDay || '1月1日') + ' ' + time;
+                        default: return time;
+                    }
+                }
+
+                function formatDate(dateStr) {
+                    if (!dateStr) return '';
+                    const date = new Date(dateStr);
+                    return (date.getMonth() + 1) + '/' + date.getDate();
+                }
+
+                onMounted(() => {
                     loadTasks();
-                }
-            };
-            xhr.send(params);
-        }
-        
-        function showAddReminderModal() {
-            document.getElementById('reminder-modal-title').textContent = '添加提醒';
-            document.getElementById('reminder-id').value = '';
-            document.getElementById('reminder-name').value = '';
-            document.getElementById('reminder-message').value = '';
-            document.getElementById('reminder-type').value = 'daily';
-            document.getElementById('reminder-time').value = '09:00';
-            document.getElementById('reminder-date').value = '';
-            document.getElementById('reminder-dayOfWeek').value = '1';
-            document.getElementById('reminder-dayOfMonth').value = '';
-            document.getElementById('reminder-yearMonth').value = '';
-            document.getElementById('reminder-yearDay').value = '';
-            onReminderTypeChange();
-            document.getElementById('reminder-modal').classList.add('show');
-        }
-        
-        function showEditReminderModal(id) {
-            var reminder = reminders.find(function(r) { return r.id === id; });
-            if (!reminder) return;
-            
-            document.getElementById('reminder-modal-title').textContent = '编辑提醒';
-            document.getElementById('reminder-id').value = reminder.id;
-            document.getElementById('reminder-name').value = reminder.name;
-            document.getElementById('reminder-message').value = reminder.message || '';
-            document.getElementById('reminder-type').value = reminder.type || 'daily';
-            document.getElementById('reminder-time').value = reminder.time || '09:00';
-            document.getElementById('reminder-date').value = reminder.date || '';
-            document.getElementById('reminder-dayOfWeek').value = reminder.dayOfWeek || '1';
-            document.getElementById('reminder-dayOfMonth').value = reminder.dayOfMonth || '';
-            
-            var monthDay = (reminder.monthDay || '').split('-');
-            document.getElementById('reminder-yearMonth').value = monthDay[0] || '';
-            document.getElementById('reminder-yearDay').value = monthDay[1] || '';
-            
-            onReminderTypeChange();
-            document.getElementById('reminder-modal').classList.add('show');
-        }
-        
-        function onReminderTypeChange() {
-            var type = document.getElementById('reminder-type').value;
-            document.getElementById('reminder-weekday-group').style.display = type === 'weekly' ? 'block' : 'none';
-            document.getElementById('reminder-once-group').style.display = type === 'once' ? 'block' : 'none';
-            document.getElementById('reminder-monthly-group').style.display = type === 'monthly' ? 'block' : 'none';
-            document.getElementById('reminder-yearly-group').style.display = type === 'yearly' ? 'block' : 'none';
-        }
-        
-        function saveReminder() {
-            var id = document.getElementById('reminder-id').value;
-            var name = document.getElementById('reminder-name').value.trim();
-            var message = document.getElementById('reminder-message').value.trim();
-            var type = document.getElementById('reminder-type').value;
-            var time = document.getElementById('reminder-time').value;
-            var date = document.getElementById('reminder-date').value;
-            var dayOfWeek = document.getElementById('reminder-dayOfWeek').value;
-            var dayOfMonth = document.getElementById('reminder-dayOfMonth').value;
-            var yearMonth = document.getElementById('reminder-yearMonth').value;
-            var yearDay = document.getElementById('reminder-yearDay').value;
-            
-            if (!name) {
-                alert('请输入提醒名称');
-                return;
-            }
-            
-            var monthDay = yearMonth && yearDay ? yearMonth + '-' + yearDay : '';
-            
-            var url = id ? '/v3/api/reminders/update' : '/v3/api/reminders/add';
-            var params = 'name=' + encodeURIComponent(name) + 
-                '&message=' + encodeURIComponent(message) + 
-                '&type=' + type + 
-                '&time=' + encodeURIComponent(time) + 
-                '&date=' + encodeURIComponent(date) + 
-                '&dayOfWeek=' + dayOfWeek + 
-                '&dayOfMonth=' + dayOfMonth + 
-                '&monthDay=' + encodeURIComponent(monthDay);
-            
-            if (id) {
-                params += '&reminderId=' + encodeURIComponent(id);
-            }
-            if (currentKbId) {
-                params += '&kbId=' + currentKbId;
-            }
-            
-            var xhr = new XMLHttpRequest();
-            xhr.open('POST', url);
-            xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
-            xhr.onload = function() {
-                if (xhr.status === 200) {
-                    closeModal('reminder-modal');
                     loadReminders();
-                }
-            };
-            xhr.send(params);
-        }
-        
-        function toggleReminder(id) {
-            var url = '/v3/api/reminders/toggle?reminderId=' + id;
-            if (currentKbId) url += '&kbId=' + currentKbId;
-            
-            var xhr = new XMLHttpRequest();
-            xhr.open('POST', url);
-            xhr.onload = function() {
-                if (xhr.status === 200) {
-                    loadReminders();
-                }
-            };
-            xhr.send();
-        }
-        
-        function showDeleteModal(id, type) {
-            document.getElementById('delete-id').value = id;
-            document.getElementById('delete-type').value = type;
-            document.getElementById('delete-modal').classList.add('show');
-        }
-        
-        function confirmDelete() {
-            var id = document.getElementById('delete-id').value;
-            var type = document.getElementById('delete-type').value;
-            
-            var url = type === 'reminder' ? '/v3/api/reminders/delete' : '/v3/api/tasks/delete';
-            url += '?' + (type === 'reminder' ? 'reminderId' : 'taskId') + '=' + id;
-            if (currentKbId) url += '&kbId=' + currentKbId;
-            
-            var xhr = new XMLHttpRequest();
-            xhr.open('POST', url);
-            xhr.onload = function() {
-                if (xhr.status === 200) {
-                    closeModal('delete-modal');
-                    if (type === 'reminder') loadReminders();
-                    else loadTasks();
-                }
-            };
-            xhr.send();
-        }
-        
-        function closeModal(modalId) {
-            document.getElementById(modalId).classList.remove('show');
-        }
-        
-        function formatDate(dateStr) {
-            if (!dateStr) return '';
-            var date = new Date(dateStr);
-            return (date.getMonth() + 1) + '/' + date.getDate();
-        }
-        
-        document.addEventListener('click', function(e) {
-            if (e.target.classList.contains('modal-overlay')) {
-                e.target.classList.remove('show');
+                });
+
+                return {
+                    tasks, reminders,
+                    showTaskModal, isEditingTask, editingTask,
+                    showReminderModal, isEditingReminder, editingReminder,
+                    reminderYearMonth, reminderYearDay,
+                    showDeleteModal, deleteId, deleteType,
+                    pendingTasks, progressTasks, doneTasks, enabledReminderCount,
+                    showAddTaskModal, showEditTaskModal, saveTask,
+                    showAddReminderModal, showEditReminderModal, onReminderTypeChange, saveReminder,
+                    toggleReminder, openDeleteModal, confirmDelete,
+                    getScheduleText, formatDate
+                };
             }
-        });
+        }).mount('#app');
     </script>
 </body>
 </html>
