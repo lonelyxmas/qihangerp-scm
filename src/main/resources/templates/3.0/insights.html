@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>笔灵 AI - 洞察</title>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --primary: #6366f1;
+            --primary-light: #818cf8;
+            --primary-dark: #4f46e5;
+            --bg-main: #f8fafc;
+            --bg-sidebar: #ffffff;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --text-muted: #94a3b8;
+            --border: #e2e8f0;
+            --hover: #f1f5f9;
+            --radius-sm: 8px;
+            --radius-md: 12px;
+            --radius-lg: 16px;
+            --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+            --shadow-md: 0 4px 6px rgba(0,0,0,0.05);
+            --shadow-lg: 0 10px 15px rgba(0,0,0,0.08);
+        }
+        html, body { height: 100%; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+        body { display: flex; background: var(--bg-main); color: var(--text-primary); }
+
+        .sidebar { width: 260px; background: var(--bg-sidebar); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 16px 0; flex-shrink: 0; }
+        .sidebar-header { padding: 0 16px 16px; }
+        .sidebar-title { font-size: 20px; font-weight: 700; color: var(--primary); display: flex; align-items: center; gap: 8px; }
+        .sidebar-title svg { width: 24px; height: 24px; }
+        
+        .nav-menu { flex: 1; overflow-y: auto; padding: 8px 0; }
+        .nav-item { display: flex; align-items: center; gap: 10px; padding: 10px 16px; cursor: pointer; color: var(--text-secondary); font-size: 14px; transition: all 0.2s; border-radius: 0 var(--radius-md) var(--radius-md) 0; text-decoration: none; }
+        .nav-item:hover { background: var(--hover); color: var(--text-primary); }
+        .nav-item.active { background: rgba(99, 102, 241, 0.1); color: var(--primary); font-weight: 500; }
+        .nav-item svg { width: 20px; height: 20px; flex-shrink: 0; }
+        .nav-item:active { transform: scale(0.98); }
+        
+        .sidebar-footer .nav-item:hover { background: rgba(99, 102, 241, 0.05); color: var(--primary); }
+        .sidebar-footer .nav-item svg { opacity: 0.6; }
+        .sidebar-footer .nav-item:hover svg { opacity: 1; }
+
+        .main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+        .content-header { padding: 16px 24px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; background: white; }
+        .content-title { font-size: 18px; font-weight: 600; color: var(--text-primary); }
+        .kb-select-wrapper { display: flex; align-items: center; gap: 8px; }
+        .kb-select { padding: 6px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 13px; outline: none; background: white; color: var(--text-primary); cursor: pointer; }
+        .kb-select:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1); }
+        
+        .content-body { flex: 1; overflow-y: auto; padding: 24px; }
+
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
+        .stat-card { background: white; border-radius: var(--radius-md); border: 1px solid var(--border); padding: 20px; display: flex; flex-direction: column; transition: all 0.2s; }
+        .stat-card:hover { box-shadow: var(--shadow-md); }
+        .stat-icon { width: 44px; height: 44px; border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; font-size: 22px; margin-bottom: 12px; }
+        .stat-value { font-size: 28px; font-weight: 700; color: var(--text-primary); margin-bottom: 4px; }
+        .stat-label { font-size: 13px; color: var(--text-secondary); }
+
+        .card { background: white; border-radius: var(--radius-md); border: 1px solid var(--border); box-shadow: var(--shadow-sm); padding: 24px; margin-bottom: 20px; }
+        .card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+        .card-title { font-size: 16px; font-weight: 600; color: var(--text-primary); }
+        .card-actions { display: flex; gap: 8px; }
+
+        .search-box { display: flex; gap: 8px; margin-bottom: 16px; }
+        .search-input { flex: 1; padding: 10px 14px; border: 1px solid var(--border); border-radius: var(--radius-md); font-size: 14px; outline: none; background: white; }
+        .search-input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1); }
+        .search-btn { padding: 10px 20px; background: var(--primary); color: white; border: none; border-radius: var(--radius-md); font-size: 14px; cursor: pointer; transition: all 0.2s; }
+        .search-btn:hover { background: var(--primary-dark); }
+        .search-btn:active { transform: scale(0.98); }
+        .search-results { max-height: 300px; overflow-y: auto; }
+        .search-item { padding: 12px; border-radius: var(--radius-sm); border: 1px solid var(--border); margin-bottom: 8px; cursor: pointer; transition: all 0.2s; }
+        .search-item:hover { background: var(--hover); border-color: var(--primary); }
+        .search-item-title { font-size: 14px; font-weight: 500; color: var(--text-primary); margin-bottom: 4px; }
+        .search-item-path { font-size: 12px; color: var(--text-muted); margin-bottom: 6px; }
+        .search-item-preview { font-size: 13px; color: var(--text-secondary); line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+        .search-score { font-size: 11px; color: var(--text-muted); }
+
+        .project-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; }
+        .project-card { background: white; border-radius: var(--radius-md); border: 1px solid var(--border); padding: 16px; cursor: pointer; transition: all 0.2s; }
+        .project-card:hover { border-color: var(--primary); box-shadow: var(--shadow-md); }
+        .project-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+        .project-name { font-size: 14px; font-weight: 600; color: var(--text-primary); }
+        .project-status { font-size: 11px; padding: 2px 6px; border-radius: 4px; }
+        .project-status.analyzed { background: rgba(34, 197, 94, 0.1); color: #22c55e; }
+        .project-status.not-analyzed { background: rgba(148, 163, 184, 0.1); color: #94a3b8; }
+        .project-info { display: flex; gap: 16px; font-size: 12px; color: var(--text-secondary); }
+        .project-detail { display: none; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
+        .project-detail.active { display: block; }
+        .project-analysis { font-size: 13px; color: var(--text-secondary); line-height: 1.6; }
+        .project-btn { padding: 6px 12px; font-size: 12px; border: none; border-radius: var(--radius-sm); cursor: pointer; transition: all 0.2s; }
+        .project-btn.primary { background: var(--primary); color: white; }
+        .project-btn.primary:hover { background: var(--primary-dark); }
+        .project-btn.secondary { background: var(--hover); color: var(--text-secondary); }
+        .project-btn.secondary:hover { background: #e2e8f0; }
+
+        .action-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+        .action-card { background: white; border-radius: var(--radius-md); border: 1px solid var(--border); padding: 16px; cursor: pointer; transition: all 0.2s; text-align: center; }
+        .action-card:hover { border-color: var(--primary); box-shadow: var(--shadow-md); }
+        .action-icon { font-size: 32px; margin-bottom: 8px; }
+        .action-title { font-size: 14px; font-weight: 500; color: var(--text-primary); margin-bottom: 4px; }
+        .action-desc { font-size: 12px; color: var(--text-secondary); }
+        .action-result { margin-top: 12px; padding: 12px; background: var(--bg-main); border-radius: var(--radius-sm); font-size: 13px; color: var(--text-secondary); line-height: 1.6; display: none; }
+        .action-result.active { display: block; }
+
+        .tag-cloud { display: flex; flex-wrap: wrap; gap: 8px; }
+        .tag-item { padding: 4px 12px; border-radius: 20px; font-size: 13px; cursor: pointer; transition: all 0.2s; }
+        .tag-item:hover { transform: scale(1.05); }
+
+        .heatmap-container { overflow-x: auto; }
+        .heatmap-grid { display: grid; grid-template-columns: repeat(52, 1fr); gap: 3px; }
+        .heatmap-cell { width: 14px; height: 14px; border-radius: 2px; }
+        .heatmap-legend { display: flex; align-items: center; gap: 4px; margin-top: 12px; font-size: 11px; color: var(--text-muted); }
+        .heatmap-legend-cell { width: 14px; height: 14px; border-radius: 2px; }
+
+        .empty-state { text-align: center; padding: 60px 20px; color: var(--text-muted); }
+        .empty-icon { font-size: 48px; margin-bottom: 16px; opacity: 0.5; }
+        .empty-title { font-size: 16px; font-weight: 500; margin-bottom: 8px; color: #64748b; }
+        .empty-desc { font-size: 14px; color: #94a3b8; }
+
+        .loading { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-secondary); }
+        .loading-dot { width: 6px; height: 6px; background: var(--primary); border-radius: 50%; animation: loading 1.4s infinite ease-in-out both; }
+        .loading-dot:nth-child(1) { animation-delay: -0.32s; }
+        .loading-dot:nth-child(2) { animation-delay: -0.16s; }
+        @keyframes loading { 0%, 80%, 100% { transform: scale(0.6); opacity: 0.5; } 40% { transform: scale(1); opacity: 1; } }
+
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+    </style>
+</head>
+<body>
+    <th:block th:replace="3.0/fragments/sidebar::sidebar(${currentNav})"></th:block>
+    
+    <main class="main-content" id="ai-app">
+        <div class="content-header">
+            <h1 class="content-title">洞察</h1>
+            <div class="kb-select-wrapper">
+                <select class="kb-select" id="kbSelect">
+                    <option value="">选择笔记库</option>
+                </select>
+            </div>
+        </div>
+        
+        <div class="content-body" id="content-body">
+            <div class="empty-state">
+                <div class="empty-icon">🤖</div>
+                <div class="empty-title">选择一个笔记库查看统计</div>
+                <div class="empty-desc">在配置页添加笔记库后，即可查看AI概览和统计信息</div>
+                <button class="search-btn" style="margin-top:20px;" onclick="window.location.href='/config'">去配置笔记库</button>
+            </div>
+        </div>
+    </main>
+    
+    <script>
+        const API_BASE = '/api/ai';
+        let selectedKbId = null;
+        let kbList = [];
+        
+        function formatSize(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+            return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+        }
+
+        function getTagStyle(count, maxCount) {
+            const ratio = count / maxCount;
+            const sizes = ['12px', '13px', '14px', '15px', '16px', '17px', '18px'];
+            const sizeIndex = Math.min(Math.floor(ratio * sizes.length), sizes.length - 1);
+            const hue = 250 + ratio * 30;
+            const saturation = 40 + ratio * 20;
+            const lightness = 90 - ratio * 15;
+            return {
+                fontSize: sizes[sizeIndex],
+                background: 'hsl(' + hue + ', ' + saturation + '%, ' + lightness + '%)',
+                color: ratio > 0.5 ? '#6366f1' : '#64748b'
+            };
+        }
+
+        function getHeatmapColor(count) {
+            if (count === 0) return '#ebedf0';
+            if (count <= 2) return '#c6e48b';
+            if (count <= 5) return '#7bc96f';
+            if (count <= 10) return '#239a3b';
+            return '#196127';
+        }
+
+        function parseMarkdown(text) {
+            if (!text) return '';
+            try {
+                return marked.parse(text);
+            } catch (e) {
+                return text.replace(/\n/g, '<br>');
+            }
+        }
+
+        function loadKbList() {
+            fetch('/v3/api/kbs')
+                .then(r => r.json())
+                .then(d => {
+                    if (d.ok && d.data) {
+                        kbList = d.data;
+                        const select = document.getElementById('kbSelect');
+                        select.innerHTML = '<option value="">选择笔记库</option>';
+                        kbList.forEach(kb => {
+                            const option = document.createElement('option');
+                            option.value = kb.id;
+                            option.textContent = kb.name;
+                            select.appendChild(option);
+                        });
+                        if (kbList.length > 0) {
+                            select.value = kbList[0].id;
+                            selectedKbId = kbList[0].id;
+                            loadAllData();
+                        }
+                    }
+                }).catch(e => console.error('加载笔记库列表失败', e));
+        }
+
+        function initKbSelectListener() {
+            const select = document.getElementById('kbSelect');
+            if (select) {
+                select.addEventListener('change', function(event) {
+                    selectedKbId = event.target.value;
+                    if (selectedKbId) {
+                        loadAllData();
+                    }
+                });
+            }
+        }
+
+        async function loadAllData() {
+            if (!selectedKbId) return;
+
+            try {
+                const [statsRes, projectsRes, tagsRes, heatmapRes, messagesRes] = await Promise.all([
+                    fetch(API_BASE + '/kb-stats?kbId=' + selectedKbId),
+                    fetch(API_BASE + '/projects?kbId=' + selectedKbId),
+                    fetch(API_BASE + '/tags?kbId=' + selectedKbId),
+                    fetch(API_BASE + '/heatmap?kbId=' + selectedKbId),
+                    fetch('/v3/api/chat/messages?kbId=' + selectedKbId + '&limit=1')
+                ]);
+
+                const [statsData, projectsData, tagsData, heatmapData, messagesData] = await Promise.all([
+                    statsRes.json(),
+                    projectsRes.json(),
+                    tagsRes.json(),
+                    heatmapRes.json(),
+                    messagesRes.json()
+                ]);
+
+                renderPage(statsData, projectsData, tagsData, heatmapData, messagesData);
+            } catch (e) {
+                console.error('加载数据失败', e);
+            }
+        }
+
+        function renderPage(statsData, projectsData, tagsData, heatmapData, messagesData) {
+            const contentBody = document.getElementById('content-body');
+            
+            const stats = statsData.ok ? statsData : { fileCount: 0, chunkCount: 0, todayModified: 0 };
+            const projects = projectsData.ok ? (projectsData.projects || []) : [];
+            const tags = tagsData.ok ? (tagsData.tags || []) : [];
+            const heatmap = heatmapData.ok ? (heatmapData.heatmap || {}) : {};
+            const messageCount = messagesData.ok ? (messagesData.total || 0) : 0;
+
+            contentBody.innerHTML = `
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background:rgba(99,102,241,0.1);color:#6366f1;">📚</div>
+                        <div class="stat-value">` + (stats.fileCount || 0) + `</div>
+                        <div class="stat-label">笔记文件数</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background:rgba(34,197,94,0.1);color:#22c55e;">🔍</div>
+                        <div class="stat-value">` + (stats.chunkCount || 0) + `</div>
+                        <div class="stat-label">索引片段数</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background:rgba(59,130,246,0.1);color:#3b82f6;">💬</div>
+                        <div class="stat-value">` + messageCount + `</div>
+                        <div class="stat-label">对话消息数</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon" style="background:rgba(251,146,60,0.1);color:#fb923c;">📅</div>
+                        <div class="stat-value">` + (stats.todayModified || 0) + `</div>
+                        <div class="stat-label">今日修改</div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">🔍 智能搜索</h2>
+                    </div>
+                    <div class="search-box">
+                        <input type="text" class="search-input" id="searchInput" placeholder="输入关键词搜索笔记..." onkeyup="if(event.keyCode===13)doSearch()">
+                        <button class="search-btn" onclick="doSearch()">搜索</button>
+                    </div>
+                    <div class="search-results" id="searchResults"></div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">📂 子项目分析</h2>
+                        <span style="font-size:12px;color:#94a3b8;">共 ` + projects.length + ` 个项目</span>
+                    </div>
+                    <div class="project-list">
+                        ` + renderProjects(projects) + `
+                    </div>
+                    ` + (projects.length === 0 ? `
+                    <div class="empty-state">
+                        <div class="empty-icon">📂</div>
+                        <div class="empty-title">暂无子项目</div>
+                        <div class="empty-desc">在笔记库中创建文件夹即可作为子项目</div>
+                    </div>` : '') + `
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">🎯 AI 学习助手</h2>
+                    </div>
+                    <div class="action-grid">
+                        <div class="action-card" onclick="runQuickAction('summarize-week', this)">
+                            <div class="action-icon">📅</div>
+                            <div class="action-title">周总结</div>
+                            <div class="action-desc">自动生成本周学习总结</div>
+                            <div class="action-result" id="action-summarize-week"></div>
+                        </div>
+                        <div class="action-card" onclick="runQuickAction('extract-key-points', this)">
+                            <div class="action-icon">🔑</div>
+                            <div class="action-title">知识提取</div>
+                            <div class="action-desc">提取笔记中的关键知识点</div>
+                            <div class="action-result" id="action-extract-key-points"></div>
+                        </div>
+                        <div class="action-card" onclick="runQuickAction('generate-review-plan', this)">
+                            <div class="action-icon">📋</div>
+                            <div class="action-title">复习计划</div>
+                            <div class="action-desc">生成个性化复习计划</div>
+                            <div class="action-result" id="action-generate-review-plan"></div>
+                        </div>
+                        <div class="action-card" onclick="runQuickAction('find-related', this)">
+                            <div class="action-icon">🔗</div>
+                            <div class="action-title">知识关联</div>
+                            <div class="action-desc">发现相关知识点和主题</div>
+                            <div class="action-result" id="action-find-related"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">🏷️ 知识标签</h2>
+                    </div>
+                    <div class="tag-cloud">
+                        ` + renderTags(tags) + `
+                    </div>
+                    ` + (tags.length === 0 ? `
+                    <div class="empty-state">
+                        <div class="empty-icon">🏷️</div>
+                        <div class="empty-title">暂无标签</div>
+                        <div class="empty-desc">标签将从笔记内容中自动提取</div>
+                    </div>` : '') + `
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">🔥 活动热力图</h2>
+                    </div>
+                    <div class="heatmap-container">
+                        <div class="heatmap-grid">
+                            ` + renderHeatmap(heatmap) + `
+                        </div>
+                    </div>
+                    <div class="heatmap-legend">
+                        <span>少</span>
+                        <div class="heatmap-legend-cell" style="background:#ebedf0;"></div>
+                        <div class="heatmap-legend-cell" style="background:#c6e48b;"></div>
+                        <div class="heatmap-legend-cell" style="background:#7bc96f;"></div>
+                        <div class="heatmap-legend-cell" style="background:#239a3b;"></div>
+                        <div class="heatmap-legend-cell" style="background:#196127;"></div>
+                        <span>多</span>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderProjects(projects) {
+            return projects.map((project, index) => `
+                <div class="project-card" onclick="toggleProject('project-detail-' + ${index})">
+                    <div class="project-header">
+                        <span class="project-name">` + escapeHtml(project.name) + `</span>
+                        <span class="project-status ` + (project.hasAnalysis ? 'analyzed' : 'not-analyzed') + `">
+                            ` + (project.hasAnalysis ? '已分析' : '未分析') + `
+                        </span>
+                    </div>
+                    <div class="project-info">
+                        <span>📄 ` + project.fileCount + ` 文件</span>
+                        <span>📁 ` + formatSize(project.totalSize) + `</span>
+                    </div>
+                    <div class="project-detail" id="project-detail-` + index + `">
+                        ` + (project.analysis ? `<div class="project-analysis">` + parseMarkdown(project.analysis) + `</div>` : `
+                        <button class="project-btn primary" onclick="event.stopPropagation(); analyzeProject('` + escapeHtml(project.name) + `', 'project-detail-' + ${index})">🔍 AI分析</button>`) + `
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderTags(tags) {
+            const maxCount = tags.length > 0 ? Math.max(...tags.map(t => t.count)) : 1;
+            return tags.map(tag => {
+                const style = getTagStyle(tag.count, maxCount);
+                return `<span class="tag-item" style="font-size:` + style.fontSize + `;background:` + style.background + `;color:` + style.color + `" onclick="doSearch('` + escapeHtml(tag.name) + `')">` + escapeHtml(tag.name) + `</span>`;
+            }).join('');
+        }
+
+        function renderHeatmap(heatmap) {
+            const dates = Object.keys(heatmap).sort();
+            return dates.map(date => `<div class="heatmap-cell" style="background:` + getHeatmapColor(heatmap[date]) + `" title="` + date + ': ' + heatmap[date] + '次修改' + `"></div>`).join('');
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+        }
+
+        function doSearch(query) {
+            const q = query || document.getElementById('searchInput').value;
+            if (!q.trim() || !selectedKbId) return;
+
+            const resultsDiv = document.getElementById('searchResults');
+            resultsDiv.innerHTML = '<div class="loading"><span class="loading-dot"></span><span class="loading-dot"></span><span class="loading-dot"></span>搜索中...</div>';
+
+            fetch(API_BASE + '/search?kbId=' + selectedKbId + '&query=' + encodeURIComponent(q))
+                .then(r => r.json())
+                .then(d => {
+                    if (d.ok && d.results && d.results.length > 0) {
+                        resultsDiv.innerHTML = d.results.map((result, i) => `
+                            <div class="search-item">
+                                <div class="search-item-title">` + escapeHtml(result.filePath) + `</div>
+                                <div class="search-item-path">` + escapeHtml(result.pathContext || '') + `</div>
+                                <div class="search-item-preview">` + escapeHtml(result.content || '') + `</div>
+                                <div class="search-score">匹配度: ` + (result.score * 100).toFixed(0) + `%</div>
+                            </div>
+                        `).join('');
+                    } else {
+                        resultsDiv.innerHTML = `
+                            <div class="empty-state">
+                                <div class="empty-icon">🔍</div>
+                                <div class="empty-title">未找到相关笔记</div>
+                                <div class="empty-desc">尝试使用其他关键词搜索</div>
+                            </div>
+                        `;
+                    }
+                }).catch(e => {
+                    console.error('搜索失败', e);
+                    resultsDiv.innerHTML = '<div style="color:#ef4444;text-align:center;padding:20px;">搜索失败，请稍后重试</div>';
+                });
+        }
+
+        function toggleProject(id) {
+            const el = document.getElementById(id);
+            if (el) {
+                el.classList.toggle('active');
+            }
+        }
+
+        function analyzeProject(projectName, detailId) {
+            if (!selectedKbId) return;
+
+            const detailEl = document.getElementById(detailId);
+            detailEl.innerHTML = '<div class="loading"><span class="loading-dot"></span><span class="loading-dot"></span><span class="loading-dot"></span>AI分析中...</div>';
+
+            fetch(API_BASE + '/analyze-project?kbId=' + selectedKbId + '&projectName=' + encodeURIComponent(projectName), {
+                method: 'POST'
+            }).then(r => r.json())
+            .then(d => {
+                if (d.ok) {
+                    detailEl.innerHTML = '<div class="project-analysis">' + parseMarkdown(d.analysis) + '</div>';
+                    loadAllData();
+                } else {
+                    detailEl.innerHTML = '<div style="color:#ef4444;text-align:center;padding:10px;">分析失败: ' + escapeHtml(d.error || '未知错误') + '</div>';
+                }
+            }).catch(e => {
+                console.error('分析失败', e);
+                detailEl.innerHTML = '<div style="color:#ef4444;text-align:center;padding:10px;">分析失败，请稍后重试</div>';
+            });
+        }
+
+        function runQuickAction(action, card) {
+            if (!selectedKbId) return;
+
+            const resultId = 'action-' + action;
+            const resultDiv = document.getElementById(resultId);
+            
+            if (resultDiv.innerHTML.trim()) {
+                resultDiv.classList.toggle('active');
+                return;
+            }
+
+            resultDiv.innerHTML = '<div class="loading"><span class="loading-dot"></span><span class="loading-dot"></span><span class="loading-dot"></span>处理中...</div>';
+            resultDiv.classList.add('active');
+
+            fetch(API_BASE + '/quick-action?kbId=' + selectedKbId + '&action=' + action, {
+                method: 'POST'
+            }).then(r => r.json())
+            .then(d => {
+                if (d.ok) {
+                    resultDiv.innerHTML = parseMarkdown(d.result);
+                } else {
+                    resultDiv.innerHTML = '<div style="color:#ef4444;">操作失败: ' + escapeHtml(d.error || '未知错误') + '</div>';
+                }
+            }).catch(e => {
+                console.error('执行操作失败', e);
+                resultDiv.innerHTML = '<div style="color:#ef4444;">操作失败，请稍后重试</div>';
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            initKbSelectListener();
+            loadKbList();
+        });
+    </script>
+</body>
+</html>

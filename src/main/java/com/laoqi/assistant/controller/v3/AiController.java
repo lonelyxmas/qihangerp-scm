@@ -11,7 +11,7 @@ import java.util.List;
 import java.util.Map;
 
 @Controller
-@RequestMapping("/v3")
+@RequestMapping("/")
 public class AiController {
 
     private final KnowledgeBaseService kbService;
@@ -26,9 +26,9 @@ public class AiController {
         this.messageDbService = messageDbService;
     }
 
-    @GetMapping("/ai")
-    public String aiPage(@RequestParam(required = false) Long kbId, Map<String, Object> model) {
-        model.put("currentNav", "ai");
+    @GetMapping("/insights")
+    public String insightsPage(@RequestParam(required = false) Long kbId, Map<String, Object> model) {
+        model.put("currentNav", "insights");
         List<KnowledgeBaseEntity> kbList = kbService.getAll();
         model.put("kbList", kbList);
         
@@ -60,6 +60,6 @@ public class AiController {
             }
         }
 
-        return "3.0/ai";
+        return "3.0/insights";
     }
 }
