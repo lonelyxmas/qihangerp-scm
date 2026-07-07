@@ -1,4 +1,4 @@
-package com.laoqi.assistant.controller;
+package com.laoqi.assistant.controller.api;
 
 import com.laoqi.assistant.model.TaskData.*;
 import com.laoqi.assistant.model.ReminderData.Reminder;
