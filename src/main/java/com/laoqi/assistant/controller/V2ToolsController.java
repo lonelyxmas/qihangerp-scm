@@ -5,7 +5,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.ui.Model;
 
 @Controller
-public class ToolsController {
+public class V2ToolsController {
 
     @GetMapping("/tools")
     public String toolsPage(Model model) {

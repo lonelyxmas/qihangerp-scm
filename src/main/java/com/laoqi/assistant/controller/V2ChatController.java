@@ -2,10 +2,8 @@ package com.laoqi.assistant.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.laoqi.assistant.entity.KnowledgeBaseEntity;
-import com.laoqi.assistant.entity.LlmProfileEntity;
 import com.laoqi.assistant.entity.MessageEntity;
 import com.laoqi.assistant.entity.SessionEntity;
-import com.laoqi.assistant.model.TaskData.TaskItem;
 import com.laoqi.assistant.service.*;
 import com.laoqi.assistant.service.db.MessageDbService;
 import com.laoqi.assistant.service.db.SessionDbService;
@@ -13,20 +11,18 @@ import com.laoqi.assistant.util.TimeUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Controller;
-import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.stream.Collectors;
 
 @Controller
 @RequestMapping("/chat")
-public class ChatController {
+public class V2ChatController {
 
-    private static final Logger log = LoggerFactory.getLogger(ChatController.class);
+    private static final Logger log = LoggerFactory.getLogger(V2ChatController.class);
     private static final ObjectMapper mapper = new ObjectMapper();
     private static final ExecutorService chatExecutor = Executors.newSingleThreadExecutor(r -> {
         Thread t = new Thread(r, "chat-sse");
@@ -46,16 +42,16 @@ public class ChatController {
     private final TaskService taskService;
     private final AgentTraceService agentTraceService;
 
-    public ChatController(KnowledgeBaseService kbService,
-                          SessionDbService sessionDbService,
-                          MessageDbService messageDbService,
-                          SessionService sessionService,
-                          LlmService llmService,
-                          NoteAssistantService noteAssistantService,
-                          LlmConfigResolver llmConfigResolver,
-                          LogService logService,
-                          TaskService taskService,
-                          AgentTraceService agentTraceService) {
+    public V2ChatController(KnowledgeBaseService kbService,
+                            SessionDbService sessionDbService,
+                            MessageDbService messageDbService,
+                            SessionService sessionService,
+                            LlmService llmService,
+                            NoteAssistantService noteAssistantService,
+                            LlmConfigResolver llmConfigResolver,
+                            LogService logService,
+                            TaskService taskService,
+                            AgentTraceService agentTraceService) {
         this.kbService = kbService;
         this.sessionDbService = sessionDbService;
         this.messageDbService = messageDbService;
