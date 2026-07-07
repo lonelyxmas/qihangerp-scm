@@ -88,29 +88,29 @@ public class ChatController {
         return "3.0/chat";
     }
 
-    @GetMapping("/ai")
-    public String aiPage(@RequestParam(required = false) Long kbId, Map<String, Object> model) {
-        model.put("currentNav", "ai");
-        List<KnowledgeBaseEntity> kbList = kbService.getAll();
-        model.put("kbList", kbList);
-        
-        if (!kbList.isEmpty()) {
-            model.put("defaultKbId", kbList.get(0).getId());
-        }
-
-        if (kbId == null && !kbList.isEmpty()) {
-            kbId = kbList.get(0).getId();
-        }
-
-        if (kbId != null) {
-            KnowledgeBaseEntity kb = kbService.getById(kbId);
-            if (kb != null) {
-                model.put("selectedKb", kb);
-            }
-        }
-
-        return "3.0/ai";
-    }
+//    @GetMapping("/ai")
+//    public String aiPage(@RequestParam(required = false) Long kbId, Map<String, Object> model) {
+//        model.put("currentNav", "ai");
+//        List<KnowledgeBaseEntity> kbList = kbService.getAll();
+//        model.put("kbList", kbList);
+//
+//        if (!kbList.isEmpty()) {
+//            model.put("defaultKbId", kbList.get(0).getId());
+//        }
+//
+//        if (kbId == null && !kbList.isEmpty()) {
+//            kbId = kbList.get(0).getId();
+//        }
+//
+//        if (kbId != null) {
+//            KnowledgeBaseEntity kb = kbService.getById(kbId);
+//            if (kb != null) {
+//                model.put("selectedKb", kb);
+//            }
+//        }
+//
+//        return "3.0/ai";
+//    }
 
     @ResponseBody
     @GetMapping("/api/kbs")
