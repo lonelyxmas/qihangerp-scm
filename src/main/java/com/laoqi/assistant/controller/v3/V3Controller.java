@@ -223,6 +223,20 @@ public class V3Controller {
         return "3.0/tools";
     }
 
+    @GetMapping("/data/module/{moduleId}")
+    public String dataModulePage(@PathVariable String moduleId, Map<String, Object> model) {
+        model.put("currentNav", "data");
+        model.put("moduleId", moduleId);
+        List<KnowledgeBaseEntity> kbList = kbService.getAll();
+        model.put("kbList", kbList);
+        
+        if (!kbList.isEmpty()) {
+            model.put("defaultKbId", kbList.get(0).getId());
+        }
+
+        return "3.0/data-module";
+    }
+
     // ========== API: 获取笔记库列表 ==========
 
     @ResponseBody

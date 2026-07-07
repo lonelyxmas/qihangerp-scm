@@ -397,7 +397,7 @@ function renderModuleList() {
     el.innerHTML = modules.map(function(m) {
         var ds = datasets.filter(function(d) { return d.moduleId === m.id; });
         var totalRecords = ds.reduce(function(s, d) { return s + (d.recordCount || 0); }, 0);
-        return '<div class="module-card" onclick="openModule(\'' + m.id + '\')">'
+        return '<div class="module-card" onclick="window.location.href=\'/v3/data/module/'+m.id+'\'">'
             + '<div class="module-card-top">'
             + '<div class="module-card-icon">' + (m.icon || '📁') + '</div>'
             + '<div class="module-card-info">'

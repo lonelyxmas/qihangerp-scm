@@ -1,0 +1,1206 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>笔灵 AI - 数据模块</title>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --primary: #6366f1;
+            --primary-light: #818cf8;
+            --primary-dark: #4f46e5;
+            --bg-main: #f8fafc;
+            --bg-sidebar: #ffffff;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --text-muted: #94a3b8;
+            --border: #e2e8f0;
+            --hover: #f1f5f9;
+            --success: #22c55e;
+            --warning: #fb923c;
+            --danger: #ef4444;
+            --radius-sm: 8px;
+            --radius-md: 12px;
+            --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+            --shadow-md: 0 4px 6px rgba(0,0,0,0.05);
+        }
+        html, body { height: 100%; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+        body { display: flex; background: var(--bg-main); color: var(--text-primary); }
+
+        .sidebar { width: 260px; background: var(--bg-sidebar); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 16px 0; flex-shrink: 0; }
+        .sidebar-header { padding: 0 16px 16px; }
+        .sidebar-title { font-size: 20px; font-weight: 700; color: var(--primary); display: flex; align-items: center; gap: 8px; }
+        .sidebar-title svg { width: 24px; height: 24px; }
+        .nav-menu { flex: 1; overflow-y: auto; padding: 8px 0; }
+        .nav-item { display: flex; align-items: center; gap: 10px; padding: 10px 16px; cursor: pointer; color: var(--text-secondary); font-size: 14px; transition: all 0.2s; border-radius: 0 var(--radius-md) var(--radius-md) 0; text-decoration: none; }
+        .nav-item:hover { background: var(--hover); color: var(--text-primary); }
+        .nav-item.active { background: rgba(99, 102, 241, 0.1); color: var(--primary); font-weight: 500; }
+        .nav-item svg { width: 20px; height: 20px; flex-shrink: 0; }
+        .nav-item:active { transform: scale(0.98); }
+        .sidebar-footer .nav-item:hover { background: rgba(99, 102, 241, 0.05); color: var(--primary); }
+        .sidebar-footer .nav-item svg { opacity: 0.6; }
+        .sidebar-footer .nav-item:hover svg { opacity: 1; }
+
+        .main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+        .content-header { padding: 16px 24px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; background: white; }
+        .content-title { font-size: 18px; font-weight: 600; color: var(--text-primary); }
+
+        .content-body { flex: 1; overflow-y: auto; padding: 24px; }
+
+        .btn { padding: 8px 16px; border: none; border-radius: var(--radius-sm); font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 6px; }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-primary:hover { background: var(--primary-dark); }
+        .btn-secondary { background: white; color: var(--text-secondary); border: 1px solid var(--border); }
+        .btn-secondary:hover { background: var(--hover); }
+        .btn-danger { background: var(--danger); color: white; }
+        .btn-danger:hover { background: #dc2626; }
+        .btn-sm { padding: 6px 12px; font-size: 12px; }
+
+        .badge { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 20px; font-size: 12px; font-weight: 500; }
+        .badge-gray { background: #f5f5f7; color: #909296; }
+
+        .form-group { margin-bottom: 12px; }
+        .form-group label { display: block; font-size: 13px; font-weight: 500; color: var(--text-secondary); margin-bottom: 6px; }
+        .form-group input, .form-group textarea, .form-group select { width: 100%; padding: 8px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 13px; outline: none; transition: all 0.2s; background: white; }
+        .form-group input:focus, .form-group textarea:focus, .form-group select:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1); }
+
+        .empty-state { text-align: center; padding: 60px 20px; color: var(--text-muted); }
+        .empty-state .icon { font-size: 48px; margin-bottom: 16px; opacity: 0.5; }
+
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+        .page-header { display: flex; align-items: center; gap: 12px; margin-bottom: 24px; flex-wrap: wrap; }
+        .page-back { font-size: 20px; color: var(--text-secondary); text-decoration: none; }
+        .page-back:hover { color: var(--primary); }
+        .page-title { font-size: 20px; font-weight: 600; color: var(--text-primary); }
+        .page-desc { font-size: 13px; color: var(--text-muted); }
+        .page-stats { display: flex; gap: 24px; margin-left: auto; }
+        .stat-item { text-align: center; }
+        .stat-value { font-size: 24px; font-weight: 700; color: var(--primary); }
+        .stat-label { font-size: 12px; color: var(--text-muted); }
+        .page-actions { display: flex; gap: 8px; margin-left: 16px; }
+
+        .tabs-nav { display: flex; gap: 4px; margin-bottom: 16px; padding-bottom: 16px; border-bottom: 1px solid var(--border); }
+        .tab-btn { padding: 8px 16px; border: none; background: transparent; border-radius: var(--radius-sm); font-size: 13px; font-weight: 500; color: var(--text-secondary); cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 6px; }
+        .tab-btn:hover { background: var(--hover); color: var(--text-primary); }
+        .tab-btn.active { background: rgba(99, 102, 241, 0.1); color: var(--primary); }
+        .tab-icon { font-size: 14px; }
+        .tab-count { background: var(--border); color: var(--text-secondary); font-size: 11px; padding: 1px 6px; border-radius: 10px; margin-left: 4px; }
+        .tab-btn-add { color: var(--primary); font-weight: 600; }
+
+        .tab-content { min-height: 400px; }
+
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 1000; }
+        .modal-box { background: white; border-radius: var(--radius-md); box-shadow: 0 10px 25px rgba(0,0,0,0.1); max-width: 90%; max-height: 90vh; overflow-y: auto; }
+        .modal-header { padding: 16px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; }
+        .modal-header h3 { font-size: 16px; font-weight: 600; }
+        .modal-body { padding: 20px; }
+        .modal-footer { padding: 16px 20px; border-top: 1px solid var(--border); display: flex; align-items: center; justify-content: flex-end; gap: 8px; }
+
+        .overview-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; margin-bottom: 24px; }
+        .overview-card { background: white; border: 1px solid var(--border); border-radius: var(--radius-md); padding: 20px; }
+        .overview-card-full { grid-column: 1 / -1; }
+        .overview-card h4 { font-size: 14px; font-weight: 600; margin-bottom: 16px; }
+        .overview-chart { height: 180px; }
+        .chart-time-wrap { height: 220px; }
+
+        .ai-analysis { background: white; border: 1px solid var(--border); border-radius: var(--radius-md); padding: 20px; }
+        .ai-analysis h4 { font-size: 14px; font-weight: 600; margin-bottom: 12px; }
+        .ai-analysis-content { font-size: 13px; line-height: 1.7; }
+        .ai-loading { color: var(--text-muted); font-style: italic; }
+
+        .status-grid { display: grid; gap: 12px; }
+        .status-card { background: #fafbfc; border-radius: var(--radius-sm); padding: 16px; }
+        .status-card h5 { font-size: 13px; font-weight: 600; margin-bottom: 8px; }
+        .status-complete-rate { font-size: 20px; font-weight: 700; color: var(--success); }
+        .status-meta { font-size: 12px; color: var(--text-muted); margin-left: 8px; }
+        .status-bar-wrap { height: 8px; background: #e5e7eb; border-radius: 4px; margin: 12px 0; overflow: hidden; }
+        .status-bar-seg { height: 100%; border-radius: 4px; }
+        .status-legend { display: flex; flex-wrap: wrap; gap: 12px; font-size: 12px; }
+        .status-legend-item { display: flex; align-items: center; gap: 4px; }
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; }
+
+        .toolbar { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+        .search-box { position: relative; flex: 1; min-width: 200px; max-width: 300px; }
+        .search-box input { width: 100%; padding: 8px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 13px; }
+
+        .data-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        .data-table th { text-align: left; padding: 10px 12px; background: #f8fafc; border-bottom: 2px solid var(--border); font-weight: 600; color: var(--text-secondary); }
+        .data-table td { padding: 10px 12px; border-bottom: 1px solid var(--border); }
+        .data-table tr:hover { background: var(--hover); }
+
+        .detail-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border); }
+        .detail-row:last-child { border-bottom: none; }
+        .detail-row label { font-size: 13px; color: var(--text-secondary); font-weight: 500; }
+        .detail-row span { font-size: 13px; color: var(--text-primary); }
+
+        .msg { padding: 10px 16px; border-radius: var(--radius-sm); font-size: 13px; margin-bottom: 8px; }
+        .msg-success { background: #dcfce7; color: #166534; }
+        .msg-error { background: #fee2e2; color: #991b1b; }
+        .msg-info { background: #dbeafe; color: #1e40af; }
+    </style>
+</head>
+<body>
+    <th:block th:replace="3.0/fragments/sidebar::sidebar(${currentNav})"></th:block>
+    
+    <main class="main-content">
+        <div class="content-header">
+            <h1 class="content-title" id="pageTitle">数据模块</h1>
+        </div>
+        
+        <div class="content-body">
+            <div class="page-header">
+                <a href="/v3/data" class="page-back">←</a>
+                <span id="moduleIcon" style="font-size:28px;"></span>
+                <div>
+                    <h2 class="page-title" id="moduleName"></h2>
+                    <span class="page-desc" id="moduleDesc"></span>
+                </div>
+                <div class="page-stats">
+                    <div class="stat-item"><div class="stat-value" id="statDs">0</div><div class="stat-label">数据集</div></div>
+                    <div class="stat-item"><div class="stat-value" id="statRecords">0</div><div class="stat-label">总记录</div></div>
+                </div>
+                <div class="page-actions">
+                    <button class="btn btn-secondary" onclick="showEditModule()">✏️ 编辑模块</button>
+                </div>
+            </div>
+
+            <div class="tabs-nav" id="tabsNav">
+                <button class="tab-btn active" onclick="switchTab('overview',this)">
+                    <span class="tab-icon">📊</span> 概览
+                </button>
+            </div>
+
+            <div class="tab-content" id="tabContent"></div>
+        </div>
+    </main>
+
+    <div id="moduleModal" class="modal-overlay" onclick="closeModal('moduleModal',event)">
+        <div class="modal-box" style="width:420px;" onclick="event.stopPropagation()">
+            <div class="modal-header"><h3>编辑模块</h3><button class="btn btn-secondary" onclick="closeModal('moduleModal')">✕</button></div>
+            <div class="modal-body">
+                <div class="form-group"><label>模块名称 *</label><input id="editModName" type="text"></div>
+                <div class="form-group"><label>描述</label><input id="editModDesc" type="text"></div>
+                <div class="form-group"><label>图标</label><input id="editModIcon" type="text"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('moduleModal')">取消</button>
+                <button class="btn btn-primary" onclick="saveModule()">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="dsModal" class="modal-overlay" onclick="closeModal('dsModal',event)">
+        <div class="modal-box" style="width:520px;" onclick="event.stopPropagation()">
+            <div class="modal-header"><h3 id="dsModalTitle">新建数据集</h3><button class="btn btn-secondary" onclick="closeModal('dsModal')">✕</button></div>
+            <div class="modal-body">
+                <input type="hidden" id="editDsId">
+                <div class="form-group"><label>名称 *</label><input id="dsName" type="text" placeholder="如：客户信息"></div>
+                <div class="form-group"><label>描述</label><textarea id="dsDesc" rows="2" style="resize:vertical;"></textarea></div>
+                <div class="form-group"><label>类型</label><input id="dsType" type="text" placeholder="如：项目管理"></div>
+                <div class="form-group"><label>状态</label><input id="dsStatus" type="text" placeholder="如：启用"></div>
+                <div class="form-group"><label>Schema 字段（每行一个）</label><textarea id="dsSchema" rows="3" style="resize:vertical;font-family:monospace;font-size:12px;" placeholder="编号&#10;项目&#10;负责人"></textarea>
+                    <div style="color:#909296;font-size:11px;margin-top:4px;">💡 系统固定字段（id/type/status/创建时间/更新时间）无需设置，保存记录时自动生成；即使写入也会被替换</div>
+                </div>
+                <div class="form-group"><label>类型选项（每行一个，留空则记录为文本框）</label><textarea id="dsTypeOptions" rows="2" style="resize:vertical;font-family:monospace;font-size:12px;" placeholder="需求&#10;Bug&#10;优化"></textarea></div>
+                <div class="form-group"><label>状态选项（每行一个，留空则记录为文本框）</label><textarea id="dsStatusOptions" rows="2" style="resize:vertical;font-family:monospace;font-size:12px;" placeholder="待办&#10;进行中&#10;已完成"></textarea></div>
+                <div class="form-group"><label style="color:#909296;font-weight:normal;font-size:11px;">💡「类型/状态」是数据集本身属性；下面的「类型选项/状态选项」用于控制记录表单中对应字段是下拉还是文本框</label></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('dsModal')">取消</button>
+                <button class="btn btn-primary" onclick="saveDataset()">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="detailModal" class="modal-overlay" onclick="closeModal('detailModal',event)">
+        <div class="modal-box" style="width:540px;" onclick="event.stopPropagation()">
+            <div class="modal-header"><h3 id="detailModalTitle">记录详情</h3><button class="btn btn-secondary" onclick="closeModal('detailModal')">✕</button></div>
+            <div class="modal-body" id="detailBody"></div>
+            <div class="modal-footer" id="detailModalFooter">
+                <button class="btn btn-secondary" onclick="completeFromDetail()" id="btnComplete" style="display:none;">✅ 完成</button>
+                <button class="btn btn-secondary" onclick="closeFromDetail()" id="btnClose" style="display:none;">🔒 关闭</button>
+                <button class="btn btn-danger" onclick="deleteFromDetail()">🗑️ 删除</button>
+                <button class="btn btn-primary" onclick="editFromDetail()">✏️ 编辑</button>
+                <button class="btn btn-secondary" onclick="closeModal('detailModal')">关闭</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="recordModal" class="modal-overlay" onclick="closeModal('recordModal',event)">
+        <div class="modal-box" style="width:520px;" onclick="event.stopPropagation()">
+            <div class="modal-header"><h3 id="recordModalTitle">新增记录</h3><button class="btn btn-secondary" onclick="closeModal('recordModal')">✕</button></div>
+            <div class="modal-body" id="recordFormBody"></div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('recordModal')">取消</button>
+                <button class="btn btn-primary" onclick="saveRecord()">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <script th:inline="javascript">
+/*<![CDATA[*/
+const MODULE_ID = /*[[${moduleId}]]*/ '';
+
+const API = '/api/datacenter';
+let moduleData = null, datasets = [], currentDs = null, currentTab = 'overview';
+let allRecords = {};
+let charts = {};
+
+async function loadAll() {
+    const [mRes, dRes] = await Promise.all([fetch(API+'/modules/'+MODULE_ID), fetch(API+'/modules/'+MODULE_ID+'/datasets')]);
+    const md = await mRes.json(), dd = await dRes.json();
+    if (md.ok) {
+        moduleData = md.data;
+        document.getElementById('moduleIcon').textContent = moduleData.icon || '📁';
+        document.getElementById('moduleName').textContent = moduleData.name;
+        document.getElementById('moduleDesc').textContent = moduleData.description || '';
+        document.getElementById('pageTitle').textContent = moduleData.name + ' - 数据';
+    }
+    datasets = dd.ok ? dd.data : [];
+    const totalRecords = datasets.reduce((s,d) => s + (d.recordCount||0), 0);
+    document.getElementById('statDs').textContent = datasets.length;
+    document.getElementById('statRecords').textContent = totalRecords;
+
+    allRecords = {};
+    await Promise.all(datasets.map(async ds => {
+        const r = await fetch(API+'/datasets/'+ds.id+'/records');
+        const d = await r.json();
+        allRecords[ds.id] = d.ok ? d.data : [];
+    }));
+
+    renderTabs();
+    switchTab(currentTab, document.querySelector('.tab-btn.active'));
+}
+
+function renderTabs() {
+    const nav = document.getElementById('tabsNav');
+    let html = '<button class="tab-btn'+(currentTab==='overview'?' active':'')+'" onclick="switchTab(\'overview\',this)"><span class="tab-icon">📊</span> 概览</button>';
+    datasets.forEach(ds => {
+        html += '<button class="tab-btn'+(currentTab===ds.id?' active':'')+'" onclick="switchTab(\''+ds.id+'\',this)">'
+            + '<span class="tab-icon">📦</span> '+ds.name
+            + '<span class="tab-count">'+(ds.recordCount||0)+'</span>'
+            + '</button>';
+    });
+    html += '<button class="tab-btn tab-btn-add" onclick="showCreateDs()">+</button>';
+    nav.innerHTML = html;
+}
+
+function switchTab(tab, btn) {
+    currentTab = tab;
+    document.querySelectorAll('.tab-btn').forEach(t=>t.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+    else document.querySelector('.tab-btn').classList.add('active');
+
+    if (tab === 'overview') renderOverview();
+    else renderDatasetTab(tab);
+}
+
+function renderOverview() {
+    const el = document.getElementById('tabContent');
+    if (datasets.length === 0) {
+        el.innerHTML = '<div class="empty-state"><div class="icon">📦</div><p>暂无数据集</p></div>';
+        return;
+    }
+
+    let html = '<div class="overview-grid">'
+        + '<div class="overview-card overview-card-full"><h4>📈 时间趋势 <span style="font-weight:400;font-size:11px;color:#909296;">按创建时间聚合</span></h4>'
+        + '<div class="chart-time-wrap"><canvas id="chartTrend"></canvas></div></div>'
+        + '<div class="overview-card"><h4>📦 数据集分布</h4><div class="overview-chart"><canvas id="chartDs"></canvas></div></div>'
+        + '<div class="overview-card" id="statusCard"><h4>✅ 状态分布</h4><div id="statusContent"><div class="ai-loading">计算中...</div></div></div>'
+        + '</div>';
+
+    html += '<div class="ai-analysis">'
+        + '<h4>🤖 AI 数据分析 <button class="btn btn-secondary btn-sm" onclick="refreshAnalysis()" style="margin-left:8px;font-size:11px;">🔄 刷新分析</button></h4>'
+        + '<div id="aiAnalysisContent" class="ai-analysis-content"><div class="ai-loading">正在分析数据...</div></div>'
+        + '</div>';
+
+    el.innerHTML = html;
+
+    setTimeout(() => {
+        renderTrendChart();
+        renderDsChart();
+        renderStatusOverview();
+        generateAiAnalysis();
+    }, 100);
+}
+
+function renderTrendChart() {
+    const ctx = document.getElementById('chartTrend');
+    if (!ctx) return;
+    if (charts.trend) charts.trend.destroy();
+
+    const dateCount = {};
+    datasets.forEach(ds => {
+        const records = allRecords[ds.id] || [];
+        records.forEach(r => {
+            const raw = r['创建时间'] || r['_importTime'] || '';
+            const m = String(raw).match(/(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})/);
+            if (!m) return;
+            const day = m[1] + '-' + m[2].padStart(2,'0') + '-' + m[3].padStart(2,'0');
+            if (!dateCount[day]) dateCount[day] = { total:0, byDs:{} };
+            dateCount[day].total++;
+            if (!dateCount[day].byDs[ds.name]) dateCount[day].byDs[ds.name] = 0;
+            dateCount[day].byDs[ds.name]++;
+        });
+    });
+
+    const sortedDays = Object.keys(dateCount).sort();
+    if (sortedDays.length === 0) {
+        ctx.parentElement.innerHTML = '<div style="text-align:center;padding:60px 0;color:#909296;font-size:13px;">📭 暂无时间数据</div>';
+        return;
+    }
+
+    const hasMultiDs = datasets.filter(d => (allRecords[d.id]||[]).length > 0).length > 1;
+
+    if (hasMultiDs) {
+        const dsNames = datasets.filter(d => {
+            return (allRecords[d.id]||[]).some(r => {
+                const raw = r['创建时间'] || r['_importTime'] || '';
+                return raw.match(/(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})/);
+            });
+        }).map(d => d.name);
+
+        const colors = ['#7c5cfc','#f59e0b','#10b981','#ef4444','#3b82f6','#8b5cf6','#ec4899','#06b6d4'];
+        const datasets_chart = dsNames.map((name, i) => ({
+            label: name,
+            data: sortedDays.map(d => dateCount[d].byDs[name] || 0),
+            backgroundColor: colors[i % colors.length] + '33',
+            borderColor: colors[i % colors.length],
+            borderWidth: 2,
+            fill: true,
+            tension: 0.3,
+            pointRadius: 2
+        }));
+
+        charts.trend = new Chart(ctx, {
+            type: 'line',
+            data: { labels: sortedDays, datasets: datasets_chart },
+            options: {
+                responsive:true, maintainAspectRatio:false,
+                interaction:{ mode:'index', intersect:false },
+                plugins:{
+                    legend:{ position:'top', labels:{ boxWidth:12, padding:8, font:{size:11} } },
+                    tooltip:{ callbacks:{ title:(items) => '📅 '+items[0].label } }
+                },
+                scales:{
+                    x:{ ticks:{ font:{size:10}, maxTicksLimit:15 }, grid:{display:false} },
+                    y:{ beginAtZero:true, ticks:{ stepSize:1, font:{size:10} }, grid:{color:'#f0f0f0'} }
+                }
+            }
+        });
+    } else {
+        const totalData = sortedDays.map(d => dateCount[d].total);
+        charts.trend = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: sortedDays,
+                datasets: [{
+                    label: '记录数', data: totalData,
+                    borderColor: '#7c5cfc', backgroundColor: '#7c5cfc22',
+                    borderWidth: 2, fill: true, tension: 0.3, pointRadius: 3
+                }]
+            },
+            options: {
+                responsive:true, maintainAspectRatio:false,
+                plugins:{ legend:{ display:false } },
+                scales:{
+                    x:{ ticks:{ font:{size:10}, maxTicksLimit:15 }, grid:{display:false} },
+                    y:{ beginAtZero:true, ticks:{ stepSize:1, font:{size:10} }, grid:{color:'#f0f0f0'} }
+                }
+            }
+        });
+    }
+}
+
+function renderStatusOverview() {
+    const el = document.getElementById('statusContent');
+    if (!el) return;
+
+    const statusDsList = [];
+    datasets.forEach(ds => {
+        const records = allRecords[ds.id] || [];
+        const statusValues = [];
+        records.forEach(r => {
+            const s = r['status'] || r['状态'];
+            if (s && String(s).trim()) statusValues.push(String(s).trim());
+        });
+        if (statusValues.length > 0) {
+            const countMap = {};
+            statusValues.forEach(s => { countMap[s] = (countMap[s] || 0) + 1; });
+            const total = statusValues.length;
+            const sorted = Object.entries(countMap).sort((a,b) => b[1]-a[1]);
+
+            const doneKeywords = ['已完成','完成','已发布','已修复','完结'];
+            const doneCount = Object.entries(countMap)
+                .filter(([k]) => doneKeywords.some(dk => k.includes(dk)))
+                .reduce((s, [,c]) => s+c, 0);
+            const rate = total > 0 ? (doneCount/total*100).toFixed(0) : 0;
+
+            const statusOpts = (ds.schema && (ds.schema.statusOptions || ds.schema.statuses)) || [];
+            const statusColorMap = assignStatusColors(statusOpts);
+
+            statusDsList.push({
+                dsName: ds.name,
+                dsIcon: ds.icon || '📦',
+                total,
+                doneCount,
+                rate,
+                distribution: sorted,
+                statusColorMap,
+                countMap
+            });
+        }
+    });
+
+    if (statusDsList.length === 0) {
+        el.innerHTML = '<div style="text-align:center;padding:30px 0;color:#909296;font-size:13px;">📭 暂无状态数据</div>';
+        return;
+    }
+
+    let html = '<div class="status-grid">';
+    statusDsList.forEach(item => {
+        const segs = item.distribution.map(([status, count]) => {
+            const pct = (count / item.total * 100).toFixed(0);
+            const color = item.statusColorMap[status] || '#909296';
+            return `<div class="status-bar-seg" style="width:${pct}%;background:${color};" title="${esc(status)}: ${count}条">${pct}%</div>`;
+        }).join('');
+
+        const legend = item.distribution.map(([status, count]) => {
+            const color = item.statusColorMap[status] || '#909296';
+            return `<span class="status-legend-item"><span class="status-dot" style="background:${color}"></span>${esc(status)} ${count}</span>`;
+        }).join('');
+
+        html += '<div class="status-card">'
+            + `<h5>${item.dsIcon} ${esc(item.dsName)}</h5>`
+            + `<div><span class="status-complete-rate">${item.rate}%</span><span class="status-meta">完成率（${item.doneCount}/${item.total}）</span></div>`
+            + `<div class="status-bar-wrap">${segs}</div>`
+            + `<div class="status-legend">${legend}</div>`
+            + '</div>';
+    });
+    html += '</div>';
+
+    el.innerHTML = html;
+}
+
+function assignStatusColors(statusOpts) {
+    const palette = ['#10b981','#f59e0b','#ef4444','#3b82f6','#8b5cf6','#ec4899','#06b6d4','#f97316'];
+    const map = {};
+    statusOpts.forEach((opt, i) => {
+        const lower = opt.toLowerCase();
+        if (lower.includes('完成')||lower.includes('完结')||lower.includes('发布')||lower.includes('修复')) map[opt] = '#10b981';
+        else if (lower.includes('待')||lower.includes('进行')||lower.includes('继续')) map[opt] = '#f59e0b';
+        else if (lower.includes('取消')||lower.includes('关闭')||lower.includes('失效')||lower.includes('流失')) map[opt] = '#909296';
+        else if (lower.includes('正常')||lower.includes('启用')) map[opt] = '#3b82f6';
+        else map[opt] = palette[i % palette.length];
+    });
+    return map;
+}
+
+function renderDsChart() {
+    const ctx = document.getElementById('chartDs');
+    if (!ctx) return;
+    if (charts.ds) charts.ds.destroy();
+    const labels = datasets.map(d => d.name);
+    const data = datasets.map(d => (allRecords[d.id]||[]).length);
+    if (data.every(v => v === 0)) {
+        ctx.parentElement.innerHTML = '<div style="text-align:center;padding:60px 0;color:#909296;font-size:13px;">📭 暂无数据</div>';
+        return;
+    }
+    const colors = ['#7c5cfc','#f59e0b','#10b981','#ef4444','#3b82f6','#8b5cf6','#ec4899','#06b6d4'];
+    charts.ds = new Chart(ctx, {
+        type: 'doughnut',
+        data: { labels, datasets: [{ data, backgroundColor: colors.slice(0, labels.length), borderWidth: 0 }] },
+        options: { responsive:true, maintainAspectRatio:false, plugins:{legend:{position:'bottom',labels:{padding:12,font:{size:12}}}} }
+    });
+}
+
+async function generateAiAnalysis() {
+    const el = document.getElementById('aiAnalysisContent');
+
+    try {
+        const cacheRes = await fetch(API + '/modules/' + MODULE_ID + '/analysis');
+        const cacheData = await cacheRes.json();
+        if (cacheData.ok && cacheData.reply) {
+            el.innerHTML = cacheData.reply;
+            return;
+        }
+    } catch(e) {}
+
+    await doGenerateAnalysis(el);
+}
+
+async function refreshAnalysis() {
+    const el = document.getElementById('aiAnalysisContent');
+    await fetch(API + '/modules/' + MODULE_ID + '/analysis', { method: 'DELETE' });
+    el.innerHTML = '<div class="ai-loading">正在重新分析...</div>';
+    await doGenerateAnalysis(el);
+}
+
+async function doGenerateAnalysis(el) {
+    const dsInfo = datasets.map(ds => {
+        const records = allRecords[ds.id] || [];
+        const fields = ds.schema && ds.schema.fields ? ds.schema.fields.map(f=>f.name).join('、') : '';
+        const sample = records.slice(0, 3).map(r => {
+            const fieldNames = ds.schema && ds.schema.fields ? ds.schema.fields.map(f=>f.name) : Object.keys(r).filter(k=>!k.startsWith('_'));
+            return fieldNames.slice(0, 5).map(f => f + ':' + (r[f]||'')).join(', ');
+        }).join(' | ');
+
+        const statusCount = {};
+        let hasStatus = false;
+        records.forEach(r => {
+            const s = r['status'] || r['状态'];
+            if (s && String(s).trim()) {
+                hasStatus = true;
+                const key = String(s).trim();
+                statusCount[key] = (statusCount[key]||0) + 1;
+            }
+        });
+
+        const dayCount = {};
+        records.forEach(r => {
+            const raw = r['创建时间'] || r['_importTime'] || '';
+            const m = String(raw).match(/(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})/);
+            if (m) {
+                const day = m[1]+'-'+m[2].padStart(2,'0')+'-'+m[3].padStart(2,'0');
+                dayCount[day] = (dayCount[day]||0) + 1;
+            }
+        });
+        const days = Object.keys(dayCount).sort();
+        const trendDesc = days.length >= 2
+            ? `从 ${days[0]} 到 ${days[days.length-1]}，共${days.length}天有记录`
+            : (days.length === 1 ? `仅有 ${days[0]} 有记录` : '暂无时间数据');
+
+        const fieldDistributions = {};
+        if (ds.schema && ds.schema.fields) {
+            ds.schema.fields.forEach(f => {
+                const fName = f.name;
+                if (['编号','创建时间','更新时间','id','recordNum'].includes(fName)) return;
+                const valCount = {};
+                records.forEach(r => {
+                    const v = r[fName];
+                    if (v !== null && v !== undefined && String(v).trim()) {
+                        const key = String(v).trim();
+                        valCount[key] = (valCount[key]||0) + 1;
+                    }
+                });
+                const entries = Object.entries(valCount);
+                if (entries.length >= 2 && entries.length <= 15) {
+                    fieldDistributions[fName] = entries.sort((a,b) => b[1]-a[1]).slice(0, 5);
+                }
+            });
+        }
+
+        return {
+            name: ds.name,
+            count: records.length,
+            fields,
+            sample,
+            statusCount: hasStatus ? statusCount : null,
+            trendDesc,
+            fieldDistributions: Object.keys(fieldDistributions).length > 0 ? fieldDistributions : null
+        };
+    });
+
+    try {
+        const r = await fetch(API + '/modules/' + MODULE_ID + '/analysis', {
+            method: 'POST', headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({ datasets: dsInfo })
+        });
+        const d = await r.json();
+        if (d.ok && d.reply) {
+            el.innerHTML = d.reply;
+        } else {
+            el.innerHTML = generateLocalAnalysis(dsInfo);
+        }
+    } catch(e) {
+        el.innerHTML = generateLocalAnalysis(dsInfo);
+    }
+}
+
+function generateLocalAnalysis(dsInfo) {
+    if (!dsInfo) {
+        dsInfo = datasets.map(ds => {
+            const records = allRecords[ds.id] || [];
+            const fields = ds.schema && ds.schema.fields ? ds.schema.fields.map(f=>f.name).join('、') : '';
+            return { name: ds.name, count: records.length, fields };
+        });
+    }
+
+    let total = 0;
+    dsInfo.forEach(d => total += d.count);
+
+    let html = '<h4 style="font-size:14px;margin-bottom:10px;">📊 数据概览</h4>';
+
+    html += '<div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:10px;">'
+        + `<span style="background:#f0edff;padding:4px 12px;border-radius:16px;font-size:13px;">📦 ${datasets.length} 个数据集</span>`
+        + `<span style="background:#f0edff;padding:4px 12px;border-radius:16px;font-size:13px;">📝 ${total} 条记录</span>`
+        + '</div>';
+
+    dsInfo.forEach(d => {
+        html += `<div style="background:#fafbfc;border:1px solid #eef0f4;border-radius:8px;padding:12px;margin-bottom:10px;">`;
+        html += `<div style="font-weight:600;font-size:13px;margin-bottom:6px;">📁 ${esc(d.name)} <span style="font-weight:400;color:#909296;">（${d.count}条）</span></div>`;
+
+        if (d.fields) {
+            html += `<div style="font-size:12px;color:#5c5f66;margin-bottom:4px;">字段：${esc(d.fields)}</div>`;
+        }
+
+        if (d.statusCount) {
+            const entries = Object.entries(d.statusCount).sort((a,b) => b[1]-a[1]);
+            const doneKeywords = ['已完成','完成','已发布','已修复','完结'];
+            const doneCount = entries.filter(([k]) => doneKeywords.some(dk=>k.includes(dk))).reduce((s, [,c])=>s+c, 0);
+            const rate = d.count > 0 ? (doneCount/d.count*100).toFixed(0) : 0;
+            html += `<div style="font-size:12px;margin-top:4px;">`
+                + `<span style="color:#10b981;">✅ 完成率 ${rate}%</span>`
+                + ` <span style="color:#909296;">（${doneCount}/${d.count}）</span>`
+                + ` <span style="color:#909296;">|</span> `;
+            entries.forEach(([s, c], i) => {
+                if (i > 0) html += ' ';
+                html += `<span>${esc(s)} ${c}</span>`;
+            });
+            html += `</div>`;
+        }
+
+        if (d.trendDesc) {
+            html += `<div style="font-size:12px;color:#909296;margin-top:3px;">📈 ${d.trendDesc}</div>`;
+        }
+
+        if (d.fieldDistributions) {
+            Object.entries(d.fieldDistributions).forEach(([fName, topVals]) => {
+                html += `<div style="font-size:12px;color:#5c5f66;margin-top:3px;">🔹 ${esc(fName)}：`;
+                topVals.forEach(([v, c], i) => {
+                    if (i > 0) html += '、';
+                    html += `${esc(v)}(${c})`;
+                });
+                html += `</div>`;
+            });
+        }
+
+        html += '</div>';
+    });
+
+    if (dsInfo.some(d => d.count > 0)) {
+        const allDays = new Set();
+        datasets.forEach(ds => {
+            (allRecords[ds.id]||[]).forEach(r => {
+                const raw = r['创建时间'] || r['_importTime'] || '';
+                const m = String(raw).match(/(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})/);
+                if (m) allDays.add(m[0]+'-'+m[1].padStart(2,'0')+'-'+m[2].padStart(2,'0'));
+            });
+        });
+        if (allDays.size > 0) {
+            const sorted = [...allDays].sort();
+            html += `<p style="font-size:12px;color:#909296;margin-top:8px;">📅 数据时间跨度：${sorted[0]} ~ ${sorted[sorted.length-1]}（共${sorted.length}天）</p>`;
+        }
+    }
+
+    if (!window.llmAvailable) {
+        html += '<p style="color:#909296;font-size:12px;margin-top:10px;padding-top:8px;border-top:1px solid #eef0f4;">💡 配置 LLM API Key 可获得更深入的智能分析</p>';
+    }
+    return html;
+}
+
+const SYSTEM_FIELDS = ['recordNum', '编号', '类型', '状态', '创建时间', '更新时间'];
+const SYSTEM_FIELD_SET = new Set(SYSTEM_FIELDS);
+const SYSTEM_EDITABLE = ['类型', '状态', '编号'];
+
+function buildCols(schemaFields, recKeys) {
+    const schemaSet = new Set(schemaFields);
+    const cols = [...schemaFields];
+    if (!schemaSet.has('编号')) {
+        cols.unshift('编号');
+    }
+    if (!schemaSet.has('类型')) {
+        const idxBianHao = cols.indexOf('编号');
+        if (idxBianHao >= 0) {
+            cols.splice(idxBianHao + 1, 0, '类型');
+        } else {
+            cols.push('类型');
+        }
+    }
+    if (!schemaSet.has('状态')) {
+        cols.push('状态');
+    }
+    if (!cols.includes('创建时间')) cols.push('创建时间');
+    if (!cols.includes('更新时间')) cols.push('更新时间');
+    return cols;
+}
+
+function buildFormFields(schemaFields, rec) {
+    const schemaSet = new Set(schemaFields);
+    const merged = [...schemaFields];
+    if (!schemaSet.has('编号')) merged.push('编号');
+    if (!schemaSet.has('类型')) merged.push('类型');
+    if (!schemaSet.has('状态')) merged.push('状态');
+    if (rec) {
+        Object.keys(rec).forEach(fn => {
+            if (fn.startsWith('_')) return;
+            if (SYSTEM_FIELD_SET.has(fn) && !SYSTEM_EDITABLE.includes(fn)) return;
+            if (merged.includes(fn)) return;
+            merged.push(fn);
+        });
+    }
+    return merged;
+}
+
+function parseTimeField(v) {
+    if (v === null || v === undefined || v === '') return 0;
+    if (typeof v === 'number') return v;
+    const s = String(v).trim();
+    if (!s) return 0;
+    const m = s.match(/(\d{4})[-\/\.]?(\d{1,2})[-\/\.]?(\d{1,2})[\sT]?(\d{1,2})?[:\.]?(\d{1,2})?[:\.]?(\d{1,2})?/);
+    if (m) {
+        const d = new Date(
+            parseInt(m[1]),
+            parseInt(m[2]) - 1,
+            parseInt(m[3]),
+            m[4] ? parseInt(m[4]) : 0,
+            m[5] ? parseInt(m[5]) : 0,
+            m[6] ? parseInt(m[6]) : 0
+        );
+        return d.getTime();
+    }
+    const ms = Date.parse(s);
+    return isNaN(ms) ? 0 : ms;
+}
+
+function sortRecordsByUpdatedAt(records) {
+    return [...records].sort((a, b) => {
+        let ta = parseTimeField(a['更新时间']);
+        let tb = parseTimeField(b['更新时间']);
+        if (!ta && !tb) {
+            ta = parseTimeField(a['完成日期']);
+            tb = parseTimeField(b['完成日期']);
+        }
+        if (!ta && !tb) {
+            ta = parseTimeField(a['提出日期']);
+            tb = parseTimeField(b['提出日期']);
+        }
+        if (!ta && !tb) {
+            if (a['_importTime'] && b['_importTime']) {
+                ta = parseTimeField(a['_importTime']);
+                tb = parseTimeField(b['_importTime']);
+            }
+        }
+        if (ta === tb) return 0;
+        return ta < tb ? 1 : -1;
+    });
+}
+
+function renderDatasetTab(dsId) {
+    currentDs = datasets.find(d => d.id === dsId);
+    if (!currentDs) return;
+    const records = sortRecordsByUpdatedAt(allRecords[dsId] || []);
+    const el = document.getElementById('tabContent');
+
+    let html = '<div class="toolbar">'
+        + '<div class="search-box"><input type="text" id="recordSearch" placeholder="搜索记录..." oninput="filterRecords()"></div>'
+        + '<button class="btn btn-primary btn-sm" onclick="showAddRecord()">+ 新增</button>'
+        + '<button class="btn btn-secondary btn-sm" onclick="showEditDs()">✏️ 编辑数据集</button>'
+        + '<button class="btn btn-secondary btn-sm" onclick="showImport()">📥 导入</button>'
+        + '<button class="btn btn-secondary btn-sm" onclick="doExport()">📤 导出</button>'
+        + '<button class="btn btn-danger btn-sm" onclick="deleteDs()">🗑️ 删除</button>'
+        + '<button class="btn btn-secondary btn-sm" onclick="loadAll()">🔄</button>'
+        + '</div>';
+
+    if (records.length === 0) {
+        html += '<div class="empty-state"><div class="icon">📭</div><p>暂无数据</p></div>';
+    } else {
+        const schema = currentDs.schema || {};
+        const schemaFields = schema.fields ? schema.fields.map(f => f.name) : [];
+        const cols = buildCols(schemaFields);
+        html += '<div style="overflow-x:auto;max-height:60vh;overflow-y:auto;"><table class="data-table"><thead><tr>'
+            + cols.map(c=>'<th>'+esc(c)+'</th>').join('')
+            + '</tr></thead><tbody id="recordsBody">';
+        records.forEach(rec => {
+            const statusVal = rec['status'];
+            const statusBadge = statusVal ? getStatusBadge(statusVal) : '';
+            html += '<tr data-search="'+esc(JSON.stringify(rec).toLowerCase())+'" style="cursor:pointer;" onclick="showRecordDetail(\''+esc(rec._id||'')+'\')">'
+                + cols.map(c=>{
+                    if (c === 'status') {
+                        return '<td>'+(statusVal ? statusBadge : '')+'</td>';
+                    }
+                    const v = rec[c];
+                    const s = v !== null && v !== undefined ? String(v) : '';
+                    const isSystem = SYSTEM_FIELD_SET.has(c);
+                    const cls = isSystem ? ' style="white-space:nowrap;color:#888;font-size:12px;"' : '';
+                    return '<td'+cls+' title="'+esc(s)+'">'+esc(s.substring(0,150))+'</td>';
+                }).join('')
+                + '</tr>';
+        });
+        html += '</tbody></table></div>';
+    }
+
+    el.innerHTML = html;
+}
+
+function filterRecords() {
+    const q = document.getElementById('recordSearch').value.toLowerCase();
+    document.querySelectorAll('#recordsBody tr').forEach(tr => { tr.style.display = tr.dataset.search.includes(q)?'':'none'; });
+}
+
+function showAddRecord() { showRecordForm(null); }
+
+function showEditRecord(rid) {
+    const rec = allRecords[currentDs.id].find(r=>r._id===rid);
+    showRecordForm(rec);
+}
+
+function showRecordForm(rec) {
+    const schema = currentDs.schema || {};
+    const schemaFields = schema.fields ? schema.fields.map(f => f.name) : [];
+    const fieldNames = buildFormFields(schemaFields, rec);
+    document.getElementById('recordModalTitle').textContent = rec ? '编辑记录' : '新增记录';
+
+    const typeOptions = (schema.typeOptions && schema.typeOptions.length) ? schema.typeOptions : [];
+    let statusOptions = (schema.statusOptions && schema.statusOptions.length) ? schema.statusOptions : [];
+    if (statusOptions.length === 0 && schema.statuses && schema.statuses.length) {
+        statusOptions = schema.statuses;
+    }
+
+    const isTypeField = (fn) => fn === 'type' || fn === '类型';
+    const isStatusField = (fn) => fn === 'status' || fn === '状态';
+    const AUTO_ONLY_SET = new Set(['id', '创建时间', '更新时间']);
+
+    let html = '';
+    const schemaFieldSet = new Set(schemaFields);
+    fieldNames.forEach((fn, idx) => {
+        if (AUTO_ONLY_SET.has(fn)) return;
+        let val = '';
+        if (rec) {
+            if (rec[fn] !== null && rec[fn] !== undefined) {
+                val = String(rec[fn]);
+            } else if (isTypeField(fn)) {
+                if (rec['type']) val = String(rec['type']);
+                else if (rec['类型']) val = String(rec['类型']);
+                else if (currentDs.type) val = currentDs.type;
+            } else if (isStatusField(fn)) {
+                if (rec['status']) val = String(rec['status']);
+                else if (rec['状态']) val = String(rec['状态']);
+                else if (currentDs.status) val = currentDs.status;
+            }
+        } else {
+            if (isTypeField(fn)) val = currentDs.type || '';
+            if (isStatusField(fn)) val = currentDs.status || '';
+        }
+        const canRemove = !schemaFieldSet.has(fn) && !SYSTEM_EDITABLE.includes(fn);
+        html += '<div class="form-group" id="rf_wrap_'+idx+'">'
+             + '<label>' + esc(fn)
+             + (canRemove ? ' <button type="button" onclick="removeField('+idx+', \''+esc(fn).replace(/'/g,"\\'")+'\')" style="border:none;background:transparent;color:#e74c3c;cursor:pointer;font-size:14px;padding:0 4px;" title="从这条记录中删除该字段">✕</button>' : '')
+             + (SYSTEM_EDITABLE.includes(fn) ? ' <span style="color:#aaa;font-size:11px;">系统</span>' : '')
+             + '</label>';
+
+        if (isTypeField(fn) && typeOptions.length > 0) {
+            const selectKey = fn === '类型' ? '类型' : fn;
+            html += '<select id="rf_'+esc(selectKey)+'">';
+            typeOptions.forEach(opt => {
+                html += '<option value="'+esc(opt)+'"'+(val===opt?' selected':'')+'>'+esc(opt)+'</option>';
+            });
+            html += '</select>';
+        } else if (isStatusField(fn) && statusOptions.length > 0) {
+            const selectKey = fn === '状态' ? '状态' : fn;
+            html += '<select id="rf_'+esc(selectKey)+'">';
+            statusOptions.forEach(opt => {
+                html += '<option value="'+esc(opt)+'"'+(val===opt?' selected':'')+'>'+esc(opt)+'</option>';
+            });
+            html += '</select>';
+        } else if (isTypeField(fn)) {
+            html += '<input id="rf_类型" value="'+esc(val)+'" placeholder="系统自动补全">';
+        } else if (isStatusField(fn)) {
+            html += '<input id="rf_状态" value="'+esc(val)+'" placeholder="系统自动补全">';
+        } else {
+            html += '<input id="rf_'+esc(fn)+'" value="'+esc(val)+'">';
+        }
+        html += '</div>';
+    });
+    document.getElementById('recordFormBody').innerHTML = html;
+    document.getElementById('recordModal').dataset.rid = rec ? rec._id : '';
+    document.getElementById('recordModal').dataset.removed = '';
+    openModal('recordModal');
+}
+
+function removeField(idx, fn) {
+    document.getElementById('rf_wrap_'+idx).style.display = 'none';
+    const rmStr = document.getElementById('recordModal').dataset.removed || '';
+    const arr = rmStr ? rmStr.split('\x01') : [];
+    if (!arr.includes(fn)) arr.push(fn);
+    document.getElementById('recordModal').dataset.removed = arr.join('\x01');
+}
+
+async function saveRecord() {
+    const rid = document.getElementById('recordModal').dataset.rid;
+    const removedStr = document.getElementById('recordModal').dataset.removed || '';
+    const removed = removedStr ? removedStr.split('\x01') : [];
+    const fields = document.querySelectorAll('#recordFormBody input[id^="rf_"], #recordFormBody select[id^="rf_"]');
+    const data = {};
+    fields.forEach(el => {
+        const fieldName = el.id.substring(3);
+        if (removed.includes(fieldName)) return;
+        data[fieldName] = el.value || null;
+    });
+    if (data['类型'] !== undefined) {
+        data['type'] = data['类型'];
+    }
+    if (data['状态'] !== undefined) {
+        data['status'] = data['状态'];
+    }
+
+    let r;
+    if (rid) {
+        r = await fetch(API+'/datasets/'+currentDs.id+'/records/'+rid, {
+            method: 'PUT',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({data})
+        });
+    } else {
+        r = await fetch(API+'/datasets/'+currentDs.id+'/import/json', {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({data: [data]})
+        });
+    }
+
+    const d = await r.json();
+    if (d.ok) { closeModal('recordModal'); toast('已保存'); loadAll(); }
+    else toast(d.error||'失败','error');
+}
+
+async function deleteRecord(rid) {
+    if (!confirm('确定删除？')) return;
+    await fetch(API+'/datasets/'+currentDs.id+'/records/'+rid, {method:'DELETE'});
+    toast('已删除'); loadAll();
+}
+
+function getStatusBadge(status) {
+    if (status === '已完成' || status === '完成') return '<span class="badge" style="background:#e8f5e9;color:#2e7d32;font-weight:500;">✅ 已完成</span>';
+    if (status === '已关闭' || status === '关闭') return '<span class="badge" style="background:#f0f0f0;color:#909296;">🔒 已关闭</span>';
+    if (status === '进行中') return '<span class="badge" style="background:#e3f2fd;color:#1565c0;">🔄 进行中</span>';
+    if (status === '待办') return '<span class="badge" style="background:#fff8e1;color:#f57f17;">📋 待办</span>';
+    return '<span class="badge badge-gray">'+esc(status)+'</span>';
+}
+
+function showRecordDetail(rid) {
+    const rec = allRecords[currentDs.id].find(r => r._id === rid);
+    if (!rec) return;
+
+    const schema = currentDs.schema || {};
+    const schemaFields = schema.fields ? schema.fields.map(f => f.name) : [];
+    const recKeys = Object.keys(rec);
+    const cols = buildCols(schemaFields, recKeys);
+
+    document.getElementById('detailModalTitle').textContent = '📄 记录详情';
+    let html = '';
+
+    cols.forEach(f => {
+        if (f.startsWith('_')) return;
+        const val = rec[f] !== null && rec[f] !== undefined ? String(rec[f]) : '';
+        const statusVal = rec['status'];
+        const isSystem = SYSTEM_FIELD_SET.has(f);
+        const label = esc(f) + (isSystem ? ' <span style="font-size:10px;color:#9aa0a6;">系统</span>' : '');
+        if (f === 'status' && statusVal) {
+            html += '<div class="detail-row"><label>' + label + '</label><span>' + getStatusBadge(statusVal) + '</span></div>';
+        } else if (isSystem) {
+            html += '<div class="detail-row"><label>' + label + '</label><span style="color:#888;font-size:12px;">' + esc(val) + '</span></div>';
+        } else {
+            html += '<div class="detail-row"><label>' + label + '</label><span>' + esc(val) + '</span></div>';
+        }
+    });
+
+    document.getElementById('detailBody').innerHTML = html;
+    document.getElementById('detailModal').dataset.rid = rid;
+
+    const statusVal = rec['status'];
+    document.getElementById('btnComplete').style.display = (!statusVal || statusVal === '已完成') ? 'none' : '';
+    document.getElementById('btnClose').style.display = (!statusVal || statusVal === '已关闭') ? 'none' : '';
+
+    openModal('detailModal');
+}
+
+async function completeFromDetail() {
+    const rid = document.getElementById('detailModal').dataset.rid;
+    const r = await fetch(API+'/datasets/'+currentDs.id+'/records/'+rid+'/status', {
+        method: 'PATCH',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({status:'已完成'})
+    });
+    const d = await r.json();
+    if (d.ok) {
+        closeModal('detailModal');
+        toast('✅ 已完成');
+        loadAll();
+    } else {
+        toast(d.error||'失败','error');
+    }
+}
+
+async function closeFromDetail() {
+    const rid = document.getElementById('detailModal').dataset.rid;
+    const r = await fetch(API+'/datasets/'+currentDs.id+'/records/'+rid+'/status', {
+        method: 'PATCH',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({status:'已关闭'})
+    });
+    const d = await r.json();
+    if (d.ok) {
+        closeModal('detailModal');
+        toast('🔒 已关闭');
+        loadAll();
+    } else {
+        toast(d.error||'失败','error');
+    }
+}
+
+function editFromDetail() {
+    const rid = document.getElementById('detailModal').dataset.rid;
+    closeModal('detailModal');
+    showEditRecord(rid);
+}
+
+function deleteFromDetail() {
+    const rid = document.getElementById('detailModal').dataset.rid;
+    closeModal('detailModal');
+    setTimeout(() => deleteRecord(rid), 150);
+}
+
+function showCreateDs() {
+    document.getElementById('dsModalTitle').textContent = '新建数据集';
+    document.getElementById('editDsId').value = '';
+    document.getElementById('dsName').value = '';
+    document.getElementById('dsDesc').value = '';
+    document.getElementById('dsType').value = '';
+    document.getElementById('dsStatus').value = '';
+    document.getElementById('dsSchema').value = '';
+    document.getElementById('dsTypeOptions').value = '';
+    document.getElementById('dsStatusOptions').value = '';
+    openModal('dsModal');
+}
+
+function showEditDs() {
+    if (!currentDs) return;
+    document.getElementById('dsModalTitle').textContent = '编辑数据集';
+    document.getElementById('editDsId').value = currentDs.id;
+    document.getElementById('dsName').value = currentDs.name;
+    document.getElementById('dsDesc').value = currentDs.description || '';
+    document.getElementById('dsType').value = currentDs.type || '';
+    document.getElementById('dsStatus').value = currentDs.status || '';
+    const schemaText = currentDs.schema && currentDs.schema.fields ? currentDs.schema.fields.map(f=>f.name).join('\n') : '';
+    document.getElementById('dsSchema').value = schemaText;
+    let typeOptList = (currentDs.schema && currentDs.schema.typeOptions && currentDs.schema.typeOptions.length) ? currentDs.schema.typeOptions : [];
+    let statusOptList = (currentDs.schema && currentDs.schema.statusOptions && currentDs.schema.statusOptions.length) ? currentDs.schema.statusOptions : [];
+    if (statusOptList.length === 0 && currentDs.schema && currentDs.schema.statuses && currentDs.schema.statuses.length) {
+        statusOptList = currentDs.schema.statuses;
+    }
+    document.getElementById('dsTypeOptions').value = typeOptList.join('\n');
+    document.getElementById('dsStatusOptions').value = statusOptList.join('\n');
+    openModal('dsModal');
+}
+
+async function saveDataset() {
+    const id = document.getElementById('editDsId').value;
+    const name = document.getElementById('dsName').value.trim();
+    if (!name) { toast('请输入名称','error'); return; }
+    const type = document.getElementById('dsType').value.trim();
+    const status = document.getElementById('dsStatus').value.trim();
+    const schemaText = document.getElementById('dsSchema').value.trim();
+    const fields = schemaText ? schemaText.split('\n').filter(l=>l.trim()).map(l=>({name:l.trim(),type:'string'})) : [];
+    const typeOptText = document.getElementById('dsTypeOptions').value.trim();
+    const typeOptions = typeOptText ? typeOptText.split('\n').filter(l=>l.trim()).map(l=>l.trim()) : [];
+    const statusOptText = document.getElementById('dsStatusOptions').value.trim();
+    const statusOptions = statusOptText ? statusOptText.split('\n').filter(l=>l.trim()).map(l=>l.trim()) : [];
+    const body = {
+        name,
+        description: document.getElementById('dsDesc').value.trim(),
+        type,
+        status,
+        moduleId: MODULE_ID,
+        schema: {fields, typeOptions, statusOptions}
+    };
+    const r = id ? await fetch(API+'/datasets/'+id, {method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)})
+                 : await fetch(API+'/datasets', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)});
+    const d = await r.json();
+    if (d.ok) { closeModal('dsModal'); toast(id?'已更新':'已创建'); loadAll(); }
+    else toast(d.error||'失败','error');
+}
+
+async function deleteDs() {
+    if (!currentDs || !confirm('确定删除数据集「'+currentDs.name+'」及所有数据？')) return;
+    await fetch(API+'/datasets/'+currentDs.id, {method:'DELETE'});
+    toast('已删除'); currentTab = 'overview'; loadAll();
+}
+
+function showImport() {
+    let html = '<div style="border:2px dashed #d0d0d0;border-radius:10px;padding:30px;text-align:center;">'
+        + '<div style="font-size:36px;margin-bottom:10px;">📥</div>'
+        + '<p style="font-size:13px;margin-bottom:12px;color:#5c5f66;">支持 JSON 格式</p>'
+        + '<input type="file" id="importFile" accept=".json" style="display:none;" onchange="doImport(this)">'
+        + '<button class="btn btn-primary btn-sm" onclick="document.getElementById(\'importFile\').click()">选择文件</button>'
+        + '<div id="importResult" style="margin-top:12px;"></div></div>';
+
+    const box = document.createElement('div');
+    box.className = 'modal-overlay'; box.style.display = 'flex'; box.id = 'importModal';
+    box.onclick = function(e) { if (e.target===box) box.remove(); };
+    box.innerHTML = '<div class="modal-box" style="width:460px;" onclick="event.stopPropagation()">'
+        + '<div class="modal-header"><h3>导入数据</h3><button class="btn btn-secondary" onclick="document.getElementById(\'importModal\').remove()">✕</button></div>'
+        + '<div class="modal-body">'+html+'</div></div>';
+    document.body.appendChild(box);
+}
+
+async function doImport(input) {
+    const file = input.files[0]; if (!file) return;
+    const st = document.getElementById('importResult');
+    st.innerHTML = '<div class="msg msg-info">导入中...</div>';
+    try {
+        const text = await file.text();
+        let data = JSON.parse(text);
+        if (!Array.isArray(data)) data = [data];
+        const r = await fetch(API+'/datasets/'+currentDs.id+'/import/json', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({data})});
+        const d = await r.json();
+        st.innerHTML = d.ok ? '<div class="msg msg-success">✅ '+d.message+'</div>' : '<div class="msg msg-error">❌ '+d.error+'</div>';
+        if (d.ok) { setTimeout(()=>{ document.getElementById('importModal').remove(); loadAll(); }, 1000); }
+    } catch(e) { st.innerHTML = '<div class="msg msg-error">❌ '+e.message+'</div>'; }
+}
+
+async function doExport() {
+    const records = allRecords[currentDs.id] || [];
+    if (!records.length) { toast('无数据可导出','error'); return; }
+    const blob = new Blob([JSON.stringify(records,null,2)], {type:'application/json'});
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = currentDs.name+'.json'; a.click();
+    toast('导出成功');
+}
+
+function showEditModule() {
+    document.getElementById('editModName').value = moduleData.name;
+    document.getElementById('editModDesc').value = moduleData.description || '';
+    document.getElementById('editModIcon').value = moduleData.icon || '📁';
+    openModal('moduleModal');
+}
+
+async function saveModule() {
+    const name = document.getElementById('editModName').value.trim();
+    if (!name) { toast('请输入名称','error'); return; }
+    const r = await fetch(API+'/modules/'+MODULE_ID, {
+        method:'PUT', headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ name, description: document.getElementById('editModDesc').value.trim(), icon: document.getElementById('editModIcon').value.trim() })
+    });
+    const d = await r.json();
+    if (d.ok) { closeModal('moduleModal'); toast('已更新'); loadAll(); }
+    else toast(d.error||'失败','error');
+}
+
+function openModal(id) { document.getElementById(id).style.display = 'flex'; }
+function closeModal(id, e) { if (e && e.target!==e.currentTarget) return; document.getElementById(id).style.display = 'none'; }
+function esc(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function toast(msg, type) {
+    const d = document.createElement('div');
+    d.className = 'msg msg-'+(type||'success'); d.textContent = msg;
+    d.style.cssText = 'position:fixed;top:20px;right:20px;z-index:9999;';
+    document.body.appendChild(d); setTimeout(()=>d.remove(), 3000);
+}
+
+loadAll();
+</script>
