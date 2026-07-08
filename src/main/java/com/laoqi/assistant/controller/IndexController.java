@@ -47,7 +47,7 @@ public class IndexController {
 //            return "redirect:/kb/" + first.getId() + "/chat";
 //        }
 //        return "redirect:/config";
-        return "1.0/index";
+        return "redirect:/chat";
     }
 
     @GetMapping("/v1")
