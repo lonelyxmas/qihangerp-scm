@@ -82,15 +82,7 @@ public class ChatApiController {
             item.put("id", s.getId());
             item.put("title", s.getTitle());
             item.put("mode", s.getMode());
-            item.put("kbId", s.getKbId());
             item.put("updatedAt", s.getUpdatedAt());
-            
-            if (s.getKbId() != null) {
-                KnowledgeBaseEntity kb = kbService.getById(s.getKbId());
-                item.put("kbName", kb != null ? kb.getName() : "未知");
-            } else {
-                item.put("kbName", null);
-            }
             
             result.add(item);
         }
@@ -99,16 +91,14 @@ public class ChatApiController {
 
     @PostMapping("/sessions")
     public ResponseEntity<Map<String, Object>> createSession(@RequestParam(required = false) String title,
-                                                             @RequestParam(required = false) Long kbId,
                                                              @RequestParam(required = false, defaultValue = "knowledge") String mode) {
         String id = UUID.randomUUID().toString().substring(0, 12);
         String now = TimeUtil.nowStr();
         SessionEntity se = new SessionEntity();
         se.setId(id);
         se.setSource("web");
-        se.setTitle(title != null && !title.isBlank() ? title : (kbId != null ? "连续对话" : "新对话"));
+        se.setTitle(title != null && !title.isBlank() ? title : "新对话");
         se.setMode(mode != null ? mode : "knowledge");
-        se.setKbId(kbId);
         se.setCreatedAt(now);
         se.setUpdatedAt(now);
         sessionDbService.save(se);
@@ -235,7 +225,7 @@ public class ChatApiController {
                 thinkingStatus.start();
 
                 StringBuilder replyBuffer = new StringBuilder();
-                noteAssistantService.streamChat(sessionId, finalMessage, mode, finalKbId, modelName, chunk -> {
+                noteAssistantService.streamChat(actualSessionId, finalMessage, mode, finalKbId, modelName, chunk -> {
                     if (emitterDone[0]) return;
                     firstChunkArrived[0] = true;
                     replyBuffer.append(chunk);
@@ -255,7 +245,7 @@ public class ChatApiController {
                 heartbeatDone[0] = true;
                 if (emitterDone[0]) return;
                 String replyText = replyBuffer.toString();
-                sessionService.saveMessage(sessionId, "assistant", replyText, mode, "web");
+                sessionService.saveMessage(actualSessionId, "assistant", replyText, mode, "web");
                 sendDone(emitter, mode);
 
             } catch (Exception e) {
@@ -287,7 +277,6 @@ public class ChatApiController {
             total = messageDbService.countByKb(kbId);
         } else {
             SessionEntity globalSession = sessionDbService.listBySourceOrderByUpdate("web").stream()
-                    .filter(s -> s.getKbId() == null)
                     .findFirst().orElse(null);
             if (globalSession != null) {
                 msgs = messageDbService.listBySession(globalSession.getId());
@@ -317,10 +306,7 @@ public class ChatApiController {
             sessionService.deleteSession(sessionId);
             logService.add("对话", "清空", "清空会话(session=" + sessionId + ")的聊天记录");
         } else if (kbId != null) {
-            List<SessionEntity> sessions = sessionDbService.listByKb(kbId);
-            for (SessionEntity se : sessions) {
-                sessionService.deleteSession(se.getId());
-            }
+            sessionService.deleteMessagesByKb(kbId);
             logService.add("对话", "清空", "清空笔记库(KB=" + kbId + ")的聊天记录");
         }
         return ResponseEntity.ok(Map.of("ok", true));
@@ -402,7 +388,6 @@ public class ChatApiController {
         }
 
         SessionEntity latest = sessionDbService.listBySourceOrderByUpdate("web").stream()
-                .filter(s -> s.getKbId() == null)
                 .findFirst().orElse(null);
         if (latest != null) {
             latest.setUpdatedAt(TimeUtil.nowStr());
@@ -417,7 +402,6 @@ public class ChatApiController {
         se.setSource("web");
         se.setTitle("新对话");
         se.setMode(mode != null ? mode : "knowledge");
-        se.setKbId(null);
         se.setCreatedAt(now);
         se.setUpdatedAt(now);
         sessionDbService.save(se);

@@ -15,12 +15,9 @@ public class SessionEntity {
     private String mode;
     private String createdAt;
     private String updatedAt;
-    private Long kbId;
 
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
-    public Long getKbId() { return kbId; }
-    public void setKbId(Long kbId) { this.kbId = kbId; }
 
     public String getSource() { return source; }
     public void setSource(String source) { this.source = source; }

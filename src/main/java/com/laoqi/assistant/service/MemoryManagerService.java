@@ -102,8 +102,8 @@ public class MemoryManagerService {
         List<MemoryEntry> result = new ArrayList<>();
         try (Connection conn = dataSource.getConnection();
              PreparedStatement ps = conn.prepareStatement(
-                     "SELECT key_name, \"value\", importance, category, created_at, updated_at"
-                   + "FROM agent_memories WHERE kb_id=? AND category=? ORDER BY importance DESC, updated_at DESC")) {
+"SELECT key_name, \"value\", importance, category, created_at, updated_at"
+                    + " FROM agent_memories WHERE kb_id=? AND category=? ORDER BY importance DESC, updated_at DESC")) {
             ps.setLong(1, kbId != null ? kbId : 0);
             ps.setString(2, category);
             ResultSet rs = ps.executeQuery();
@@ -146,8 +146,8 @@ public class MemoryManagerService {
         String like = "%" + keyword + "%";
         try (Connection conn = dataSource.getConnection();
              PreparedStatement ps = conn.prepareStatement(
-                     "SELECT key_name, \"value\", importance, category, created_at, updated_at"
-                   + "FROM agent_memories WHERE kb_id=? AND (key_name LIKE ? OR \"value\" LIKE ?) "
+"SELECT key_name, \"value\", importance, category, created_at, updated_at"
+                    + " FROM agent_memories WHERE kb_id=? AND (key_name LIKE ? OR \"value\" LIKE ?) "
                    + "ORDER BY importance DESC, updated_at DESC LIMIT 20")) {
             ps.setLong(1, kbId != null ? kbId : 0);
             ps.setString(2, like);
@@ -187,8 +187,8 @@ public class MemoryManagerService {
         List<MemoryEntry> entries = new ArrayList<>();
         try (Connection conn = dataSource.getConnection();
              PreparedStatement ps = conn.prepareStatement(
-                     "SELECT key_name, \"value\", importance, category, created_at, updated_at"
-                   + "FROM agent_memories WHERE kb_id=? ORDER BY importance DESC, updated_at DESC LIMIT 50")) {
+"SELECT key_name, \"value\", importance, category, created_at, updated_at"
+                    + " FROM agent_memories WHERE kb_id=? ORDER BY importance DESC, updated_at DESC LIMIT 50")) {
             ps.setLong(1, kbId != null ? kbId : 0);
             ResultSet rs = ps.executeQuery();
             while (rs.next()) {

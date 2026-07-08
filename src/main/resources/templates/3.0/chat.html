@@ -325,12 +325,7 @@
                 sessions = d.data;
                 renderSessions();
                 if (sessions.length > 0) {
-                    var globalSession = sessions.find(s => s.kbId === null);
-                    if (globalSession) {
-                        selectSession(globalSession.id);
-                    } else {
-                        selectSession(sessions[0].id);
-                    }
+                    selectSession(sessions[0].id);
                 }
             }
         }
@@ -367,14 +362,9 @@
                         selectSession(session.id);
                     }
                 };
-                let icon = '💬';
-                if (session.kbId !== null) {
-                    icon = '📚';
-                }
                 div.innerHTML = `
-                    <span>${icon}</span>
+                    <span>💬</span>
                     <span style="flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${session.title}</span>
-                    ${session.kbName ? '<span style="font-size:11px; color:var(--text-muted);">' + session.kbName + '</span>' : ''}
                     <button class="delete-btn" onclick="deleteSession('${session.id}')">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12">
                             <path d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6m3 0V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>

@@ -6,8 +6,10 @@ import com.laoqi.assistant.entity.SessionEntity;
 import java.util.List;
 
 public interface SessionDbService extends IService<SessionEntity> {
-    List<SessionEntity> listAllOrderByUpdate();
-    List<SessionEntity> listBySourceOrderByUpdate(String source);
+
     SessionEntity findLatestByKb(Long kbId);
     List<SessionEntity> listByKb(Long kbId);
+    List<SessionEntity> listAllOrderByUpdate();
+    List<SessionEntity> listBySourceOrderByUpdate(String source);
+
 }

@@ -88,16 +88,25 @@ public class NoteTools {
         }
     }
 
+    private String checkKb() {
+        Long kbId = CURRENT_KB_ID.get();
+        if (kbId == null) return "未指定知识库。请在问题中使用 @笔记库名 来指定要搜索的笔记库。";
+        return null;
+    }
+
     private Path baseDir() {
         Path scope = CURRENT_SCOPE.get();
         if (scope != null) return scope;
         Long kbId = CURRENT_KB_ID.get();
         String dir = kbService.getNotesDirById(kbId);
+        if (dir == null || dir.isBlank()) throw new IllegalStateException("笔记库路径未配置");
         return Path.of(dir);
     }
 
     @Tool(description = "列出笔记库指定目录下的所有文件和子目录，path 是相对于笔记库根目录的路径")
     public String listDir(@ToolParam(description = "目录路径，相对于笔记库根目录，例如 \"工作/日报\"") String path) {
+        String err = checkKb();
+        if (err != null) return err;
         reportStatus("📂 正在浏览目录...");
         Path dir = baseDir().resolve(path != null ? path : "").normalize();
         if (!dir.startsWith(baseDir())) return "路径越界: " + path;
@@ -119,6 +128,8 @@ public class NoteTools {
 
     @Tool(description = "读取笔记库中指定文件的内容，path 是相对于笔记库根目录的路径")
     public String readFile(@ToolParam(description = "文件路径，相对于笔记库根目录，例如 \"工作/日报/2024-01-01.md\"") String path) {
+        String err = checkKb();
+        if (err != null) return err;
         reportStatus("📖 正在读取文件...");
         if (path == null || path.isEmpty()) return "文件路径不能为空";
         Path file = baseDir().resolve(path).normalize();
@@ -161,6 +172,8 @@ public class NoteTools {
 
     @Tool(description = "读取指定笔记文件的完整内容，语义与 readFile 相同，用于读取笔记内容")
     public String readNote(@ToolParam(description = "文件路径，相对于笔记库根目录") String path) {
+        String err = checkKb();
+        if (err != null) return err;
         reportStatus("📖 正在读取文件...");
         return readFile(path);
     }
@@ -169,6 +182,8 @@ public class NoteTools {
     public String writeFile(
             @ToolParam(description = "文件路径，相对于笔记库根目录") String path,
             @ToolParam(description = "要写入的完整文件内容") String content) {
+        String err = checkKb();
+        if (err != null) return err;
         reportStatus("💾 正在写入文件...");
         if (path == null || path.isEmpty()) return "文件路径不能为空";
         Path file = baseDir().resolve(path).normalize();
@@ -182,6 +197,8 @@ public class NoteTools {
 
     @Tool(description = "删除笔记库中的指定文件，path 是相对于笔记库根目录的路径。注意：这是删除笔记文件，不是操作数据集。如果要删除数据集记录请使用deleteRecord工具")
     public String deleteFile(@ToolParam(description = "文件路径，相对于笔记库根目录，例如 \"客户管理/data/xxx.json\"") String path) {
+        String err = checkKb();
+        if (err != null) return err;
         reportStatus("🗑️ 正在删除文件...");
         if (path == null || path.isEmpty()) return "文件路径不能为空";
         Path file = baseDir().resolve(path).normalize();
@@ -200,6 +217,8 @@ public class NoteTools {
 
     @Tool(description = "在笔记库中搜索文件名包含指定关键词的文件和目录。注意：这是搜索笔记文件，不是搜索数据集。如果要搜索数据集请使用searchRecords工具")
     public String searchFiles(@ToolParam(description = "搜索关键词，如 BUG、客户、日报") String keyword) {
+        String err = checkKb();
+        if (err != null) return err;
         reportStatus("🔎 正在搜索文件...");
         if (keyword == null || keyword.isEmpty()) return "搜索关键词不能为空";
         Path root = baseDir();

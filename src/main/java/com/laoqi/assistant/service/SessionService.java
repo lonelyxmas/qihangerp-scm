@@ -74,14 +74,14 @@ public class SessionService {
                     chat_id    VARCHAR(255) NOT NULL DEFAULT '',
                     chat_type  VARCHAR(64) NOT NULL DEFAULT '',
                     mode       VARCHAR(64) NOT NULL DEFAULT 'knowledge',
-                    kb_id      BIGINT NOT NULL DEFAULT 1,
+                    kb_id      BIGINT,
                     created_at VARCHAR(32) NOT NULL,
                     updated_at VARCHAR(32) NOT NULL
                 )
                 """);
-            // 迁移：为 sessions 补充 kb_id 列（兼容旧数据库）
-            try { stmt.execute("ALTER TABLE sessions ADD COLUMN kb_id BIGINT DEFAULT 1"); } catch (Exception ignored) {}
-            stmt.execute("CREATE INDEX IF NOT EXISTS idx_sessions_kb ON sessions(kb_id)");
+            // V3 迁移：sessions 不再绑定 kbId，删掉旧列重建为可空（兼容旧数据库的 NOT NULL DEFAULT 1）
+            try { stmt.execute("ALTER TABLE sessions DROP COLUMN kb_id"); } catch (Exception ignored) {}
+            try { stmt.execute("ALTER TABLE sessions ADD COLUMN kb_id BIGINT"); } catch (Exception ignored) {}
             stmt.execute("""
                 CREATE TABLE IF NOT EXISTS messages (
                     id          BIGINT AUTO_INCREMENT PRIMARY KEY,
@@ -431,6 +431,12 @@ public class SessionService {
                 new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<MessageEntity>()
                         .eq("session_id", sessionId));
         sessionDbService.removeById(sessionId);
+    }
+
+    public void deleteMessagesByKb(Long kbId) {
+        messageDbService.getBaseMapper().delete(
+                new com.baomidou.mybatisplus.core.conditions.query.QueryWrapper<MessageEntity>()
+                        .eq("kb_id", kbId));
     }
 
     // ========== Messages ==========

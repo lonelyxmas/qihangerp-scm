@@ -507,7 +507,7 @@ public class NoteAssistantService {
 
              == 重要原则 ==
              - AGENTS.md 的内容已包含在上下文中，无需再用 readFile 读取
-             - 笔记库路径已在上下文中给出，使用 listDir / readFile / searchFiles 等工具直接操作文件
+             - 没有 @笔记库 时，用户没有指定笔记库，不要调用 listDir/readFile/searchFiles/searchNotes 等笔记库工具
              - 用户问"张三"、"客户"、"本周"等关键词时，先 searchFiles 按文件名定位，再用 readFile 读取
              - 参考文件内容，但以对话历史中的用户最新说法为最高优先级
              - 如果用户明确纠正了某个信息（如"已经发布过了"），以用户说法为准，并主动更新笔记
