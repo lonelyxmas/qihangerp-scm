@@ -366,4 +366,9 @@ public class ApiConfigController {
         return result;
     }
 
+    @GetMapping("/api/logs")
+    public Map<String, Object> getLogs() {
+        return Map.of("ok", true, "logs", logService.load());
+    }
+
 }
