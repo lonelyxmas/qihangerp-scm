@@ -103,6 +103,6 @@ public class IndexV2Controller {
             }
         }
 
-        return "2.0/index";
+        return "2.0/chat";
     }
 }

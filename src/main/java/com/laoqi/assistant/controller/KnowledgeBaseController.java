@@ -153,7 +153,7 @@ public class KnowledgeBaseController {
         model.put("defaultModel", defaultProfile != null ? defaultProfile.getName() : "");
 
         model.put("pageTitle", kb.getName() + " · 对话");
-        model.put("contentFragment", "2.0/index");
+        model.put("contentFragment", "2.0/chat");
         return "2.0/layout";
     }
 
