@@ -73,6 +73,59 @@ public class ChatApiController {
         return ResponseEntity.ok(Map.of("ok", true, "data", result));
     }
 
+    @GetMapping("/sessions")
+    public ResponseEntity<Map<String, Object>> listSessions() {
+        List<SessionEntity> sessions = sessionDbService.listBySourceOrderByUpdate("web");
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (SessionEntity s : sessions) {
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("id", s.getId());
+            item.put("title", s.getTitle());
+            item.put("mode", s.getMode());
+            item.put("kbId", s.getKbId());
+            item.put("updatedAt", s.getUpdatedAt());
+            
+            if (s.getKbId() != null) {
+                KnowledgeBaseEntity kb = kbService.getById(s.getKbId());
+                item.put("kbName", kb != null ? kb.getName() : "未知");
+            } else {
+                item.put("kbName", null);
+            }
+            
+            result.add(item);
+        }
+        return ResponseEntity.ok(Map.of("ok", true, "data", result));
+    }
+
+    @PostMapping("/sessions")
+    public ResponseEntity<Map<String, Object>> createSession(@RequestParam(required = false) String title,
+                                                             @RequestParam(required = false) Long kbId,
+                                                             @RequestParam(required = false, defaultValue = "knowledge") String mode) {
+        String id = UUID.randomUUID().toString().substring(0, 12);
+        String now = TimeUtil.nowStr();
+        SessionEntity se = new SessionEntity();
+        se.setId(id);
+        se.setSource("web");
+        se.setTitle(title != null && !title.isBlank() ? title : (kbId != null ? "连续对话" : "新对话"));
+        se.setMode(mode != null ? mode : "knowledge");
+        se.setKbId(kbId);
+        se.setCreatedAt(now);
+        se.setUpdatedAt(now);
+        sessionDbService.save(se);
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("ok", true);
+        result.put("id", id);
+        result.put("title", se.getTitle());
+        return ResponseEntity.ok(result);
+    }
+
+    @DeleteMapping("/sessions/{id}")
+    public ResponseEntity<Map<String, Object>> deleteSession(@PathVariable String id) {
+        sessionService.deleteSession(id);
+        return ResponseEntity.ok(Map.of("ok", true));
+    }
+
     @GetMapping("/models")
     public ResponseEntity<Map<String, Object>> listModels() {
         List<com.laoqi.assistant.entity.LlmProfileEntity> chatModels = llmConfigResolver.getAllProfiles()
@@ -101,7 +154,8 @@ public class ChatApiController {
     public SseEmitter sendChat(@RequestParam String message,
                                @RequestParam(required = false) Long kbId,
                                @RequestParam(required = false, defaultValue = "knowledge") String mode,
-                               @RequestParam(required = false, defaultValue = "") String modelName) {
+                               @RequestParam(required = false, defaultValue = "") String modelName,
+                               @RequestParam(required = false) String sessionId) {
         SseEmitter emitter = new SseEmitter(300_000L);
 
         String cleanMessage = message;
@@ -116,6 +170,7 @@ public class ChatApiController {
 
         final Long finalKbId = resolvedKbId;
         final String finalMessage = cleanMessage;
+        final String providedSessionId = sessionId;
 
         final boolean[] emitterDone = {false};
         emitter.onCompletion(() -> emitterDone[0] = true);
@@ -126,30 +181,11 @@ public class ChatApiController {
             try {
                 if (emitterDone[0]) return;
 
-                if (finalKbId == null) {
-                    String hint = "请先选择一个笔记库，或在问题中使用 @笔记库名 指定要搜索的笔记库。\n\n" +
-                            "例如：'@工作笔记 查一下项目进展'\n\n" +
-                            "可用笔记库：";
-                    List<KnowledgeBaseEntity> kbList = kbService.getAll();
-                    if (kbList.isEmpty()) {
-                        hint += "\n- 暂无笔记库，请先到配置页添加";
-                    } else {
-                        for (KnowledgeBaseEntity kb : kbList) {
-                            hint += "\n- @" + kb.getName();
-                        }
-                    }
-                    
-                    emitter.send(SseEmitter.event().data(mapper.writeValueAsString(
-                            Map.of("type", "text", "content", hint, "mode", mode))));
-                    sendDone(emitter, mode);
-                    return;
-                }
-
-                String sessionId = getOrCreateSession(finalKbId, mode);
+                String actualSessionId = getOrCreateSession(providedSessionId, finalKbId, mode);
 
                 if (emitterDone[0]) return;
                 emitter.send(SseEmitter.event().data(mapper.writeValueAsString(
-                        Map.of("type", "session", "sessionId", sessionId))));
+                        Map.of("type", "session", "sessionId", actualSessionId))));
 
                 if (emitterDone[0]) return;
                 sendStatus(emitter, mode, "正在处理...");
@@ -237,17 +273,32 @@ public class ChatApiController {
 
     @GetMapping("/messages")
     public ResponseEntity<Map<String, Object>> getMessages(@RequestParam(required = false) Long kbId,
+                                                           @RequestParam(required = false) String sessionId,
                                                            @RequestParam(defaultValue = "0") int offset,
                                                            @RequestParam(defaultValue = "60") int limit) {
-        if (kbId == null) {
-            return ResponseEntity.ok(Map.of("ok", true, "messages", List.of(), "total", 0));
+        List<MessageEntity> msgs;
+        long total;
+
+        if (sessionId != null && !sessionId.isBlank()) {
+            msgs = messageDbService.listBySession(sessionId);
+            total = msgs.size();
+        } else if (kbId != null) {
+            msgs = messageDbService.listByKb(kbId, offset, limit);
+            total = messageDbService.countByKb(kbId);
+        } else {
+            SessionEntity globalSession = sessionDbService.listBySourceOrderByUpdate("web").stream()
+                    .filter(s -> s.getKbId() == null)
+                    .findFirst().orElse(null);
+            if (globalSession != null) {
+                msgs = messageDbService.listBySession(globalSession.getId());
+                total = msgs.size();
+            } else {
+                return ResponseEntity.ok(Map.of("ok", true, "messages", List.of(), "total", 0));
+            }
         }
-        List<MessageEntity> msgs = messageDbService.listByKb(kbId, offset, limit);
-        long total = messageDbService.countByKb(kbId);
 
         List<Map<String, Object>> messages = new ArrayList<>();
-        for (int i = msgs.size() - 1; i >= 0; i--) {
-            MessageEntity me = msgs.get(i);
+        for (MessageEntity me : msgs) {
             Map<String, Object> m = new LinkedHashMap<>();
             m.put("role", me.getRole());
             m.put("content", me.getContent());
@@ -260,12 +311,18 @@ public class ChatApiController {
     }
 
     @DeleteMapping("/clear")
-    public ResponseEntity<Map<String, Object>> clearChat(@RequestParam Long kbId) {
-        List<SessionEntity> sessions = sessionDbService.listByKb(kbId);
-        for (SessionEntity se : sessions) {
-            sessionService.deleteSession(se.getId());
+    public ResponseEntity<Map<String, Object>> clearChat(@RequestParam(required = false) Long kbId,
+                                                         @RequestParam(required = false) String sessionId) {
+        if (sessionId != null && !sessionId.isBlank()) {
+            sessionService.deleteSession(sessionId);
+            logService.add("对话", "清空", "清空会话(session=" + sessionId + ")的聊天记录");
+        } else if (kbId != null) {
+            List<SessionEntity> sessions = sessionDbService.listByKb(kbId);
+            for (SessionEntity se : sessions) {
+                sessionService.deleteSession(se.getId());
+            }
+            logService.add("对话", "清空", "清空笔记库(KB=" + kbId + ")的聊天记录");
         }
-        logService.add("对话", "清空", "清空笔记库(KB=" + kbId + ")的聊天记录");
         return ResponseEntity.ok(Map.of("ok", true));
     }
 
@@ -334,16 +391,36 @@ public class ChatApiController {
         return message.replaceAll("@\\S+", "").trim();
     }
 
-    private String getOrCreateSession(Long kbId, String mode) {
-        SessionEntity latest = sessionDbService.findLatestByKb(kbId);
-        if (latest != null) return latest.getId();
+    private String getOrCreateSession(String providedSessionId, Long kbId, String mode) {
+        if (providedSessionId != null && !providedSessionId.isBlank()) {
+            SessionEntity existing = sessionDbService.getById(providedSessionId);
+            if (existing != null) {
+                existing.setUpdatedAt(TimeUtil.nowStr());
+                sessionDbService.updateById(existing);
+                return existing.getId();
+            }
+        }
+
+        SessionEntity latest;
+        if (kbId != null) {
+            latest = sessionDbService.findLatestByKb(kbId);
+        } else {
+            latest = sessionDbService.listBySourceOrderByUpdate("web").stream()
+                    .filter(s -> s.getKbId() == null)
+                    .findFirst().orElse(null);
+        }
+        if (latest != null) {
+            latest.setUpdatedAt(TimeUtil.nowStr());
+            sessionDbService.updateById(latest);
+            return latest.getId();
+        }
 
         String id = UUID.randomUUID().toString().substring(0, 12);
         String now = TimeUtil.nowStr();
         SessionEntity se = new SessionEntity();
         se.setId(id);
         se.setSource("web");
-        se.setTitle("连续对话");
+        se.setTitle(kbId != null ? "连续对话" : "新对话");
         se.setMode(mode != null ? mode : "knowledge");
         se.setKbId(kbId);
         se.setCreatedAt(now);
