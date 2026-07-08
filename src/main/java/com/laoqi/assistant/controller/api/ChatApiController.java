@@ -1,4 +1,4 @@
-package com.laoqi.assistant.controller;
+package com.laoqi.assistant.controller.api;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.laoqi.assistant.entity.KnowledgeBaseEntity;
@@ -10,26 +10,27 @@ import com.laoqi.assistant.service.db.SessionDbService;
 import com.laoqi.assistant.util.TimeUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.stereotype.Controller;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
-@Controller
-@RequestMapping("/chat")
-public class V2ChatController {
+@RestController
+@RequestMapping("/api/chat")
+public class ChatApiController {
 
-    private static final Logger log = LoggerFactory.getLogger(V2ChatController.class);
+    private static final Logger log = LoggerFactory.getLogger(ChatApiController.class);
     private static final ObjectMapper mapper = new ObjectMapper();
     private static final ExecutorService chatExecutor = Executors.newSingleThreadExecutor(r -> {
         Thread t = new Thread(r, "chat-sse");
         t.setDaemon(true);
         return t;
     });
-    private static final int PAGE_SIZE = 60;
 
     private final KnowledgeBaseService kbService;
     private final SessionDbService sessionDbService;
@@ -39,19 +40,15 @@ public class V2ChatController {
     private final NoteAssistantService noteAssistantService;
     private final LlmConfigResolver llmConfigResolver;
     private final LogService logService;
-    private final TaskService taskService;
-    private final AgentTraceService agentTraceService;
 
-    public V2ChatController(KnowledgeBaseService kbService,
+    public ChatApiController(KnowledgeBaseService kbService,
                             SessionDbService sessionDbService,
                             MessageDbService messageDbService,
                             SessionService sessionService,
                             LlmService llmService,
                             NoteAssistantService noteAssistantService,
                             LlmConfigResolver llmConfigResolver,
-                            LogService logService,
-                            TaskService taskService,
-                            AgentTraceService agentTraceService) {
+                            LogService logService) {
         this.kbService = kbService;
         this.sessionDbService = sessionDbService;
         this.messageDbService = messageDbService;
@@ -60,44 +57,194 @@ public class V2ChatController {
         this.noteAssistantService = noteAssistantService;
         this.llmConfigResolver = llmConfigResolver;
         this.logService = logService;
-        this.taskService = taskService;
-        this.agentTraceService = agentTraceService;
     }
 
-    // ========== 页面路由 ==========
-
-    @GetMapping
-    public String chatPage(@RequestParam(required = false) Long kbId) {
-        // 检查大模型是否已配置
-        if (!llmService.isAvailable()) {
-            return "redirect:/config#ai-model-section";
+    @GetMapping("/kbs")
+    public ResponseEntity<Map<String, Object>> listKbs() {
+        List<KnowledgeBaseEntity> kbs = kbService.getAll();
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (KnowledgeBaseEntity kb : kbs) {
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("id", kb.getId());
+            item.put("name", kb.getName());
+            item.put("notesDir", kb.getNotesDir());
+            result.add(item);
         }
-
-        // 重定向到新版 /kb/{id}/chat 路由
-        KnowledgeBaseEntity kb = null;
-        if (kbId != null) {
-            kb = kbService.getById(kbId);
-        }
-        if (kb == null) {
-            kb = kbService.getFirst();
-        }
-        if (kb != null) {
-            return "redirect:/kb/" + kb.getId() + "/chat";
-        }
-        return "redirect:/config";
+        return ResponseEntity.ok(Map.of("ok", true, "data", result));
     }
 
-    // ========== API: 加载消息（分页） ==========
+    @GetMapping("/models")
+    public ResponseEntity<Map<String, Object>> listModels() {
+        List<com.laoqi.assistant.entity.LlmProfileEntity> chatModels = llmConfigResolver.getAllProfiles()
+                .stream()
+                .filter(p -> !com.laoqi.assistant.entity.LlmProfileEntity.TYPE_EMBEDDING.equals(p.getModelType()))
+                .toList();
+        
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (var model : chatModels) {
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("name", model.getName());
+            item.put("modelType", model.getModelType());
+            result.add(item);
+        }
+        
+        String defaultModel = null;
+        var defaultProfile = llmConfigResolver.getDefaultProfile();
+        if (defaultProfile != null) {
+            defaultModel = defaultProfile.getName();
+        }
+        
+        return ResponseEntity.ok(Map.of("ok", true, "data", result, "defaultModel", defaultModel));
+    }
 
-    @GetMapping("/api/kb/{kbId}/messages")
-    @ResponseBody
-    public Map<String, Object> kbMessages(@PathVariable Long kbId,
-                                           @RequestParam(defaultValue = "0") int offset,
-                                           @RequestParam(defaultValue = "60") int limit) {
+    @PostMapping("/send")
+    public SseEmitter sendChat(@RequestParam String message,
+                               @RequestParam(required = false) Long kbId,
+                               @RequestParam(required = false, defaultValue = "knowledge") String mode,
+                               @RequestParam(required = false, defaultValue = "") String modelName) {
+        SseEmitter emitter = new SseEmitter(300_000L);
+
+        String cleanMessage = message;
+        Long resolvedKbId = kbId;
+
+        if (resolvedKbId == null) {
+            resolvedKbId = parseMentionedKb(message);
+            if (resolvedKbId != null) {
+                cleanMessage = removeMentions(message);
+            }
+        }
+
+        final Long finalKbId = resolvedKbId;
+        final String finalMessage = cleanMessage;
+
+        final boolean[] emitterDone = {false};
+        emitter.onCompletion(() -> emitterDone[0] = true);
+        emitter.onTimeout(() -> emitterDone[0] = true);
+        emitter.onError(e -> emitterDone[0] = true);
+
+        chatExecutor.execute(() -> {
+            try {
+                if (emitterDone[0]) return;
+
+                if (finalKbId == null) {
+                    String hint = "请先选择一个笔记库，或在问题中使用 @笔记库名 指定要搜索的笔记库。\n\n" +
+                            "例如：'@工作笔记 查一下项目进展'\n\n" +
+                            "可用笔记库：";
+                    List<KnowledgeBaseEntity> kbList = kbService.getAll();
+                    if (kbList.isEmpty()) {
+                        hint += "\n- 暂无笔记库，请先到配置页添加";
+                    } else {
+                        for (KnowledgeBaseEntity kb : kbList) {
+                            hint += "\n- @" + kb.getName();
+                        }
+                    }
+                    
+                    emitter.send(SseEmitter.event().data(mapper.writeValueAsString(
+                            Map.of("type", "text", "content", hint, "mode", mode))));
+                    sendDone(emitter, mode);
+                    return;
+                }
+
+                String sessionId = getOrCreateSession(finalKbId, mode);
+
+                if (emitterDone[0]) return;
+                emitter.send(SseEmitter.event().data(mapper.writeValueAsString(
+                        Map.of("type", "session", "sessionId", sessionId))));
+
+                if (emitterDone[0]) return;
+                sendStatus(emitter, mode, "正在处理...");
+
+                sessionService.saveMessage(sessionId, "user", finalMessage, mode, "web");
+
+                if (!llmService.isAvailable()) {
+                    throw new IllegalStateException("LLM API Key 未配置，请在配置页填写");
+                }
+
+                final boolean[] heartbeatDone = {false};
+                Thread heartbeat = new Thread(() -> {
+                    while (!heartbeatDone[0] && !emitterDone[0]) {
+                        try {
+                            Thread.sleep(5000);
+                            if (!heartbeatDone[0] && !emitterDone[0]) {
+                                emitter.send(SseEmitter.event()
+                                        .data(mapper.writeValueAsString(Map.of("type", "heartbeat"))));
+                            }
+                        } catch (Exception e) {
+                            break;
+                        }
+                    }
+                }, "chat-heartbeat");
+                heartbeat.setDaemon(true);
+                heartbeat.start();
+
+                final boolean[] firstChunkArrived = {false};
+                final long[] lastStatusTime = {System.currentTimeMillis()};
+                Thread thinkingStatus = new Thread(() -> {
+                    while (!firstChunkArrived[0] && !emitterDone[0]) {
+                        try { Thread.sleep(3000); } catch (InterruptedException e) { break; }
+                        if (!firstChunkArrived[0] && !emitterDone[0]) {
+                            long elapsed = System.currentTimeMillis() - lastStatusTime[0];
+                            if (elapsed >= 3000) {
+                                String msg;
+                                if (elapsed < 6000) msg = "⏳ 正在分析获取到的信息...";
+                                else if (elapsed < 10000) msg = "✍️ AI 正在组织回复...";
+                                else if (elapsed < 15000) msg = "📝 即将完成...";
+                                else msg = "⏳ 处理中，请稍候...";
+                                sendStatus(emitter, mode, msg);
+                            }
+                        }
+                    }
+                }, "chat-thinking-status");
+                thinkingStatus.setDaemon(true);
+                thinkingStatus.start();
+
+                StringBuilder replyBuffer = new StringBuilder();
+                noteAssistantService.streamChat(sessionId, finalMessage, mode, finalKbId, modelName, chunk -> {
+                    if (emitterDone[0]) return;
+                    firstChunkArrived[0] = true;
+                    replyBuffer.append(chunk);
+                    try {
+                        emitter.send(SseEmitter.event().data(mapper.writeValueAsString(
+                                Map.of("type", "text", "content", chunk, "mode", mode))));
+                    } catch (Exception e) {
+                        emitterDone[0] = true;
+                    }
+                }, status -> {
+                    if (!emitterDone[0]) {
+                        lastStatusTime[0] = System.currentTimeMillis();
+                        sendStatus(emitter, mode, status);
+                    }
+                });
+
+                heartbeatDone[0] = true;
+                if (emitterDone[0]) return;
+                String replyText = replyBuffer.toString();
+                sessionService.saveMessage(sessionId, "assistant", replyText, mode, "web");
+                sendDone(emitter, mode);
+
+            } catch (Exception e) {
+                log.error("对话请求处理失败", e);
+                try {
+                    sendError(emitter, resolveErrorMessage(e));
+                } catch (Exception ex) {
+                    try { emitter.completeWithError(ex); } catch (Exception ignored) {}
+                }
+            }
+        });
+
+        return emitter;
+    }
+
+    @GetMapping("/messages")
+    public ResponseEntity<Map<String, Object>> getMessages(@RequestParam(required = false) Long kbId,
+                                                           @RequestParam(defaultValue = "0") int offset,
+                                                           @RequestParam(defaultValue = "60") int limit) {
+        if (kbId == null) {
+            return ResponseEntity.ok(Map.of("ok", true, "messages", List.of(), "total", 0));
+        }
         List<MessageEntity> msgs = messageDbService.listByKb(kbId, offset, limit);
         long total = messageDbService.countByKb(kbId);
 
-        // 翻转时间顺序（DB 返回 DESC，转成 ASC 给前端）
         List<Map<String, Object>> messages = new ArrayList<>();
         for (int i = msgs.size() - 1; i >= 0; i--) {
             MessageEntity me = msgs.get(i);
@@ -109,18 +256,25 @@ public class V2ChatController {
             messages.add(m);
         }
 
-        return Map.of("ok", true, "messages", messages, "total", total, "offset", offset);
+        return ResponseEntity.ok(Map.of("ok", true, "messages", messages, "total", total));
     }
 
-    // ========== API: 搜索消息 ==========
+    @DeleteMapping("/clear")
+    public ResponseEntity<Map<String, Object>> clearChat(@RequestParam Long kbId) {
+        List<SessionEntity> sessions = sessionDbService.listByKb(kbId);
+        for (SessionEntity se : sessions) {
+            sessionService.deleteSession(se.getId());
+        }
+        logService.add("对话", "清空", "清空笔记库(KB=" + kbId + ")的聊天记录");
+        return ResponseEntity.ok(Map.of("ok", true));
+    }
 
-    @GetMapping("/api/kb/{kbId}/search")
-    @ResponseBody
-    public Map<String, Object> searchMessages(@PathVariable Long kbId,
-                                               @RequestParam String q,
-                                               @RequestParam(defaultValue = "30") int limit) {
+    @GetMapping("/search")
+    public ResponseEntity<Map<String, Object>> searchMessages(@RequestParam Long kbId,
+                                                               @RequestParam String q,
+                                                               @RequestParam(defaultValue = "30") int limit) {
         if (q == null || q.isBlank()) {
-            return Map.of("ok", true, "messages", List.of());
+            return ResponseEntity.ok(Map.of("ok", true, "messages", List.of()));
         }
         List<MessageEntity> msgs = messageDbService.searchByKb(kbId, q, limit);
         List<Map<String, Object>> messages = new ArrayList<>();
@@ -132,175 +286,11 @@ public class V2ChatController {
             m.put("mode", me.getMode());
             messages.add(m);
         }
-        return Map.of("ok", true, "messages", messages, "query", q);
+        return ResponseEntity.ok(Map.of("ok", true, "messages", messages, "query", q));
     }
 
-    // ========== API: 发送消息（SSE 流式） ==========
-
-    @PostMapping("/send")
-    @ResponseBody
-    public SseEmitter send(@RequestParam String message,
-                           @RequestParam(required = false) Long kbId,
-                           @RequestParam(required = false, defaultValue = "knowledge") String mode,
-                           @RequestParam(required = false, defaultValue = "") String modelName) {
-        SseEmitter emitter = new SseEmitter(300_000L);
-
-        // 确定 KB
-        Long resolvedKbId = kbId;
-        if (resolvedKbId == null) {
-            KnowledgeBaseEntity first = kbService.getFirst();
-            if (first != null) resolvedKbId = first.getId();
-        }
-        if (resolvedKbId == null) {
-            try {
-                sendError(emitter, "未配置任何知识库，请先到配置页设置");
-            } catch (Exception ignored) {}
-            return emitter;
-        }
-        final Long finalKbId = resolvedKbId;
-
-        // 获取或创建会话
-        String sessionId = getOrCreateKbSession(finalKbId, mode);
-
-        // 客户端断开/超时标志，避免往已完成的 emitter 继续发数据
-        final boolean[] emitterDone = {false};
-        emitter.onCompletion(() -> emitterDone[0] = true);
-        emitter.onTimeout(() -> emitterDone[0] = true);
-        emitter.onError(e -> emitterDone[0] = true);
-
-        chatExecutor.execute(() -> {
-            try {
-                if (emitterDone[0]) return;
-                emitter.send(SseEmitter.event().data(mapper.writeValueAsString(
-                        Map.of("type", "session", "sessionId", sessionId))));
-
-                if (emitterDone[0]) return;
-                sendStatus(emitter, mode, "正在处理...");
-
-                sessionService.saveMessage(sessionId, "user", message, mode, "web");
-
-                if (!llmService.isAvailable()) {
-                    throw new IllegalStateException("LLM API Key 未配置，请在配置页填写");
-                }
-
-                log.info("[chat] KB={} 使用 NoteAssistant（含工具编排 + 历史上下文注入, model={})",
-                        finalKbId, modelName.isEmpty() ? "default" : modelName);
-
-                // 启动心跳：每 5 秒发送一次 keepalive
-                final boolean[] heartbeatDone = {false};
-                Thread heartbeat = new Thread(() -> {
-                    while (!heartbeatDone[0] && !emitterDone[0]) {
-                        try {
-                            Thread.sleep(5000);
-                            if (!heartbeatDone[0] && !emitterDone[0]) {
-                                emitter.send(SseEmitter.event()
-                                        .data(mapper.writeValueAsString(Map.of("type", "heartbeat"))));
-                            }
-                        } catch (InterruptedException ie) {
-                            Thread.currentThread().interrupt();
-                            break;
-                        } catch (Exception e) {
-                            break;
-                        }
-                    }
-                }, "chat-heartbeat");
-                heartbeat.setDaemon(true);
-                heartbeat.start();
-
-                // 兜底：AI 流式期间无新状态时，按时间递进显示进度
-                final boolean[] firstChunkArrived = {false};
-                final long[] lastStatusTime = {System.currentTimeMillis()};
-                Thread thinkingStatus = new Thread(() -> {
-                    while (!firstChunkArrived[0] && !emitterDone[0]) {
-                        try { Thread.sleep(3000); } catch (InterruptedException e) { break; }
-                        if (!firstChunkArrived[0] && !emitterDone[0]) {
-                            long elapsed = System.currentTimeMillis() - lastStatusTime[0];
-                            if (elapsed >= 3000) {
-                                String msg;
-                                if (elapsed < 6000) {
-                                    msg = "⏳ 正在分析获取到的信息...";
-                                } else if (elapsed < 10000) {
-                                    msg = "✍️ AI 正在组织回复...";
-                                } else if (elapsed < 15000) {
-                                    msg = "📝 即将完成...";
-                                } else {
-                                    msg = "⏳ 处理中，请稍候...";
-                                }
-                                log.info("[chat] 兜底状态: {}", msg);
-                                sendStatus(emitter, mode, msg);
-                            }
-                        }
-                    }
-                }, "chat-thinking-status");
-                thinkingStatus.setDaemon(true);
-                thinkingStatus.start();
-
-                StringBuilder replyBuffer = new StringBuilder();
-                noteAssistantService.streamChat(sessionId, message, mode, finalKbId, modelName, chunk -> {
-                    if (emitterDone[0]) return;
-                    firstChunkArrived[0] = true;
-                    replyBuffer.append(chunk);
-                    Map<String, Object> data = new LinkedHashMap<>();
-                    data.put("type", "text");
-                    data.put("content", chunk);
-                    data.put("mode", mode);
-                    try {
-                        emitter.send(SseEmitter.event().data(mapper.writeValueAsString(data)));
-                    } catch (Exception e) {
-                        log.warn("发送流式数据失败", e);
-                        emitterDone[0] = true;
-                    }
-                }, status -> {
-                    if (!emitterDone[0]) {
-                        lastStatusTime[0] = System.currentTimeMillis();
-                        log.info("[chat] 状态更新: {}", status);
-                        sendStatus(emitter, mode, status);
-                    }
-                });
-
-                heartbeatDone[0] = true;
-                if (emitterDone[0]) return;
-                String replyText = replyBuffer.toString();
-                log.info("[chat] 收到回复, 长度={}", replyText.length());
-                sessionService.saveMessage(sessionId, "assistant", replyText, mode, "web");
-                sendDone(emitter, mode);
-
-            } catch (Exception e) {
-                log.error("对话请求处理失败", e);
-                try {
-                    sendError(emitter, resolveErrorMessage(e));
-                } catch (Exception ex) {
-                    log.error("发送错误信息失败", ex);
-                    try {
-                        emitter.completeWithError(ex);
-                    } catch (Exception e2) {
-                        log.error("无法完成错误发送", e2);
-                    }
-                }
-            }
-        });
-
-        return emitter;
-    }
-
-    // ========== API: 清空对话 ==========
-
-    @DeleteMapping("/api/kb/{kbId}/clear")
-    @ResponseBody
-    public Map<String, Object> clearKbMessages(@PathVariable Long kbId) {
-        List<SessionEntity> sessions = sessionDbService.listByKb(kbId);
-        for (SessionEntity se : sessions) {
-            sessionService.deleteSession(se.getId());
-        }
-        logService.add("对话", "清空", "清空知识库(KB=" + kbId + ")的聊天记录");
-        return Map.of("ok", true);
-    }
-
-    // ========== API: 导出对话 ==========
-
-    @GetMapping("/api/kb/{kbId}/export")
-    @ResponseBody
-    public Map<String, Object> exportKbMessages(@PathVariable Long kbId) {
+    @GetMapping("/export")
+    public ResponseEntity<Map<String, Object>> exportMessages(@RequestParam Long kbId) {
         List<MessageEntity> msgs = messageDbService.listByKb(kbId, 0, 99999);
         List<Map<String, Object>> messages = new ArrayList<>();
         for (MessageEntity me : msgs) {
@@ -317,19 +307,34 @@ public class V2ChatController {
         StringBuilder sb = new StringBuilder();
         sb.append("---\ntitle: ").append(title).append("\ndate: ").append(date).append("\n---\n\n");
 
-        // 翻转时间顺序（DB 返回降序，导出时按时间升序）
         for (int i = messages.size() - 1; i >= 0; i--) {
             Map<String, Object> m = messages.get(i);
             sb.append("**").append("user".equals(m.get("role")) ? "👤 用户" : "🤖 AI").append("**\n");
             sb.append(m.get("content")).append("\n\n");
         }
 
-        return Map.of("ok", true, "title", title, "content", sb.toString());
+        return ResponseEntity.ok(Map.of("ok", true, "title", title, "content", sb.toString()));
+    }
+    private Long parseMentionedKb(String message) {
+        Pattern pattern = Pattern.compile("@(\\S+)");
+        Matcher matcher = pattern.matcher(message);
+        while (matcher.find()) {
+            String kbName = matcher.group(1);
+            List<KnowledgeBaseEntity> kbs = kbService.getAll();
+            for (KnowledgeBaseEntity kb : kbs) {
+                if (kb.getName().equals(kbName) || kb.getName().contains(kbName)) {
+                    return kb.getId();
+                }
+            }
+        }
+        return null;
     }
 
-    // ========== 辅助方法 ==========
+    private String removeMentions(String message) {
+        return message.replaceAll("@\\S+", "").trim();
+    }
 
-    private String getOrCreateKbSession(Long kbId, String mode) {
+    private String getOrCreateSession(Long kbId, String mode) {
         SessionEntity latest = sessionDbService.findLatestByKb(kbId);
         if (latest != null) return latest.getId();
 
@@ -349,11 +354,8 @@ public class V2ChatController {
 
     private void sendStatus(SseEmitter emitter, String mode, String text) {
         try {
-            Map<String, Object> data = new LinkedHashMap<>();
-            data.put("type", "status");
-            data.put("content", text);
-            data.put("mode", mode);
-            emitter.send(SseEmitter.event().data(mapper.writeValueAsString(data)));
+            emitter.send(SseEmitter.event().data(mapper.writeValueAsString(
+                    Map.of("type", "status", "content", text, "mode", mode))));
         } catch (Exception e) {
             log.warn("发送状态消息失败", e);
         }
@@ -361,24 +363,20 @@ public class V2ChatController {
 
     private void sendDone(SseEmitter emitter, String mode) {
         try {
-            Map<String, Object> data = new LinkedHashMap<>();
-            data.put("type", "done");
-            data.put("mode", mode);
-            emitter.send(SseEmitter.event().data(mapper.writeValueAsString(data)));
+            emitter.send(SseEmitter.event().data(mapper.writeValueAsString(
+                    Map.of("type", "done", "mode", mode))));
             emitter.complete();
         } catch (Exception e) {
-            log.error("发送完成消息失败", e);
             try { emitter.complete(); } catch (Exception ignored) {}
         }
     }
 
     private void sendError(SseEmitter emitter, String error) {
         try {
-            Map<String, Object> data = Map.of("type", "error", "content", error);
-            emitter.send(SseEmitter.event().data(mapper.writeValueAsString(data)));
+            emitter.send(SseEmitter.event().data(mapper.writeValueAsString(
+                    Map.of("type", "error", "content", error))));
             emitter.complete();
         } catch (Exception e) {
-            log.error("发送错误消息失败", e);
             try { emitter.completeWithError(new RuntimeException(error)); } catch (Exception ignored) {}
         }
     }
@@ -387,7 +385,7 @@ public class V2ChatController {
         String msg = e.getMessage();
         if (msg != null) {
             if (msg.contains("Insufficient Balance") || msg.contains("insufficient_balance")) {
-                return "API 余额不足，请登录 DeepSeek 平台充值后重试。";
+                return "API 余额不足，请登录平台充值后重试。";
             }
             if (msg.contains("Rate limit") || msg.contains("rate_limit")) {
                 return "请求过于频繁，请稍后再试。";
@@ -398,25 +396,7 @@ public class V2ChatController {
             if (msg.contains("context_length_exceeded") || msg.contains("maximum context length")) {
                 return "对话过长，请开启新对话。";
             }
-            int idx = msg.indexOf("\"message\":\"");
-            if (idx != -1) {
-                int start = idx + "\"message\":\"".length();
-                int end = msg.indexOf("\"", start);
-                if (end != -1) {
-                    return "AI 服务错误: " + msg.substring(start, end);
-                }
-            }
         }
         return "AI 服务调用失败: " + (msg != null ? msg : "未知错误");
-    }
-
-    // ========== Agent 决策追踪 API ==========
-
-    @GetMapping("/api/trace/{sessionId}")
-    @ResponseBody
-    public Map<String, Object> getTrace(@PathVariable String sessionId) {
-        var steps = agentTraceService.getTrace(sessionId);
-        var formatted = agentTraceService.formatTrace(sessionId);
-        return Map.of("ok", true, "steps", steps, "formatted", formatted);
     }
 }

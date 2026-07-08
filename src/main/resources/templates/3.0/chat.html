@@ -166,13 +166,13 @@
         <div class="content-body">
             <div class="chat-wrapper">
                 <div id="chatMessages" class="chat-messages">
-                    <div th:if="${!hasKb}" class="empty-state">
+                    <div id="emptyState" class="empty-state">
                         <div class="empty-icon">💬</div>
                         <div class="empty-title">开始对话</div>
                         <div class="empty-desc">你还没有添加任何笔记库。<br>可以直接与 AI 对话，或添加笔记库后使用 @笔记库名 进行知识库问答。</div>
                         <button class="empty-action" onclick="window.location.href='/config'">去配置笔记库</button>
                     </div>
-                    <div th:if="${hasKb}" id="messagesList"></div>
+                    <div id="messagesList"></div>
                 </div>
                 
                 <div class="chat-input-area">
@@ -188,7 +188,7 @@
                                 </button>
                                 <div class="divider"></div>
                                 <button class="footer-btn" onclick="toggleModelDropdown()">
-                                    <span id="currentModel">[[${defaultModel} ? ${defaultModel} : '默认模型']]</span>
+                                    <span id="currentModel">默认模型</span>
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12">
                                         <path d="M6 9l6 6 6-6"/>
                                     </svg>
@@ -205,51 +205,78 @@
                         </div>
                     </div>
                     
-                    <div id="mentionDropdown" class="dropdown-menu">
-                        <div th:each="kb : ${kbList}" class="dropdown-item" th:data-name="${kb.name}" th:data-kb-id="${kb.id}" onclick="insertMention(this.getAttribute('data-name'))">
-                            <div class="dropdown-item-icon">📚</div>
-                            <span th:text="${kb.name}"></span>
-                        </div>
-                    </div>
+                    <div id="mentionDropdown" class="dropdown-menu"></div>
                     
-                    <div id="modelDropdown" class="dropdown-menu">
-                        <div th:each="model : ${chatModels}" class="dropdown-item" th:data-model="${model.name}" onclick="selectModel(this.getAttribute('data-model'))" th:classappend="${model.name == defaultModel} ? 'selected'">
-                            <span th:text="${model.name}"></span>
-                        </div>
-                    </div>
+                    <div id="modelDropdown" class="dropdown-menu"></div>
                 </div>
             </div>
         </div>
     </main>
     
     <script>
-        var currentKbId = /*[[${defaultKbId}]]*/ null;
+        const API = '/api/chat';
+        var currentKbId = null;
         var kbList = [];
+        var modelList = [];
         var currentModel = '';
         
         document.addEventListener('DOMContentLoaded', function() {
-            var mentionItems = document.querySelectorAll('#mentionDropdown .dropdown-item');
-            mentionItems.forEach(function(item) {
-                var name = item.getAttribute('data-name');
-                var id = parseInt(item.getAttribute('data-kb-id'));
-                if (name && id) {
-                    kbList.push({ id: id, name: name });
-                }
-            });
-
-            if (!currentKbId && kbList.length > 0) {
-                currentKbId = kbList[0].id;
-            }
-
-            currentModel = document.getElementById('currentModel')?.textContent || '';
-            loadMessages();
+            loadKbs();
+            loadModels();
         });
         
-        function navigate(url) {
-            window.location.href = url;
+        async function loadKbs() {
+            const r = await fetch(API + '/kbs');
+            const d = await r.json();
+            if (d.ok && d.data) {
+                kbList = d.data;
+                if (kbList.length > 0) {
+                    currentKbId = kbList[0].id;
+                    document.getElementById('emptyState').style.display = 'none';
+                    loadMessages();
+                }
+                renderMentionDropdown();
+            }
         }
         
-        function onKbChange() {
+        async function loadModels() {
+            const r = await fetch(API + '/models');
+            const d = await r.json();
+            if (d.ok && d.data) {
+                modelList = d.data;
+                currentModel = d.defaultModel || '';
+                document.getElementById('currentModel').textContent = currentModel || '默认模型';
+                renderModelDropdown();
+            }
+        }
+        
+        function renderMentionDropdown() {
+            const dropdown = document.getElementById('mentionDropdown');
+            dropdown.innerHTML = '';
+            for (let i = 0; i < kbList.length; i++) {
+                const kb = kbList[i];
+                const div = document.createElement('div');
+                div.className = 'dropdown-item';
+                div.setAttribute('data-name', kb.name);
+                div.setAttribute('data-kb-id', kb.id);
+                div.onclick = function() { insertMention(this.getAttribute('data-name')); };
+                div.innerHTML = '<div class="dropdown-item-icon">📚</div><span>' + kb.name + '</span>';
+                dropdown.appendChild(div);
+            }
+        }
+        
+        function renderModelDropdown() {
+            const dropdown = document.getElementById('modelDropdown');
+            dropdown.innerHTML = '';
+            for (let i = 0; i < modelList.length; i++) {
+                const model = modelList[i];
+                const div = document.createElement('div');
+                div.className = 'dropdown-item' + (model.name === currentModel ? ' selected' : '');
+                div.setAttribute('data-model', model.name);
+                div.onclick = function() { selectModel(this.getAttribute('data-model')); };
+                div.innerHTML = '<span>' + model.name + '</span>';
+                dropdown.appendChild(div);
+            }
         }
         
         function toggleModelDropdown() {
@@ -300,20 +327,14 @@
             document.getElementById('mentionDropdown').style.display = 'none';
         }
         
-        function loadMessages() {
+        async function loadMessages() {
             if (!currentKbId) return;
             
-            var xhr = new XMLHttpRequest();
-            xhr.open('GET', '/v3/api/chat/messages?kbId=' + currentKbId);
-            xhr.onload = function() {
-                if (xhr.status === 200) {
-                    var data = JSON.parse(xhr.responseText);
-                    if (data.ok && data.messages) {
-                        renderMessages(data.messages);
-                    }
-                }
-            };
-            xhr.send();
+            var r = await fetch(API + '/messages?kbId=' + currentKbId);
+            var d = await r.json();
+            if (d.ok && d.messages) {
+                renderMessages(d.messages);
+            }
         }
         
         function renderMessages(messages) {
@@ -427,7 +448,7 @@
             if (sendKbId) formData.append('kbId', sendKbId);
             formData.append('modelName', currentModel);
             
-            fetch('/v3/api/chat/send', {
+            fetch(API + '/send', {
                 method: 'POST',
                 body: formData
             }).then(function(response) {
@@ -569,14 +590,13 @@
             }
             if (!confirm('确定要清空对话记录吗？')) return;
             
-            var xhr = new XMLHttpRequest();
-            xhr.open('DELETE', '/v3/api/chat/clear?kbId=' + currentKbId);
-            xhr.onload = function() {
-                if (xhr.status === 200) {
-                    document.getElementById('messagesList').innerHTML = '';
-                }
-            };
-            xhr.send();
+            fetch(API + '/clear?kbId=' + currentKbId, { method: 'DELETE' })
+                .then(function(r) { return r.json(); })
+                .then(function(d) {
+                    if (d.ok) {
+                        document.getElementById('messagesList').innerHTML = '';
+                    }
+                });
         }
         
         function parseMentionedKb(message) {

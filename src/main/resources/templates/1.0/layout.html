@@ -332,7 +332,7 @@
         <div class="nav-inner">
         <span class="title">笔灵AI助理</span>
         <a th:classappend="${requestURI == '/'} ? 'active' : ''" href="/">🏠 首页</a>
-        <a th:classappend="${requestURI == '/chat'} ? 'active' : ''" href="/chat">💬 对话</a>
+        <a th:classappend="${requestURI == '/v1/chat'} ? 'active' : ''" href="/v1/chat">💬 对话</a>
         <div class="dropdown">
             <a th:classappend="${#strings.startsWith(requestURI, '/image') or requestURI == '/tools' or #strings.startsWith(requestURI, '/data')} ? 'active' : ''"
                href="/tools" class="dropdown-toggle" style="display:inline-flex;align-items:center;text-decoration:none;">
@@ -388,7 +388,7 @@
             if (kbId) {
                 document.querySelectorAll('.nav-inner a').forEach(function(a) {
                     var href = a.getAttribute('href');
-                    if (href === '/chat' || href.startsWith('/image')) {
+                    if (href === '/v1/chat' || href.startsWith('/image')) {
                         a.href = href + '?kbId=' + kbId;
                     }
                 });

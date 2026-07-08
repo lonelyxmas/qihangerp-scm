@@ -73,7 +73,7 @@ async function loadChatHistory() {
     const box = document.getElementById('chatBox');
     box.innerHTML = '<div style="text-align:center;padding:20px;color:#909296;">加载中...</div>';
     try {
-        const resp = await fetch('/chat/api/kb/' + KB_ID + '/messages?limit=60');
+        const resp = await fetch('/api/chat/messages?kbId=' + KB_ID + '&limit=60');
         const data = await resp.json();
         box.innerHTML = '';
         if (data.messages && data.messages.length > 0) {
@@ -118,7 +118,7 @@ async function sendChat() {
     let replyText = '';
     let hasRealContent = false;
     try {
-        const res = await fetch('/chat/send', { method: 'POST', body: fd });
+        const res = await fetch('/api/chat/send', { method: 'POST', body: fd });
         const reader = res.body.getReader();
         const decoder = new TextDecoder();
         let buf = '';

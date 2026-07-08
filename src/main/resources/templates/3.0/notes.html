@@ -225,7 +225,7 @@
 
     async function loadKbListFromApi() {
         try {
-            var r = await fetch('/v3/api/kbs');
+            var r = await fetch('/api/chat/kbs');
             var d = await r.json();
             if (d.ok && d.data && d.data.length > 0) {
                 currentKbList = d.data;

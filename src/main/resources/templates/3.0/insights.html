@@ -200,7 +200,7 @@
         }
 
         function loadKbList() {
-            fetch('/v3/api/kbs')
+            fetch('/api/chat/kbs')
                 .then(r => r.json())
                 .then(d => {
                     if (d.ok && d.data) {
@@ -243,7 +243,7 @@
                     fetch(API_BASE + '/projects?kbId=' + selectedKbId),
                     fetch(API_BASE + '/tags?kbId=' + selectedKbId),
                     fetch(API_BASE + '/heatmap?kbId=' + selectedKbId),
-                    fetch('/v3/api/chat/messages?kbId=' + selectedKbId + '&limit=1')
+                    fetch('/api/chat/messages?kbId=' + selectedKbId + '&limit=1')
                 ]);
 
                 const [statsData, projectsData, tagsData, heatmapData, messagesData] = await Promise.all([
