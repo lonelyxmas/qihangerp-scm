@@ -190,7 +190,7 @@ public class ChatApiController {
                 if (emitterDone[0]) return;
                 sendStatus(emitter, mode, "正在处理...");
 
-                sessionService.saveMessage(sessionId, "user", finalMessage, mode, "web");
+                sessionService.saveMessage(actualSessionId, "user", finalMessage, mode, "web", finalKbId);
 
                 if (!llmService.isAvailable()) {
                     throw new IllegalStateException("LLM API Key 未配置，请在配置页填写");
@@ -401,14 +401,9 @@ public class ChatApiController {
             }
         }
 
-        SessionEntity latest;
-        if (kbId != null) {
-            latest = sessionDbService.findLatestByKb(kbId);
-        } else {
-            latest = sessionDbService.listBySourceOrderByUpdate("web").stream()
-                    .filter(s -> s.getKbId() == null)
-                    .findFirst().orElse(null);
-        }
+        SessionEntity latest = sessionDbService.listBySourceOrderByUpdate("web").stream()
+                .filter(s -> s.getKbId() == null)
+                .findFirst().orElse(null);
         if (latest != null) {
             latest.setUpdatedAt(TimeUtil.nowStr());
             sessionDbService.updateById(latest);
@@ -420,9 +415,9 @@ public class ChatApiController {
         SessionEntity se = new SessionEntity();
         se.setId(id);
         se.setSource("web");
-        se.setTitle(kbId != null ? "连续对话" : "新对话");
+        se.setTitle("新对话");
         se.setMode(mode != null ? mode : "knowledge");
-        se.setKbId(kbId);
+        se.setKbId(null);
         se.setCreatedAt(now);
         se.setUpdatedAt(now);
         sessionDbService.save(se);

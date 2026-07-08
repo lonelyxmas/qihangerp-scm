@@ -2,7 +2,6 @@ package com.laoqi.assistant.service;
 
 import com.laoqi.assistant.entity.KnowledgeBaseEntity;
 import com.laoqi.assistant.entity.MessageEntity;
-import com.laoqi.assistant.service.NoteIndexService.NoteSearchResult;
 import com.laoqi.assistant.util.FileUtil;
 import com.laoqi.assistant.util.TimeUtil;
 import org.slf4j.Logger;
@@ -11,12 +10,6 @@ import org.springframework.stereotype.Service;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
 import java.util.function.Consumer;
 
 @Service
@@ -25,68 +18,51 @@ public class ContextBuilder {
     private static final Logger log = LoggerFactory.getLogger(ContextBuilder.class);
 
     private final SessionService sessionService;
-    private final NoteIndexService noteIndexService;
     private final KnowledgeBaseService kbService;
 
     public ContextBuilder(SessionService sessionService,
-                         NoteIndexService noteIndexService,
-                         KnowledgeBaseService kbService) {
+                          KnowledgeBaseService kbService) {
         this.sessionService = sessionService;
-        this.noteIndexService = noteIndexService;
         this.kbService = kbService;
     }
 
     /**
      * 构建完整上下文
-     * 1. 主动搜索相关笔记
-     * 2. 注入历史对话
-     * 3. 读取规则文件
+     * 1. 注入历史对话
+     * 2. 读取规则文件
      */
     public ChatContext build(String sessionId, String userMessage, Long kbId) {
         return build(sessionId, userMessage, kbId, null);
     }
 
     public ChatContext build(String sessionId, String userMessage, Long kbId, Consumer<String> statusCallback) {
-        // 1. 注入历史对话
         if (statusCallback != null) statusCallback.accept("正在加载历史对话...");
         String historyContext = sessionService.buildHistoryContext(sessionId, "knowledge", userMessage);
 
-        // 2. 主动搜索相关笔记
-        List<NoteSearchResult> relevantNotes = List.of();
-        if (noteIndexService.isAvailable() && kbId != null) {
-            try {
-                if (statusCallback != null) statusCallback.accept("正在搜索相关笔记...");
-                relevantNotes = noteIndexService.hybridSearch(kbId, userMessage, 10);
-                log.info("[ContextBuilder] 主动搜索完成，找到 {} 条相关笔记", relevantNotes.size());
-            } catch (Exception e) {
-                log.warn("[ContextBuilder] 搜索笔记失败: {}", e.getMessage());
-            }
+        String notesDir = null;
+        if (kbId != null) {
+            notesDir = kbService.getNotesDirById(kbId);
         }
 
-        // 3. 读取规则文件
         if (statusCallback != null) statusCallback.accept("正在读取规则文件...");
         String agentsMd = "";
-        if (kbId != null) {
+        if (notesDir != null && !notesDir.isBlank()) {
             try {
-                String notesDir = kbService.getNotesDirById(kbId);
-                if (notesDir != null && !notesDir.isBlank()) {
-                    Path agentsFile = Paths.get(notesDir, "AGENTS.md");
-                    if (agentsFile.toFile().exists()) {
-                        agentsMd = FileUtil.readText(agentsFile);
-                    }
+                Path agentsFile = Paths.get(notesDir, "AGENTS.md");
+                if (agentsFile.toFile().exists()) {
+                    agentsMd = FileUtil.readText(agentsFile);
                 }
             } catch (Exception e) {
                 log.warn("[ContextBuilder] 读取 AGENTS.md 失败: {}", e.getMessage());
             }
         }
 
-        // 4. 组合上下文
         if (kbId == null) {
             if (statusCallback != null) statusCallback.accept("未指定知识库，请使用 @笔记库名 指定");
         } else {
             if (statusCallback != null) statusCallback.accept("上下文构建完成，正在请求 AI...");
         }
-        return new ChatContext(historyContext, relevantNotes, agentsMd);
+        return new ChatContext(historyContext, notesDir, agentsMd);
     }
 
     /**
@@ -95,14 +71,12 @@ public class ContextBuilder {
     public String merge(ChatContext context, String userMessage) {
         StringBuilder sb = new StringBuilder();
 
-        // 注入当前日期时间（让 AI 知道"今天"、"本周"的真实含义）
         String dateStr = TimeUtil.todayStr();
         String weekday = TimeUtil.weekdayCn(TimeUtil.now());
         sb.append("== 当前时间 ==\n");
         sb.append("日期: ").append(dateStr).append(" (").append(weekday).append(")\n");
         sb.append("请以当前日期为基准理解'今天'、'本周'、'本月'等时间概念。\n\n");
 
-        // 检查是否包含 @笔记库 标记
         boolean hasMention = userMessage != null && userMessage.contains("@");
         if (!hasMention) {
             sb.append("== 提示 ==\n");
@@ -111,107 +85,24 @@ public class ContextBuilder {
             sb.append("如果是一般性问题，可以直接回答，不需要搜索笔记库。\n\n");
         }
 
-        // 规则文件
         if (context.agentsMd() != null && !context.agentsMd().isBlank()) {
             sb.append("== 规则文件 (AGENTS.md) ==\n");
             sb.append(context.agentsMd()).append("\n\n");
         }
 
-        // 相关笔记搜索结果
-        if (context.relevantNotes() != null && !context.relevantNotes().isEmpty()) {
-            sb.append(formatNotesContext(context.relevantNotes())).append("\n\n");
+        if (context.notesDir() != null && !context.notesDir().isBlank()) {
+            sb.append("== 笔记库路径 ==\n");
+            sb.append("用户指定的笔记库路径为: ").append(context.notesDir()).append("\n");
+            sb.append("你可以使用 listDir、readFile、searchFiles 等工具浏览和读取该目录下的笔记文件。\n\n");
         }
 
-        // 历史对话
         if (context.historyContext() != null && !context.historyContext().isBlank()) {
             sb.append(context.historyContext()).append("\n\n");
         }
 
-        // 用户最新消息
         sb.append("---\n\n用户最新消息:\n").append(userMessage);
 
         return sb.toString();
-    }
-
-    /**
-     * 格式化搜索结果为上下文（去重+筛选）
-     */
-    private String formatNotesContext(List<NoteSearchResult> notes) {
-        if (notes == null || notes.isEmpty()) return "";
-
-        // 按文件去重，只保留每个文件最高分的一条
-        Map<String, NoteSearchResult> bestResults = new LinkedHashMap<>();
-        for (NoteSearchResult note : notes) {
-            String key = note.filePath();
-            if (!bestResults.containsKey(key) || note.score() > bestResults.get(key).score()) {
-                bestResults.put(key, note);
-            }
-        }
-
-        StringBuilder sb = new StringBuilder();
-        sb.append("== 相关笔记内容 ==\n\n");
-
-        int count = 0;
-        List<String> addedContents = new ArrayList<>();
-        
-        for (NoteSearchResult note : bestResults.values()) {
-            if (count >= 5) break;  // 最多注入5条
-            
-            String content = note.content();
-            if (content.length() > 800) {
-                content = content.substring(0, 800);
-            }
-            
-            // 内容去重：检查是否与已添加的内容高度相似
-            boolean isDuplicate = false;
-            for (String existing : addedContents) {
-                if (isContentSimilar(content, existing)) {
-                    log.info("[ContextBuilder] 跳过重复内容: {}", note.filePath());
-                    isDuplicate = true;
-                    break;
-                }
-            }
-            
-            if (isDuplicate) continue;
-            
-            addedContents.add(content);
-            sb.append("【来源: ").append(note.filePath()).append("】\n");
-            sb.append(content).append("\n\n");
-            count++;
-        }
-
-        sb.append("请基于以上相关笔记内容回答，引用时标注来源。");
-
-        return sb.toString();
-    }
-
-    /**
-     * 检查两段内容是否高度相似（简单实现：基于关键词重叠率）
-     */
-    private boolean isContentSimilar(String content1, String content2) {
-        if (content1 == null || content2 == null) return false;
-        
-        // 取前200字进行比较
-        String c1 = content1.length() > 200 ? content1.substring(0, 200) : content1;
-        String c2 = content2.length() > 200 ? content2.substring(0, 200) : content2;
-        
-        // 计算字符重叠率
-        Set<Character> chars1 = new HashSet<>();
-        for (char c : c1.toCharArray()) {
-            if (Character.isLetterOrDigit(c)) chars1.add(c);
-        }
-        
-        int overlap = 0;
-        for (char c : c2.toCharArray()) {
-            if (Character.isLetterOrDigit(c) && chars1.contains(c)) {
-                overlap++;
-            }
-        }
-        
-        int total = Math.min(c1.length(), c2.length());
-        double similarity = (double) overlap / total;
-        
-        return similarity > 0.7;  // 超过70%相似度认为重复
     }
 
     /**
@@ -219,7 +110,7 @@ public class ContextBuilder {
      */
     public record ChatContext(
             String historyContext,
-            List<NoteSearchResult> relevantNotes,
+            String notesDir,
             String agentsMd
     ) {}
 }

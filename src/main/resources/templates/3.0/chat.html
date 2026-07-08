@@ -389,7 +389,7 @@
             const r = await fetch(API + '/sessions', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-                body: 'kbId='
+                body: ''
             });
             const d = await r.json();
             if (d.ok) {

@@ -37,38 +37,13 @@ public class NoteTools {
 
     private final ConfigService configService;
     private final KnowledgeBaseService kbService;
-    private final NoteIndexService noteIndexService;
     private final DataSetService dataSetService;
-    private final IndexScannerService indexScannerService;
 
     public NoteTools(ConfigService configService, KnowledgeBaseService kbService,
-                    NoteIndexService noteIndexService, DataSetService dataSetService,
-                    IndexScannerService indexScannerService) {
+                    DataSetService dataSetService) {
         this.configService = configService;
         this.kbService = kbService;
-        this.noteIndexService = noteIndexService;
         this.dataSetService = dataSetService;
-        this.indexScannerService = indexScannerService;
-    }
-
-    /**
-     * 文件写入后主动触发增量索引（异步）
-     */
-    private void notifyFileChanged(Long kbId, String relativePath) {
-        if (kbId == null || !noteIndexService.isAvailable()) return;
-        String notesDir = kbService.getNotesDirById(kbId);
-        if (notesDir == null || notesDir.isBlank()) return;
-        java.nio.file.Path file = java.nio.file.Paths.get(notesDir, relativePath);
-        if (!java.nio.file.Files.isRegularFile(file)) return;
-
-        try {
-            boolean indexed = noteIndexService.indexFile(file, java.nio.file.Paths.get(notesDir), kbId);
-            if (indexed) {
-                log.info("[NoteTools] 写后自动索引完成: {}", relativePath);
-            }
-        } catch (Exception e) {
-            log.warn("[NoteTools] 写后自动索引失败: {}", relativePath, e);
-        }
     }
 
     public static void setCurrentKbId(Long kbId) {
@@ -201,10 +176,6 @@ public class NoteTools {
 
         FileUtil.writeText(file, content);
         log.info("[NoteTools] 写入文件: {} ({} 字符)", path, content.length());
-
-        // 写完后主动触发增量索引
-        notifyFileChanged(getCurrentKbId(), path);
-
         reportStatus("💾 文件写入完成");
         return "写入成功: " + path;
     }
@@ -249,47 +220,71 @@ public class NoteTools {
         return result.toString().trim();
     }
 
-    @Tool(description = "搜索笔记库内容，基于语义理解查找相关笔记片段。当用户询问某个主题、人物、事件时使用此工具")
+    @Tool(description = "在笔记库文件内容中搜索包含指定关键词的笔记文件。注意：只支持关键词匹配（不支持语义搜索），会扫描文件内容")
     public String searchNotes(
-            @ToolParam(description = "搜索关键词或自然语言查询，如'张三的跟进记录'、'本周工作重点'") String query,
+            @ToolParam(description = "搜索关键词，如'张三'、'项目进展'、'BUG'") String query,
             @ToolParam(description = "返回结果数量，默认5，最多20") int limit) {
-        reportStatus("🔍 正在搜索笔记...");
+        reportStatus("🔍 正在搜索文件内容...");
 
         Long kbId = getCurrentKbId();
         if (kbId == null) {
             reportStatus("🔍 搜索失败：未指定知识库");
-            return "未指定知识库。请在问题中使用 @笔记库名 来指定要搜索的笔记库，例如：'@工作笔记 查一下项目进展'。";
+            return "未指定知识库。请在问题中使用 @笔记库名 来指定要搜索的笔记库。";
         }
 
-        if (!noteIndexService.isAvailable()) {
-            reportStatus("🔍 语义搜索不可用，改用文件名搜索");
-            return "语义搜索不可用（Embedding 服务未配置），请使用 searchFiles 按文件名搜索";
+        String notesDir = kbService.getNotesDirById(kbId);
+        if (notesDir == null || notesDir.isBlank()) {
+            return "笔记库路径未配置";
         }
 
-        try {
-            List<NoteIndexService.NoteSearchResult> results = noteIndexService.hybridSearch(kbId, query, limit);
-            reportStatus("🔍 搜索完成，共找到 " + results.size() + " 条结果");
+        Path root = Path.of(notesDir);
+        String queryLower = query.toLowerCase();
+
+        try (Stream<Path> stream = Files.walk(root, 10)) {
+            List<String> results = stream
+                .filter(Files::isRegularFile)
+                .filter(p -> p.getFileName().toString().endsWith(".md")
+                          || p.getFileName().toString().endsWith(".txt")
+                          || p.getFileName().toString().endsWith(".json"))
+                .filter(p -> {
+                    try {
+                        String content = FileUtil.readText(p);
+                        return content != null && content.toLowerCase().contains(queryLower);
+                    } catch (Exception e) {
+                        return false;
+                    }
+                })
+                .limit(limit > 0 ? limit : 5)
+                .map(p -> {
+                    String relative = root.relativize(p).toString().replace("\\", "/");
+                    String preview = "";
+                    try {
+                        String content = FileUtil.readText(p);
+                        if (content != null) {
+                            int idx = content.toLowerCase().indexOf(queryLower);
+                            if (idx >= 0) {
+                                int start = Math.max(0, idx - 50);
+                                int end = Math.min(content.length(), idx + query.length() + 100);
+                                preview = "\n  ..." + content.substring(start, end).replace("\n", " ").trim() + "...";
+                            }
+                        }
+                    } catch (Exception e) {
+                        // ignore
+                    }
+                    return "📄 " + relative + preview;
+                })
+                .collect(Collectors.toList());
 
             if (results.isEmpty()) {
-                return "未找到与「" + query + "」相关的笔记内容。提示：可以先用 searchFiles 按文件名搜索，或检查索引是否已构建";
+                return "未找到包含「" + query + "」的笔记文件。提示：可以使用 searchFiles 按文件名搜索。";
             }
 
             StringBuilder sb = new StringBuilder();
-            sb.append("找到 ").append(results.size()).append(" 条相关笔记：\n\n");
-
-            for (int i = 0; i < results.size(); i++) {
-                NoteIndexService.NoteSearchResult r = results.get(i);
-                sb.append("📄 ").append(r.filePath());
-                sb.append(" (相似度: ").append(String.format("%.2f", r.score())).append(")\n");
-
-                String contentPreview = r.content();
-                if (contentPreview.length() > 300) {
-                    contentPreview = contentPreview.substring(0, 300) + "...";
-                }
-                sb.append("内容摘要：").append(contentPreview).append("\n\n");
+            sb.append("找到 ").append(results.size()).append(" 个包含「").append(query).append("」的文件：\n\n");
+            for (String r : results) {
+                sb.append(r).append("\n\n");
             }
-
-            return sb.toString();
+            return sb.toString().trim();
         } catch (Exception e) {
             log.error("[NoteTools] 搜索笔记失败", e);
             return "搜索失败: " + e.getMessage();
@@ -318,9 +313,6 @@ public class NoteTools {
 
         FileUtil.writeText(file, noteContent);
         log.info("[NoteTools] logRecord 写入文件: {} ({} 字符)", notePath, noteContent.length());
-
-        // 写完后主动触发增量索引
-        notifyFileChanged(getCurrentKbId(), notePath);
 
         // 2. 写数据集
         String datasetResult;

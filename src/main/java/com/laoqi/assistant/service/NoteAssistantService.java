@@ -96,9 +96,9 @@ public class NoteAssistantService {
                 fullMessage = baseMessage;
             }
 
-            int noteCount = context.relevantNotes() != null ? context.relevantNotes().size() : 0;
-            log.info("[编排] 上下文构建完成，总消息长度={}, 相关笔记={}, 记忆已注入={}",
-                    fullMessage.length(), noteCount, memoryContext.length() > 0);
+            log.info("[编排] 上下文构建完成，总消息长度={}, 笔记库路径={}, 记忆已注入={}",
+                    fullMessage.length(), context.notesDir() != null ? context.notesDir() : "无",
+                    memoryContext != null && !memoryContext.isEmpty());
 
             log.info("[编排] 用户: {} (session={}, kbId={}, model={})", userMessage, sessionId, kbId,
                     modelName != null ? modelName : "default");
@@ -171,9 +171,9 @@ public class NoteAssistantService {
             fullMessageBuilder.append(baseMessage);
             String fullMessage = fullMessageBuilder.toString();
 
-            int noteCount = context.relevantNotes() != null ? context.relevantNotes().size() : 0;
-            log.info("[编排] 上下文构建完成，总消息长度={}, 相关笔记={}, 记忆已注入={}",
-                    fullMessage.length(), noteCount, memoryContext != null && !memoryContext.isEmpty());
+            log.info("[编排] 上下文构建完成，总消息长度={}, 笔记库路径={}, 记忆已注入={}",
+                    fullMessage.length(), context.notesDir() != null ? context.notesDir() : "无",
+                    memoryContext != null && !memoryContext.isEmpty());
 
             log.info("[编排] 用户: {} (session={}, kbId={}, model={})", userMessage, sessionId, kbId,
                     modelName != null ? modelName : "default");
@@ -414,27 +414,29 @@ public class NoteAssistantService {
                - 需要调用什么工具？调用顺序是什么？
                - 有没有需要先了解的背景信息？
 
-            2️⃣ 规划（Plan）: 对复杂任务进行拆解
-               - 如果是"分析"、"总结"、"报告"、"对比"类请求，先想好执行步骤
-               - 步骤之间可能有依赖关系，按顺序执行
-               - 示例：用户说"分析本周工作" → ①searchNotes("本周") ②readFile各文件 ③用知识综合回复
+             2️⃣ 规划（Plan）: 对复杂任务进行拆解
+                - 如果是"分析"、"总结"、"报告"、"对比"类请求，先想好执行步骤
+                - 步骤之间可能有依赖关系，按顺序执行
+                - 示例：用户说"分析本周工作" → ①listDir查看目录结构 ②readFile读取相关文件 ③综合回复
 
-            3️⃣ 行动（Action）: 调用最合适的工具
-               - 优先使用 searchNotes 搜索语义相关内容
-               - 笔记操作用 NoteTools，数据集操作用 DataTools
-               - 任务管理用 TaskTools，提醒管理用 ReminderTools
-               - 知识库切换用 KbTools，记忆读写用 MemoryTools
-               - 互联网搜索用 WebTools
-
-            4️⃣ 观察（Observation）: 检查工具返回的结果
-               - 结果是否满足用户需求？
-               - 是否需要补充更多信息？
-               - 如果搜索无结果，换关键词或换工具重试
-
-            5️⃣ 回答（Answer）: 给出最终的完整回复
-               - 综合所有信息给出答案
-               - 引用来源（笔记文件路径、数据集名称）
-               - 如果用户指令有歧义，先确认再执行
+              3️⃣ 行动（Action）: 调用最合适的工具
+                 - 先用 listDir 了解目录结构，再用 readFile 读取具体文件
+                 - 使用 searchFiles 按文件名快速定位文件
+                 - 使用 searchNotes 搜索文件内容
+                 - 笔记操作用 NoteTools，数据集操作用 DataTools
+                - 任务管理用 TaskTools，提醒管理用 ReminderTools
+                - 知识库切换用 KbTools，记忆读写用 MemoryTools
+                - 互联网搜索用 WebTools
+ 
+             4️⃣ 观察（Observation）: 检查工具返回的结果
+                - 结果是否满足用户需求？
+                - 是否需要补充更多信息？
+                - 如果搜索无结果，换关键词或换工具重试
+ 
+             5️⃣ 回答（Answer）: 给出最终的完整回复
+                - 综合所有信息给出答案
+                - 引用来源（笔记文件路径、数据集名称）
+                - 如果用户指令有歧义，先确认再执行
 
             == 核心工具一览 ==
             【笔记库工具 - NoteTools】
@@ -443,7 +445,7 @@ public class NoteAssistantService {
               3. writeFile(path, content) — 写入/覆盖笔记文件
               4. deleteFile(path) — 删除笔记文件
               5. searchFiles(keyword) — 按文件名搜索
-              6. searchNotes(query, limit) — 语义搜索笔记内容（最常用！）
+               6. searchNotes(query, limit) — 搜索笔记文件内容
               7. logRecord(notePath, noteContent, dataset, jsonData) — 笔记+数据集同时写入
 
             【数据中心工具 - DataTools】
@@ -491,27 +493,26 @@ public class NoteAssistantService {
             - "我记住的关于你的信息" 已自动注入到上下文中
             - 需要了解用户信息时，用 recall 查询
 
-            == 工作流程 ==
-            1. 注意上下文中的"当前时间"信息，以此为准理解"今天"等时间概念
-            2. 理解用户意图 — 是查询、记录、分析还是管理任务？
-            3. 对复杂任务进行多步规划（分析/总结/报告类请求）
-            4. 调用合适工具执行（先 searchNotes 再 readFile，不要跳步）
-            5. 综合所有结果给出完整回复，引用来源
-            6. 对于记录类操作（客户沟通、工作进展），优先使用 logRecord
-            7. 任务相关用户说"记个事"、"待办" → 用 TaskTools
-            8. 提醒相关用户说"提醒我" → 用 ReminderTools
-            9. 用户说"切换到XX知识库" → 用 KbTools.switchKnowledgeBase
-            10. 用户问最新消息、你不知道的信息 → 用 WebTools.webSearch
+             == 工作流程 ==
+             1. 注意上下文中的"当前时间"信息，以此为准理解"今天"等时间概念
+             2. 理解用户意图 — 是查询、记录、分析还是管理任务？
+             3. 对复杂任务进行多步规划（分析/总结/报告类请求）
+             4. 调用工具执行：listDir 了解结构 → readFile 读取内容 → 综合分析
+             5. 综合所有结果给出完整回复，引用来源
+             6. 对于记录类操作（客户沟通、工作进展），优先使用 logRecord
+             7. 任务相关用户说"记个事"、"待办" → 用 TaskTools
+             8. 提醒相关用户说"提醒我" → 用 ReminderTools
+             9. 用户说"切换到XX知识库" → 用 KbTools.switchKnowledgeBase
+             10. 用户问最新消息、你不知道的信息 → 用 WebTools.webSearch
 
-            == 重要原则 ==
-            - AGENTS.md 的内容已包含在上下文中，无需再用 readFile 读取
-            - 主动使用 searchNotes 搜索相关内容，不要假设用户知道要搜什么
-            - 用户问"张三"、"客户"、"本周"等关键词时，立即调用 searchNotes
-            - 参考搜索结果，但以对话历史中的用户最新说法为最高优先级
-            - 如果用户明确纠正了某个信息（如"已经发布过了"），以用户说法为准，并主动更新笔记
-            - 如果搜索无结果，再用 searchFiles 按文件名搜索
-            - 引用笔记时标注来源 [来源: 文件路径]
-            - 不要假设工具调用失败，检查返回结果再做判断
+             == 重要原则 ==
+             - AGENTS.md 的内容已包含在上下文中，无需再用 readFile 读取
+             - 笔记库路径已在上下文中给出，使用 listDir / readFile / searchFiles 等工具直接操作文件
+             - 用户问"张三"、"客户"、"本周"等关键词时，先 searchFiles 按文件名定位，再用 readFile 读取
+             - 参考文件内容，但以对话历史中的用户最新说法为最高优先级
+             - 如果用户明确纠正了某个信息（如"已经发布过了"），以用户说法为准，并主动更新笔记
+             - 引用笔记时标注来源 [来源: 文件路径]
+             - 不要假设工具调用失败，检查返回结果再做判断
 
             == 硬性规则 ==
             - 严格执行用户最新消息中明确要求的操作，不要擅自做其他事

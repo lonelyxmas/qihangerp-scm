@@ -436,6 +436,10 @@ public class SessionService {
     // ========== Messages ==========
 
     public void saveMessage(String sessionId, String role, String content, String mode, String source) {
+        saveMessage(sessionId, role, content, mode, source, null);
+    }
+
+    public void saveMessage(String sessionId, String role, String content, String mode, String source, Long kbId) {
         String now = TimeUtil.nowStr();
 
         MessageEntity msg = new MessageEntity();
@@ -445,11 +449,7 @@ public class SessionService {
         msg.setContent(content);
         msg.setMode(mode != null ? mode : "knowledge");
         msg.setCreatedAt(now);
-        // 填充 kb_id：从 session 中获取
-        SessionEntity se = sessionDbService.getById(sessionId);
-        if (se != null && se.getKbId() != null) {
-            msg.setKbId(se.getKbId());
-        }
+        msg.setKbId(kbId);
         messageDbService.save(msg);
 
         markSessionUpdated(sessionId, role, mode);
