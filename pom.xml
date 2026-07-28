@@ -13,8 +13,8 @@
     <groupId>com.laoqi</groupId>
     <artifactId>ai-assistant</artifactId>
     <version>1.0.0</version>
-    <name>BiLing AI</name>
-    <description>笔灵 AI 笔记助理 — 基于 Spring AI 2.0 + Spring Boot 4.1 的本地多知识库智能笔记助理，@Tool 工具编排、语义检索、飞书集成</description>
+    <name>Qihang AI Workbench</name>
+    <description>启航 AI 工作台 — AI 驱动的企业协作智能体</description>
 
     <properties>
         <java.version>17</java.version>
