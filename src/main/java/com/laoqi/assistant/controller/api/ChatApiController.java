@@ -137,7 +137,7 @@ public class ChatApiController {
             defaultModel = defaultProfile.getName();
         }
         
-        return ResponseEntity.ok(Map.of("ok", true, "data", result, "defaultModel", defaultModel));
+        return ResponseEntity.ok(Map.of("ok", true, "data", result, "defaultModel", defaultModel != null ? defaultModel : ""));
     }
 
     @PostMapping("/send")

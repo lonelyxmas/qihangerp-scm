@@ -1,8 +1,11 @@
+
 server:
   port: 6790
   address: 0.0.0.0
 
 spring:
+  profiles:
+    active: dev
   servlet:
     multipart:
       max-file-size: 10MB
@@ -17,13 +20,10 @@ spring:
     default-property-inclusion: non_null
     time-zone: Asia/Shanghai
   datasource:
-    # 使用 H2 替代 SQLite（纯 Java 实现，无 JNI 依赖）jdbc:h2:file:./memory
-    url: jdbc:h2:file:${ASSISTANT_CONFIG_DIR:${user.dir}}/memory;DB_CLOSE_DELAY=-1;MODE=MySQL
-    driver-class-name: org.h2.Driver
-    username: sa
-    password: ${H2_PASSWORD:sa123456}
-    # H2 兼容模式：MODE=MySQL 使 H2 支持 SQLite 类似的 SQL 语法
-    # DB_CLOSE_DELAY=-1 确保 JVM 退出时才关闭数据库
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/qihang-work-ai?useUnicode=true&characterEncoding=utf8&zeroDateTimeBehavior=convertToNull&useSSL=true&serverTimezone=GMT%2B8
+    username: qihang
+    password: qihang2026
   ai:
     deepseek:
       # 仅用于满足 starter 启动校验，实际 API Key / Model 由 config.json 动态管理

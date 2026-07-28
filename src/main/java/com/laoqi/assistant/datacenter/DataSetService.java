@@ -17,15 +17,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
-import jakarta.annotation.PostConstruct;
-import javax.sql.DataSource;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
-import java.sql.Connection;
-import java.sql.Statement;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -38,73 +34,15 @@ public class DataSetService {
     private static final Set<String> META_FIELDS = Set.of("_id", "_source", "_importTime", "_hash");
 
     private final LogService logService;
-    private final DataSource dataSource;
     private final DataSetDbService dataSetDbService;
     private final DataSetRecordDbService recordDbService;
 
     public DataSetService(LogService logService,
-                          DataSource dataSource, DataSetDbService dataSetDbService,
+                          DataSetDbService dataSetDbService,
                           DataSetRecordDbService recordDbService) {
         this.logService = logService;
-        this.dataSource = dataSource;
         this.dataSetDbService = dataSetDbService;
         this.recordDbService = recordDbService;
-    }
-
-    @PostConstruct
-    public void init() {
-        log.info("Initializing DataSetService");
-        createTables();
-        log.info("DataSetService initialized");
-    }
-
-    private void createTables() {
-        try (Connection conn = dataSource.getConnection(); Statement stmt = conn.createStatement()) {
-            stmt.execute("""
-                CREATE TABLE IF NOT EXISTS data_center_datasets (
-                    id              BIGINT AUTO_INCREMENT PRIMARY KEY,
-                    dataset_id      VARCHAR(128) NOT NULL UNIQUE,
-                    name            VARCHAR(255) NOT NULL,
-                    description     TEXT,
-                    type            VARCHAR(64),
-                    status          VARCHAR(64),
-                    schema_json     TEXT,
-                    import_configs_json TEXT,
-                    module_id       VARCHAR(128),
-                    created_at      VARCHAR(32) NOT NULL,
-                    updated_at      VARCHAR(32) NOT NULL
-                )
-                """);
-            stmt.execute("""
-                CREATE TABLE IF NOT EXISTS data_center_records (
-                    id              BIGINT AUTO_INCREMENT PRIMARY KEY,
-                    record_id       VARCHAR(128) NOT NULL,
-                    dataset_id      VARCHAR(128) NOT NULL,
-                    data_json       TEXT NOT NULL,
-                    source          VARCHAR(64),
-                    content_hash    VARCHAR(64),
-                    record_num     VARCHAR(64),
-                    record_type     VARCHAR(64),
-                    record_status   VARCHAR(64),
-                    created_at      VARCHAR(32) NOT NULL,
-                    updated_at      VARCHAR(32) NOT NULL
-                )
-                """);
-            stmt.execute("CREATE INDEX IF NOT EXISTS idx_records_dataset ON data_center_records(dataset_id)");
-            stmt.execute("CREATE INDEX IF NOT EXISTS idx_records_hash ON data_center_records(dataset_id, content_hash)");
-
-            try { stmt.execute("ALTER TABLE data_center_datasets ADD COLUMN module_id VARCHAR(128)"); } catch (Exception ignored) {}
-            try { stmt.execute("ALTER TABLE data_center_datasets ADD COLUMN type VARCHAR(64)"); } catch (Exception ignored) {}
-            try { stmt.execute("ALTER TABLE data_center_datasets ADD COLUMN status VARCHAR(64)"); } catch (Exception ignored) {}
-            try { stmt.execute("ALTER TABLE data_center_records ADD COLUMN record_num VARCHAR(64)"); } catch (Exception ignored) {}
-            try { stmt.execute("ALTER TABLE data_center_records ADD COLUMN record_type VARCHAR(64)"); } catch (Exception ignored) {}
-            try { stmt.execute("ALTER TABLE data_center_records ADD COLUMN record_status VARCHAR(64)"); } catch (Exception ignored) {}
-            try { stmt.execute("ALTER TABLE data_center_records ADD COLUMN updated_at VARCHAR(32)"); } catch (Exception ignored) {}
-
-            log.info("Data center tables initialized");
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to create data center tables", e);
-        }
     }
 
     public List<DataSet> getAllDatasets() {
