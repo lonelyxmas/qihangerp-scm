@@ -1,6 +1,8 @@
 package cn.qihang.ai.assistant.service;
 
 import cn.qihang.ai.assistant.model.TaskData.*;
+import cn.qihang.ai.assistant.service.db.ActivityLogDbService;
+import cn.qihang.ai.assistant.service.db.NotificationDbService;
 import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,10 +21,16 @@ public class TaskService {
 
     private final ConfigService configService;
     private final DataSource dataSource;
+    private final ActivityLogDbService activityLogDbService;
+    private final NotificationDbService notificationDbService;
 
-    public TaskService(ConfigService configService, DataSource dataSource) {
+    public TaskService(ConfigService configService, DataSource dataSource,
+                       ActivityLogDbService activityLogDbService,
+                       NotificationDbService notificationDbService) {
         this.configService = configService;
         this.dataSource = dataSource;
+        this.activityLogDbService = activityLogDbService;
+        this.notificationDbService = notificationDbService;
     }
 
 
@@ -154,10 +162,7 @@ public class TaskService {
         task.dueDate = (dueDate != null && !dueDate.isEmpty()) ? dueDate : null;
 
         insertTaskToDb(task, kbId);
-
-        if (kbId != null) {
-        }
-
+        activityLogDbService.addLog("create_task", "创建任务: " + title, "user", null, null);
         return task;
     }
 
@@ -189,10 +194,7 @@ public class TaskService {
         task.updatedAt = java.time.LocalDate.now().toString();
 
         updateTaskInDb(task);
-
-        if (kbId != null) {
-        }
-
+        activityLogDbService.addLog("update_task", "更新任务: " + task.title + " (状态: " + task.status + ")", "user", null, null);
         return task;
     }
 
@@ -210,11 +212,7 @@ public class TaskService {
 
     private boolean deleteTaskInternal(String id, Long kbId) {
         deleteTaskFromDb(id);
-
-        // 同步到笔记库 JSON
-        if (kbId != null) {
-        }
-
+        activityLogDbService.addLog("delete_task", "删除任务: " + id, "user", null, null);
         return true;
     }
 

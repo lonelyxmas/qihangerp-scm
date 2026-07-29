@@ -16,6 +16,7 @@ public class DataSetEntity {
     private String status;
     private String schemaJson;
     private String importConfigsJson;
+    private String collabConfigJson;
     private String moduleId;
     private String createdAt;
     private String updatedAt;
@@ -36,6 +37,9 @@ public class DataSetEntity {
     public void setSchemaJson(String schemaJson) { this.schemaJson = schemaJson; }
     public String getImportConfigsJson() { return importConfigsJson; }
     public void setImportConfigsJson(String importConfigsJson) { this.importConfigsJson = importConfigsJson; }
+    public String getCollabConfigJson() { return collabConfigJson; }
+    public void setCollabConfigJson(String collabConfigJson) { this.collabConfigJson = collabConfigJson; }
+
     public String getModuleId() { return moduleId; }
     public void setModuleId(String moduleId) { this.moduleId = moduleId; }
     public String getCreatedAt() { return createdAt; }

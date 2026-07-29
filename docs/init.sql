@@ -136,6 +136,7 @@ CREATE TABLE IF NOT EXISTS `data_center_datasets` (
     `status`             VARCHAR(50)  DEFAULT NULL COMMENT '状态',
     `schema_json`        JSON         DEFAULT NULL COMMENT 'Schema 定义 JSON',
     `import_configs_json` JSON        DEFAULT NULL COMMENT '导入配置 JSON',
+    `collab_config_json` JSON        DEFAULT NULL COMMENT '协作配置 JSON（审批条件/审批人/通知规则）',
     `module_id`          VARCHAR(64)  DEFAULT NULL COMMENT '所属模块 ID',
     `created_at`         VARCHAR(30)  DEFAULT NULL COMMENT '创建时间',
     `updated_at`         VARCHAR(30)  DEFAULT NULL COMMENT '更新时间',
@@ -155,13 +156,20 @@ CREATE TABLE IF NOT EXISTS `data_center_records` (
     `record_num`    VARCHAR(100) DEFAULT NULL COMMENT '记录编号',
     `record_type`   VARCHAR(100) DEFAULT NULL COMMENT '记录类型',
     `record_status` VARCHAR(100) DEFAULT NULL COMMENT '记录状态',
+    `assigned_to`   BIGINT       DEFAULT NULL COMMENT '负责人用户 ID',
+    `assigned_at`   VARCHAR(32)  DEFAULT NULL COMMENT '指派时间',
+    `approval_status` VARCHAR(32) DEFAULT 'none' COMMENT '审批状态: none / pending / approved / rejected',
+    `approved_by`   BIGINT       DEFAULT NULL COMMENT '审批人用户 ID',
+    `approved_at`   VARCHAR(32)  DEFAULT NULL COMMENT '审批时间',
     `created_at`    VARCHAR(30)  DEFAULT NULL COMMENT '创建时间',
     `updated_at`    VARCHAR(30)  DEFAULT NULL COMMENT '更新时间',
     PRIMARY KEY (`id`),
     UNIQUE KEY `uk_record_id` (`record_id`),
     KEY `idx_dataset_id` (`dataset_id`),
     KEY `idx_record_status` (`record_status`),
-    KEY `idx_record_type` (`record_type`)
+    KEY `idx_record_type` (`record_type`),
+    KEY `idx_assigned_to` (`assigned_to`),
+    KEY `idx_approval_status` (`approval_status`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='数据中心 - 数据集记录';
 
 -- 11. 编码记录
@@ -342,3 +350,68 @@ CREATE TABLE IF NOT EXISTS `solve_follow_ups` (
     PRIMARY KEY (`id`),
     KEY `idx_session_id` (`session_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='识题追问';
+
+-- 22. 活动日志（动态流）
+CREATE TABLE IF NOT EXISTS `activity_log` (
+    `id`              BIGINT      NOT NULL AUTO_INCREMENT,
+    `kb_id`           BIGINT      DEFAULT NULL COMMENT '关联知识库 ID',
+    `dataset_id`      VARCHAR(64) DEFAULT NULL COMMENT '关联数据集 ID',
+    `record_id`       VARCHAR(64) DEFAULT NULL COMMENT '关联记录 ID',
+    `action_type`     VARCHAR(64) NOT NULL COMMENT '操作类型: create_note / update_note / create_record / update_record / assign_task / approval_request / approval_result / notification / report / analyze',
+    `action_desc`     TEXT        NOT NULL COMMENT '操作描述',
+    `source`          VARCHAR(32) NOT NULL DEFAULT 'ai' COMMENT '来源: user / ai / system',
+    `triggered_by`    BIGINT      DEFAULT NULL COMMENT '触发人用户 ID',
+    `triggered_name`  VARCHAR(64) DEFAULT NULL COMMENT '触发人姓名',
+    `target_user_id`  BIGINT      DEFAULT NULL COMMENT '目标用户 ID',
+    `target_name`     VARCHAR(64) DEFAULT NULL COMMENT '目标用户姓名',
+    `metadata_json`   TEXT        DEFAULT NULL COMMENT '扩展数据 JSON',
+    `created_at`      VARCHAR(32) NOT NULL COMMENT '创建时间',
+    PRIMARY KEY (`id`),
+    KEY `idx_kb_id` (`kb_id`),
+    KEY `idx_action_type` (`action_type`),
+    KEY `idx_triggered_by` (`triggered_by`),
+    KEY `idx_target_user_id` (`target_user_id`),
+    KEY `idx_created_at` (`created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='活动日志（动态流）';
+
+-- 23. 通知消息
+CREATE TABLE IF NOT EXISTS `notifications` (
+    `id`              BIGINT       NOT NULL AUTO_INCREMENT,
+    `user_id`         BIGINT       NOT NULL COMMENT '接收人用户 ID',
+    `title`           VARCHAR(255) NOT NULL COMMENT '通知标题',
+    `content`         TEXT         NOT NULL COMMENT '通知内容',
+    `type`            VARCHAR(64)  NOT NULL COMMENT '通知类型: task_assignment / approval_request / approval_result / reminder / system',
+    `source_type`     VARCHAR(64)  DEFAULT NULL COMMENT '来源类型: dataset / knowledge_base / system',
+    `source_id`       VARCHAR(128) DEFAULT NULL COMMENT '来源 ID',
+    `is_read`         INT          NOT NULL DEFAULT 0 COMMENT '是否已读 0/1',
+    `read_at`         VARCHAR(32)  DEFAULT NULL COMMENT '已读时间',
+    `created_at`      VARCHAR(32)  NOT NULL COMMENT '创建时间',
+    PRIMARY KEY (`id`),
+    KEY `idx_user_id` (`user_id`),
+    KEY `idx_type` (`type`),
+    KEY `idx_is_read` (`user_id`, `is_read`),
+    KEY `idx_created_at` (`created_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='通知消息';
+
+-- 24. 审批请求
+CREATE TABLE IF NOT EXISTS `approval_requests` (
+    `id`              BIGINT       NOT NULL AUTO_INCREMENT,
+    `request_id`      VARCHAR(64)  NOT NULL UNIQUE COMMENT '审批请求唯一标识',
+    `title`           VARCHAR(255) NOT NULL COMMENT '审批标题',
+    `description`     TEXT         DEFAULT NULL COMMENT '审批说明',
+    `source_type`     VARCHAR(64)  NOT NULL COMMENT '来源类型: dataset_record / knowledge_article / report',
+    `source_id`       VARCHAR(128) NOT NULL COMMENT '来源 ID',
+    `submitter_id`    BIGINT       NOT NULL COMMENT '提交人用户 ID',
+    `submitter_name`  VARCHAR(64)  DEFAULT NULL COMMENT '提交人姓名',
+    `approver_id`     BIGINT       NOT NULL COMMENT '审批人用户 ID',
+    `approver_name`   VARCHAR(64)  DEFAULT NULL COMMENT '审批人姓名',
+    `status`          VARCHAR(32)  NOT NULL DEFAULT 'pending' COMMENT '状态: pending / approved / rejected',
+    `comment`         TEXT         DEFAULT NULL COMMENT '审批意见',
+    `processed_at`    VARCHAR(32)  DEFAULT NULL COMMENT '处理时间',
+    `created_at`      VARCHAR(32)  NOT NULL COMMENT '创建时间',
+    PRIMARY KEY (`id`),
+    KEY `idx_submitter_id` (`submitter_id`),
+    KEY `idx_approver_id` (`approver_id`),
+    KEY `idx_status` (`status`),
+    KEY `idx_request_id` (`request_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='审批请求';

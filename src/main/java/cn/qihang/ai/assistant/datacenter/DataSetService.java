@@ -9,6 +9,8 @@ import cn.qihang.ai.assistant.datacenter.model.DataSet;
 import cn.qihang.ai.assistant.datacenter.model.ImportConfig;
 import cn.qihang.ai.assistant.entity.DataSetEntity;
 import cn.qihang.ai.assistant.entity.DataSetRecordEntity;
+import cn.qihang.ai.assistant.model.CollabConfig;
+import cn.qihang.ai.assistant.service.CollabEngine;
 import cn.qihang.ai.assistant.service.LogService;
 import cn.qihang.ai.assistant.service.db.DataSetDbService;
 import cn.qihang.ai.assistant.service.db.DataSetRecordDbService;
@@ -36,13 +38,16 @@ public class DataSetService {
     private final LogService logService;
     private final DataSetDbService dataSetDbService;
     private final DataSetRecordDbService recordDbService;
+    private final CollabEngine collabEngine;
 
     public DataSetService(LogService logService,
                           DataSetDbService dataSetDbService,
-                          DataSetRecordDbService recordDbService) {
+                          DataSetRecordDbService recordDbService,
+                          CollabEngine collabEngine) {
         this.logService = logService;
         this.dataSetDbService = dataSetDbService;
         this.recordDbService = recordDbService;
+        this.collabEngine = collabEngine;
     }
 
     public List<DataSet> getAllDatasets() {
@@ -156,6 +161,7 @@ public class DataSetService {
         if (update.getSchema() != null) existing.setSchema(normalizeSchema(update.getSchema()));
         if (update.getImportConfigs() != null) existing.setImportConfigs(update.getImportConfigs());
         if (update.getModuleId() != null) existing.setModuleId(update.getModuleId());
+        if (update.getCollabConfig() != null) existing.setCollabConfig(update.getCollabConfig());
         existing.setUpdatedAt(TimeUtil.nowStr());
 
         saveDatasetToDb(existing);
@@ -209,6 +215,11 @@ public class DataSetService {
                 record.put("更新时间", updatedAt);
                 record.put("_datasetType", ds != null ? ds.getType() : null);
                 record.put("_datasetStatus", ds != null ? ds.getStatus() : null);
+                record.put("_assignedTo", entity.getAssignedTo());
+                record.put("_assignedAt", entity.getAssignedAt());
+                record.put("_approvalStatus", entity.getApprovalStatus());
+                record.put("_approvedBy", entity.getApprovedBy());
+                record.put("_approvedAt", entity.getApprovedAt());
                 result.add(record);
             } catch (Exception e) {
                 log.warn("Failed to parse record: {}", e.getMessage());
@@ -223,6 +234,7 @@ public class DataSetService {
 
     public int addRecords(String datasetId, List<Map<String, Object>> newRecords, String source) {
         long existingCount = recordDbService.countByDataset(datasetId);
+        DataSet ds = getDataset(datasetId);
 
         int skipped = 0;
         int imported = 0;
@@ -232,11 +244,15 @@ public class DataSetService {
                 skipped += (newRecords.size() - imported - skipped);
                 break;
             }
-            saveRecordToDb(datasetId, raw, source);
-            imported++;
+            DataSetRecordEntity entity = saveRecordToDb(datasetId, raw, source);
+            if (entity != null) {
+                if (ds != null) {
+                    collabEngine.processNewRecord(ds, entity);
+                }
+                imported++;
+            }
         }
 
-        DataSet ds = getDataset(datasetId);
         logService.add("数据中心", "导入数据", ds != null ? ds.getName() : datasetId + " (" + source + ", " + imported + "条" +
                 (skipped > 0 ? ", 跳过" + skipped + "条重复" : "") + ")");
         log.info("Added {} records (skipped {} duplicates) to dataset {} from {}", imported, skipped, datasetId, source);
@@ -257,6 +273,8 @@ public class DataSetService {
         DataSetRecordEntity entity = recordDbService.getOne(wrapper);
         if (entity == null) return null;
 
+        DataSet ds = getDataset(datasetId);
+
         String rawType = resolveType(newData, datasetId);
         String rawStatus = resolveStatus(newData, datasetId);
         String type = fallthroughType(rawType, datasetId);
@@ -276,6 +294,10 @@ public class DataSetService {
             String hash = computeHash(business);
             entity.setContentHash(hash);
             recordDbService.updateById(entity);
+
+            if (ds != null) {
+                collabEngine.processUpdatedRecord(ds, entity);
+            }
 
             Map<String, Object> result = new HashMap<>(business);
             result.put("recordNum", entity.getRecordNum());
@@ -360,6 +382,7 @@ public class DataSetService {
         try {
             String schemaJson = ds.getSchema() != null ? mapper.writeValueAsString(ds.getSchema()) : null;
             String importJson = ds.getImportConfigs() != null ? mapper.writeValueAsString(ds.getImportConfigs()) : null;
+            String collabJson = ds.getCollabConfig() != null ? mapper.writeValueAsString(ds.getCollabConfig()) : null;
 
             if (existing != null) {
                 existing.setName(ds.getName());
@@ -368,6 +391,7 @@ public class DataSetService {
                 existing.setStatus(ds.getStatus());
                 existing.setSchemaJson(schemaJson);
                 existing.setImportConfigsJson(importJson);
+                existing.setCollabConfigJson(collabJson);
                 existing.setModuleId(ds.getModuleId());
                 existing.setUpdatedAt(ds.getUpdatedAt());
                 dataSetDbService.updateById(existing);
@@ -380,6 +404,7 @@ public class DataSetService {
                 entity.setStatus(ds.getStatus());
                 entity.setSchemaJson(schemaJson);
                 entity.setImportConfigsJson(importJson);
+                entity.setCollabConfigJson(collabJson);
                 entity.setModuleId(ds.getModuleId());
                 entity.setCreatedAt(ds.getCreatedAt());
                 entity.setUpdatedAt(ds.getUpdatedAt());
@@ -390,7 +415,7 @@ public class DataSetService {
         }
     }
 
-    private void saveRecordToDb(String datasetId, Map<String, Object> raw, String source) {
+    private DataSetRecordEntity saveRecordToDb(String datasetId, Map<String, Object> raw, String source) {
         String recordId = UUID.randomUUID().toString().substring(0, 12);
         String rawType = resolveType(raw, datasetId);
         String rawStatus = resolveStatus(raw, datasetId);
@@ -416,8 +441,10 @@ public class DataSetService {
             entity.setCreatedAt(now);
             entity.setUpdatedAt(now);
             recordDbService.save(entity);
+            return entity;
         } catch (Exception e) {
             log.error("Failed to save record to DB: {}", e.getMessage());
+            return null;
         }
     }
 
@@ -438,6 +465,9 @@ public class DataSetService {
             if (entity.getImportConfigsJson() != null) {
                 ds.setImportConfigs(mapper.readValue(entity.getImportConfigsJson(),
                         new TypeReference<Map<String, ImportConfig>>() {}));
+            }
+            if (entity.getCollabConfigJson() != null) {
+                ds.setCollabConfig(mapper.readValue(entity.getCollabConfigJson(), CollabConfig.class));
             }
         } catch (Exception e) {
             log.warn("Failed to parse schema: {}", e.getMessage());

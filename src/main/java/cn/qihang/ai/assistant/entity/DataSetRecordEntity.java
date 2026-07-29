@@ -17,6 +17,11 @@ public class DataSetRecordEntity {
     private String recordNum;
     private String recordType;
     private String recordStatus;
+    private Long assignedTo;
+    private String assignedAt;
+    private String approvalStatus;
+    private Long approvedBy;
+    private String approvedAt;
     private String createdAt;
     private String updatedAt;
 
@@ -45,6 +50,17 @@ public class DataSetRecordEntity {
     public void setRecordType(String recordType) { this.recordType = recordType; }
     public String getRecordStatus() { return recordStatus; }
     public void setRecordStatus(String recordStatus) { this.recordStatus = recordStatus; }
+    public Long getAssignedTo() { return assignedTo; }
+    public void setAssignedTo(Long assignedTo) { this.assignedTo = assignedTo; }
+    public String getAssignedAt() { return assignedAt; }
+    public void setAssignedAt(String assignedAt) { this.assignedAt = assignedAt; }
+    public String getApprovalStatus() { return approvalStatus; }
+    public void setApprovalStatus(String approvalStatus) { this.approvalStatus = approvalStatus; }
+    public Long getApprovedBy() { return approvedBy; }
+    public void setApprovedBy(Long approvedBy) { this.approvedBy = approvedBy; }
+    public String getApprovedAt() { return approvedAt; }
+    public void setApprovedAt(String approvedAt) { this.approvedAt = approvedAt; }
+
     public String getCreatedAt() { return createdAt; }
     public void setCreatedAt(String createdAt) { this.createdAt = createdAt; }
     public String getUpdatedAt() { return updatedAt; }

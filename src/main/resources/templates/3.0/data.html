@@ -185,6 +185,34 @@
                     <label>状态选项（每行一个）</label>
                     <textarea id="dsStatusOptions" rows="2" style="resize:vertical;font-family:monospace;font-size:12px;" placeholder="待办&#10;进行中&#10;已完成"></textarea>
                 </div>
+
+                <div style="margin-top:16px;border-top:1px solid var(--border);padding-top:12px;">
+                    <div onclick="toggleCollabSection()" style="cursor:pointer;display:flex;align-items:center;gap:6px;user-select:none;">
+                        <span id="collabToggleIcon">▶</span>
+                        <span style="font-size:13px;font-weight:600;color:var(--text-primary);">🤝 通知配置</span>
+                        <span style="font-size:11px;color:var(--text-muted);">（数据变更通知）</span>
+                    </div>
+                    <div id="collabConfigSection" style="display:none;margin-top:12px;">
+                        <div class="form-group">
+                            <label>负责人字段（从 Schema 字段中匹配，如"负责人"）</label>
+                            <input id="dsAssignedToField" type="text" placeholder="如：负责人">
+                        </div>
+                        <div style="display:flex;gap:16px;margin-top:4px;margin-bottom:12px;">
+                            <label style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer;">
+                                <input id="dsNotifyOnCreate" type="checkbox" checked>
+                                新增时通知负责人
+                            </label>
+                            <label style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer;">
+                                <input id="dsNotifyOnUpdate" type="checkbox">
+                                更新时通知负责人
+                            </label>
+                        </div>
+                        <div class="form-group">
+                            <label>飞书群 Webhook URL（可选，数据变更时自动推送到飞书群）</label>
+                            <input id="dsFeishuWebhook" type="text" placeholder="https://open.feishu.cn/open-apis/bot/v2/hook/...">
+                        </div>
+                    </div>
+                </div>
             </div>
             <div class="modal-footer">
                 <button class="btn btn-secondary" onclick="closeModal('dsModal')">取消</button>
@@ -263,9 +291,14 @@
         </div>
     </div>
 
-    <script>
+    <script th:inline="javascript">
+/*<![CDATA[*/
+const IS_ADMIN = /*[[${isAdmin}]]*/ false;
+/*]]>*/
 const API = '/api/datacenter';
+const USER_API = '/api/sys-api/system/user';
 let modules = [], allDatasets = [], datasets = [], currentModule = null, currentDs = null;
+let users = [];
 let allRecords = [], currentPage = 0, pageSize = 20, totalRecords = 0;
 let editingModuleId = null, editingDsId = null, editingRecordId = null, viewingRecord = null;
 let importType = 'json', excelFile = null;
@@ -284,6 +317,18 @@ function closeModal(id) {
 
 function showModal(id) {
     document.getElementById(id).classList.add('active');
+}
+
+function toggleCollabSection() {
+    const section = document.getElementById('collabConfigSection');
+    const icon = document.getElementById('collabToggleIcon');
+    if (section.style.display === 'none') {
+        section.style.display = 'block';
+        icon.textContent = '▼';
+    } else {
+        section.style.display = 'none';
+        icon.textContent = '▶';
+    }
 }
 
 async function loadModules() {
@@ -320,11 +365,16 @@ function renderModuleList() {
             html += '<div class="module-item-name">' + m.name + '</div>';
             html += '<div class="module-item-meta">' + dsCount + ' 数据集 · ' + recCount + ' 记录</div>';
             html += '</div>';
-            html += '<button class="edit-btn" onclick="event.stopPropagation(); showEditModule(\'' + m.id + '\')" title="编辑">✏️</button>';
-            html += '<button class="delete-btn" onclick="event.stopPropagation(); deleteModule(\'' + m.id + '\')" title="删除">🗑️</button>';
+            if (IS_ADMIN) {
+                html += '<button class="edit-btn" onclick="event.stopPropagation(); showEditModule(\'' + m.id + '\')" title="编辑">✏️</button>';
+                html += '<button class="delete-btn" onclick="event.stopPropagation(); deleteModule(\'' + m.id + '\')" title="删除">🗑️</button>';
+            }
             html += '</div>';
         }
         list.innerHTML = html;
+    }
+    if (!IS_ADMIN) {
+        document.querySelector('.new-module-btn').style.display = 'none';
     }
 }
 
@@ -424,8 +474,10 @@ function renderModuleDetail() {
     html += '<div><div class="stat-value">' + totalRecords + '</div><div class="stat-label">记录</div></div>';
     html += '</div>';
     html += '<div class="module-actions">';
-    html += '<button class="btn btn-secondary btn-sm" onclick="showCreateDataset()">+ 新建</button>';
-    html += '<button class="btn btn-secondary btn-sm" onclick="showEditModule(\'' + currentModule.id + '\')">✏️ 编辑</button>';
+    if (IS_ADMIN) {
+        html += '<button class="btn btn-secondary btn-sm" onclick="showCreateDataset()">+ 新建</button>';
+        html += '<button class="btn btn-secondary btn-sm" onclick="showEditModule(\'' + currentModule.id + '\')">✏️ 编辑</button>';
+    }
     html += '</div></div>';
 
     if (datasets.length === 0) {
@@ -475,9 +527,11 @@ function renderDatasetView() {
     html += '<div class="search-box"><input type="text" id="recordSearch" placeholder="🔍 搜索记录..." onkeyup="handleRecordSearch(event)"></div>';
     html += '<button class="btn btn-sm btn-secondary" onclick="handleRecordSearchBtn()">搜索</button>';
     html += '<button class="btn btn-sm btn-primary" onclick="showAddRecord()">+ 新增</button>';
-    html += '<button class="btn btn-sm btn-secondary" onclick="showEditDataset(\'' + currentDs.id + '\')">✏️ 编辑</button>';
+    if (IS_ADMIN) {
+        html += '<button class="btn btn-sm btn-secondary" onclick="showEditDataset(\'' + currentDs.id + '\')">✏️ 编辑</button>';
+        html += '<button class="btn btn-sm btn-danger" onclick="deleteDataset(\'' + currentDs.id + '\')">🗑️ 删除</button>';
+    }
     html += '<button class="btn btn-sm btn-secondary" onclick="showImportModal()">📥 导入</button>';
-    html += '<button class="btn btn-sm btn-danger" onclick="deleteDataset(\'' + currentDs.id + '\')">🗑️ 删除</button>';
     html += '</div>';
     
     html += '<table class="data-table"><thead><tr><th>状态</th>';
@@ -554,6 +608,12 @@ function showCreateDataset() {
     document.getElementById('dsSchema').value = '';
     document.getElementById('dsTypeOptions').value = '';
     document.getElementById('dsStatusOptions').value = '';
+    document.getElementById('dsAssignedToField').value = '';
+    document.getElementById('dsNotifyOnCreate').checked = true;
+    document.getElementById('dsNotifyOnUpdate').checked = false;
+    document.getElementById('dsFeishuWebhook').value = '';
+    document.getElementById('collabConfigSection').style.display = 'none';
+    document.getElementById('collabToggleIcon').textContent = '▶';
     showModal('dsModal');
 }
 
@@ -581,6 +641,11 @@ function showEditDataset(id) {
     } else {
         document.getElementById('dsStatusOptions').value = '';
     }
+    const cc = ds.collabConfig || {};
+    document.getElementById('dsAssignedToField').value = cc.assignedToField || '';
+    document.getElementById('dsNotifyOnCreate').checked = cc.notifyAssigneeOnCreate !== false;
+    document.getElementById('dsNotifyOnUpdate').checked = cc.notifyOnUpdate === true;
+    document.getElementById('dsFeishuWebhook').value = cc.feishuWebhookUrl || '';
     showModal('dsModal');
 }
 
@@ -595,13 +660,20 @@ async function saveDataset() {
         typeOptions: document.getElementById('dsTypeOptions').value.split('\n').map(function(s){ return s.trim(); }).filter(function(s){ return s; }),
         statusOptions: document.getElementById('dsStatusOptions').value.split('\n').map(function(s){ return s.trim(); }).filter(function(s){ return s; })
     };
+    const collabConfig = {
+        assignedToField: document.getElementById('dsAssignedToField').value || null,
+        notifyAssigneeOnCreate: document.getElementById('dsNotifyOnCreate').checked,
+        notifyOnUpdate: document.getElementById('dsNotifyOnUpdate').checked,
+        feishuWebhookUrl: document.getElementById('dsFeishuWebhook').value || null
+    };
     const data = {
         moduleId: currentModule.id,
         name: document.getElementById('dsName').value,
         description: document.getElementById('dsDesc').value,
         type: document.getElementById('dsType').value,
         status: document.getElementById('dsStatus').value,
-        schema: schema
+        schema: schema,
+        collabConfig: collabConfig
     };
     let url = API + '/datasets';
     let method = 'POST';

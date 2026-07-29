@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import cn.qihang.ai.assistant.datacenter.DataSetService;
 import cn.qihang.ai.assistant.datacenter.model.DataSet;
+import cn.qihang.ai.assistant.service.db.ActivityLogDbService;
 import cn.qihang.ai.assistant.util.FileUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,12 +39,14 @@ public class NoteTools {
     private final ConfigService configService;
     private final KnowledgeBaseService kbService;
     private final DataSetService dataSetService;
+    private final ActivityLogDbService activityLogDbService;
 
     public NoteTools(ConfigService configService, KnowledgeBaseService kbService,
-                    DataSetService dataSetService) {
+                    DataSetService dataSetService, ActivityLogDbService activityLogDbService) {
         this.configService = configService;
         this.kbService = kbService;
         this.dataSetService = dataSetService;
+        this.activityLogDbService = activityLogDbService;
     }
 
     public static void setCurrentKbId(Long kbId) {
@@ -192,6 +195,7 @@ public class NoteTools {
         FileUtil.writeText(file, content);
         log.info("[NoteTools] 写入文件: {} ({} 字符)", path, content.length());
         reportStatus("💾 文件写入完成");
+        activityLogDbService.addLog("write_note", "AI 写入笔记: " + path, "ai", null, "AI");
         return "写入成功: " + path;
     }
 
@@ -209,6 +213,7 @@ public class NoteTools {
             Files.delete(file);
             log.info("[NoteTools] 删除文件: {}", path);
             reportStatus("🗑️ 文件已删除");
+            activityLogDbService.addLog("delete_note", "AI 删除笔记: " + path, "ai", null, "AI");
             return "删除成功: " + path;
         } catch (IOException e) {
             return "删除失败: " + e.getMessage();
@@ -354,6 +359,7 @@ public class NoteTools {
             log.warn("[NoteTools] logRecord 写入数据集失败", e);
         }
 
+        activityLogDbService.addLog("log_record", "AI 记录工作: " + notePath + " → " + dataset, "ai", null, "AI");
         reportStatus("✅ 完成");
         return "✅ 笔记已保存: " + notePath + "\n" + datasetResult;
     }

@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import cn.qihang.ai.assistant.datacenter.DataSetService;
 import cn.qihang.ai.assistant.datacenter.model.DataSet;
+import cn.qihang.ai.assistant.service.db.ActivityLogDbService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.ai.tool.annotation.Tool;
@@ -27,9 +28,11 @@ public class DataTools {
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     private final DataSetService dataSetService;
+    private final ActivityLogDbService activityLogDbService;
 
-    public DataTools(DataSetService dataSetService) {
+    public DataTools(DataSetService dataSetService, ActivityLogDbService activityLogDbService) {
         this.dataSetService = dataSetService;
+        this.activityLogDbService = activityLogDbService;
     }
 
     private String now() {
@@ -105,6 +108,7 @@ public class DataTools {
             record.put("更新时间", now());
             int count = dataSetService.addRecords(ds.getId(), List.of(record), "ai_chat");
             if (count > 0) {
+                activityLogDbService.addLog("create_record", "AI 新增记录到「" + ds.getName() + "」: " + jsonData, "ai", null, "AI");
                 return "✅ 已成功添加 1 条记录到「" + ds.getName() + "」";
             } else {
                 return "⚠️ 记录已存在（重复），未添加";
@@ -149,6 +153,7 @@ public class DataTools {
             dataSetService.deleteRecord(ds.getId(), recordId);
             dataSetService.addRecords(ds.getId(), List.of(updatedRecord), "ai_chat_update");
 
+            activityLogDbService.addLog("update_record", "AI 更新记录 " + recordId + " 在「" + ds.getName() + "」: " + jsonData, "ai", null, "AI");
             return "✅ 已更新记录 " + recordId + " 在「" + ds.getName() + "」中";
         } catch (Exception e) {
             return "❌ 更新失败: " + e.getMessage();
@@ -166,6 +171,7 @@ public class DataTools {
 
         boolean deleted = dataSetService.deleteRecord(ds.getId(), recordId);
         if (deleted) {
+            activityLogDbService.addLog("delete_record", "AI 删除记录 " + recordId + " 在「" + ds.getName() + "」", "ai", null, "AI");
             return "✅ 已删除记录 " + recordId + " 在「" + ds.getName() + "」中";
         } else {
             return "❌ 未找到记录: " + recordId;

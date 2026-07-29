@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>启航AI工作台 - 审批中心</title>
     <link rel="stylesheet" href="/css/app.css">
+    <script src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.js"></script>
     <style>
         .approval-tabs { display: flex; gap: 0; margin-bottom: 20px; border-bottom: 1px solid var(--border); }
         .approval-tab { padding: 10px 20px; font-size: 14px; border: none; background: none; cursor: pointer; color: var(--text-secondary); border-bottom: 2px solid transparent; transition: all 0.2s; }
@@ -14,21 +15,32 @@
         .approval-list { display: flex; flex-direction: column; gap: 8px; }
         .approval-item { display: flex; gap: 12px; padding: 16px; background: white; border: 1px solid var(--border); border-radius: var(--radius-md); transition: all 0.2s; }
         .approval-item:hover { box-shadow: var(--shadow-sm); }
+        .approval-item.pending { border-left: 3px solid #f59e0b; }
+        .approval-item.approved { border-left: 3px solid #22c55e; }
+        .approval-item.rejected { border-left: 3px solid #ef4444; }
         .approval-icon { width: 36px; height: 36px; border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
-        .approval-body { flex: 1; }
+        .approval-body { flex: 1; min-width: 0; }
         .approval-title { font-size: 14px; font-weight: 500; color: var(--text-primary); margin-bottom: 4px; }
         .approval-desc { font-size: 13px; color: var(--text-secondary); margin-bottom: 8px; line-height: 1.5; }
-        .approval-meta { display: flex; gap: 16px; font-size: 12px; color: var(--text-muted); }
+        .approval-meta { display: flex; gap: 16px; font-size: 12px; color: var(--text-muted); flex-wrap: wrap; }
         .approval-status { padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 500; }
         .approval-status.pending { background: rgba(245,158,11,0.1); color: #d97706; }
         .approval-status.approved { background: rgba(34,197,94,0.1); color: #16a34a; }
         .approval-status.rejected { background: rgba(239,68,68,0.1); color: #dc2626; }
-        .approval-actions { display: flex; gap: 8px; margin-top: 8px; }
+        .approval-actions { display: flex; gap: 8px; margin-top: 10px; }
+        .approval-actions .btn { padding: 6px 14px; font-size: 12px; }
+        .approval-comment-box { margin-top: 10px; display: flex; gap: 8px; }
+        .approval-comment-box input { flex: 1; padding: 6px 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 12px; outline: none; }
+        .approval-comment-box input:focus { border-color: var(--primary); }
+        .loading-dot { width: 8px; height: 8px; background: var(--primary); border-radius: 50%; animation: loadPulse 1.4s infinite ease-in-out both; }
+        .loading-dot:nth-child(1) { animation-delay: -0.32s; }
+        .loading-dot:nth-child(2) { animation-delay: -0.16s; }
+        @keyframes loadPulse { 0%,80%,100% { transform: scale(0.6); opacity: 0.5; } 40% { transform: scale(1); opacity: 1; } }
     </style>
 </head>
 <body>
     <th:block th:replace="3.0/fragments/sidebar::sidebar(${currentNav})"></th:block>
-    <main class="main-content">
+    <main class="main-content" id="approvalApp">
         <div class="content-header">
             <h1 class="content-title">审批中心</h1>
             <div style="display:flex;gap:8px;align-items:center;">
@@ -37,23 +49,151 @@
         </div>
         <div class="content-body">
             <div class="approval-tabs">
-                <button class="approval-tab active" onclick="switchApprovalTab('pending', this)">待我审批 <span class="count">0</span></button>
-                <button class="approval-tab" onclick="switchApprovalTab('submitted', this)">我提交的</button>
-                <button class="approval-tab" onclick="switchApprovalTab('history', this)">已处理</button>
+                <button v-for="t in tabs" :key="t.key" class="approval-tab"
+                        :class="{ active: currentTab === t.key }"
+                        @click="switchTab(t.key)">
+                    {{ t.label }}
+                    <span v-if="t.count !== undefined" class="count">{{ t.count }}</span>
+                </button>
             </div>
-            <div class="empty-state">
+            <div v-if="loading" class="empty-state">
+                <div class="loading" style="display:flex;align-items:center;justify-content:center;gap:8px;font-size:14px;color:var(--text-secondary);">
+                    <span class="loading-dot"></span><span class="loading-dot"></span><span class="loading-dot"></span>加载中...
+                </div>
+            </div>
+            <div v-else-if="items.length === 0" class="empty-state">
                 <div class="empty-icon">✅</div>
                 <div class="empty-title">暂无审批请求</div>
                 <div class="empty-desc">AI 检测到需要审批的操作时，将自动提交审批请求</div>
             </div>
-            <div class="approval-list" id="approvalList" style="display:none;"></div>
+            <div v-else class="approval-list">
+                <div v-for="item in items" :key="item.id" class="approval-item" :class="item.status">
+                    <div class="approval-icon" :style="statusIconStyle(item.status)">
+                        {{ statusIcon(item.status) }}
+                    </div>
+                    <div class="approval-body">
+                        <div class="approval-title">{{ item.title }}</div>
+                        <div v-if="item.description" class="approval-desc">{{ item.description }}</div>
+                        <div class="approval-meta">
+                            <span>📌 {{ item.sourceType === 'dataset_record' ? '数据集' : item.sourceType === 'knowledge_article' ? '知识库' : '报告' }}</span>
+                            <span>👤 提交: {{ item.submitterName || '未知' }}</span>
+                            <span>👤 审批: {{ item.approverName || '未知' }}</span>
+                            <span class="approval-status" :class="item.status">{{ statusLabel(item.status) }}</span>
+                            <span>🕐 {{ item.createdAt }}</span>
+                        </div>
+                        <div v-if="item.comment" style="margin-top:6px;font-size:12px;color:var(--text-secondary);background:var(--hover);padding:6px 10px;border-radius:4px;">
+                            审批意见: {{ item.comment }}
+                        </div>
+                        <div v-if="item.status === 'pending' && item.approverId === 1" class="approval-actions">
+                            <div v-if="showCommentBox !== item.id" style="display:flex;gap:8px;">
+                                <button class="btn btn-primary" @click="openCommentBox(item.id, 'approve')" style="padding:6px 14px;font-size:12px;">✓ 通过</button>
+                                <button class="btn btn-secondary" @click="openCommentBox(item.id, 'reject')" style="padding:6px 14px;font-size:12px;">✗ 驳回</button>
+                            </div>
+                            <div v-else class="approval-comment-box">
+                                <input v-model="commentText" placeholder="输入审批意见（可选）" @keyup.enter="processApproval(item)">
+                                <button class="btn btn-primary" @click="processApproval(item)" style="padding:6px 12px;font-size:12px;">确认</button>
+                                <button class="btn btn-secondary" @click="showCommentBox = null" style="padding:6px 12px;font-size:12px;">取消</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </main>
     <script>
-        function switchApprovalTab(tab, btn) {
-            document.querySelectorAll('.approval-tab').forEach(t => t.classList.remove('active'));
-            btn.classList.add('active');
-        }
+        const { createApp, ref, onMounted } = Vue;
+        createApp({
+            setup() {
+                const userId = 1;
+                const items = ref([]);
+                const loading = ref(true);
+                const currentTab = ref('pending');
+                const tabs = ref([
+                    { key: 'pending', label: '待我审批' },
+                    { key: 'submitted', label: '我提交的' },
+                    { key: 'history', label: '已处理' }
+                ]);
+                const showCommentBox = ref(null);
+                const pendingAction = ref(null);
+                const commentText = ref('');
+
+                async function loadData() {
+                    loading.value = true;
+                    try {
+                        const r = await fetch('/api/collab/approval/list?userId=' + userId + '&tab=' + currentTab.value);
+                        const d = await r.json();
+                        if (d.ok) {
+                            items.value = d.data;
+                            updateTabCounts();
+                        }
+                    } catch (e) {
+                        console.error(e);
+                    } finally {
+                        loading.value = false;
+                    }
+                }
+
+                function updateTabCounts() {
+                    const pendingCount = items.value.filter(i => i.status === 'pending').length;
+                    tabs.value[0].count = pendingCount > 0 ? pendingCount : undefined;
+                }
+
+                function switchTab(key) {
+                    currentTab.value = key;
+                    showCommentBox.value = null;
+                    loadData();
+                }
+
+                function openCommentBox(id, action) {
+                    showCommentBox.value = id;
+                    pendingAction.value = action;
+                    commentText.value = '';
+                }
+
+                async function processApproval(item) {
+                    try {
+                        const formData = new FormData();
+                        formData.append('id', item.id);
+                        formData.append('action', pendingAction.value);
+                        formData.append('comment', commentText.value || '');
+                        const r = await fetch('/api/collab/approval/process', { method: 'POST', body: formData });
+                        const d = await r.json();
+                        if (d.ok) {
+                            showCommentBox.value = null;
+                            await loadData();
+                        }
+                    } catch (e) {
+                        console.error(e);
+                    }
+                }
+
+                function statusIcon(status) {
+                    if (status === 'pending') return '⏳';
+                    if (status === 'approved') return '✅';
+                    return '❌';
+                }
+
+                function statusIconStyle(status) {
+                    if (status === 'pending') return 'background:rgba(245,158,11,0.1)';
+                    if (status === 'approved') return 'background:rgba(34,197,94,0.1)';
+                    return 'background:rgba(239,68,68,0.1)';
+                }
+
+                function statusLabel(status) {
+                    if (status === 'pending') return '待审批';
+                    if (status === 'approved') return '已通过';
+                    return '已驳回';
+                }
+
+                onMounted(loadData);
+                return {
+                    items, loading, currentTab, tabs,
+                    showCommentBox, pendingAction, commentText,
+                    switchTab, openCommentBox, processApproval,
+                    statusIcon, statusIconStyle, statusLabel
+                };
+            }
+        }).mount('#approvalApp');
     </script>
 </body>
 </html>

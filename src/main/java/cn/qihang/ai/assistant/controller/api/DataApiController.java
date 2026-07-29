@@ -9,6 +9,7 @@ import cn.qihang.ai.assistant.datacenter.DataSetService;
 import cn.qihang.ai.assistant.datacenter.model.*;
 import cn.qihang.ai.assistant.service.LlmService;
 
+import cn.qihang.ai.assistant.security.common.SecurityUtils;
 import cn.qihang.ai.assistant.service.ConfigService;
 import cn.qihang.ai.assistant.util.FileUtil;
 import org.slf4j.Logger;
@@ -49,6 +50,12 @@ public class DataApiController {
         this.llmService = llmService;
         this.configService = configService;
         this.analysisCache = analysisCache;
+    }
+
+    private void requireAdmin() {
+        if (!cn.qihang.ai.assistant.entity.SysUser.isAdmin(SecurityUtils.getUserId())) {
+            throw new IllegalStateException("仅管理员可执行此操作");
+        }
     }
 
     private String doAiChat(String systemPrompt, String userMessage) throws Exception {
@@ -180,6 +187,7 @@ public class DataApiController {
     @PostMapping("/modules")
     public ResponseEntity<Map<String, Object>> createModule(@RequestBody Map<String, String> body) {
         try {
+            requireAdmin();
             String name = body.get("name");
             String description = body.get("description");
             String icon = body.get("icon");
@@ -193,6 +201,7 @@ public class DataApiController {
     @PutMapping("/modules/{id}")
     public ResponseEntity<Map<String, Object>> updateModule(@PathVariable String id, @RequestBody Map<String, Object> body) {
         try {
+            requireAdmin();
             String name = (String) body.get("name");
             String description = (String) body.get("description");
             String icon = (String) body.get("icon");
@@ -209,11 +218,16 @@ public class DataApiController {
 
     @DeleteMapping("/modules/{id}")
     public ResponseEntity<Map<String, Object>> deleteModule(@PathVariable String id) {
-        boolean deleted = moduleService.deleteModule(id);
-        if (!deleted) {
-            return ResponseEntity.ok(Map.of("ok", false, "error", "模块不存在"));
+        try {
+            requireAdmin();
+            boolean deleted = moduleService.deleteModule(id);
+            if (!deleted) {
+                return ResponseEntity.ok(Map.of("ok", false, "error", "模块不存在"));
+            }
+            return ResponseEntity.ok(Map.of("ok", true));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("ok", false, "error", e.getMessage()));
         }
-        return ResponseEntity.ok(Map.of("ok", true));
     }
 
     @GetMapping("/modules/{id}/datasets")
@@ -242,6 +256,7 @@ public class DataApiController {
     @PostMapping("/datasets")
     public ResponseEntity<Map<String, Object>> createDataset(@RequestBody DataSet ds) {
         try {
+            requireAdmin();
             DataSet created = dataSetService.createDataset(ds);
             return ResponseEntity.ok(Map.of("ok", true, "data", created));
         } catch (Exception e) {
@@ -251,20 +266,30 @@ public class DataApiController {
 
     @PutMapping("/datasets/{id}")
     public ResponseEntity<Map<String, Object>> updateDataset(@PathVariable String id, @RequestBody DataSet ds) {
-        DataSet updated = dataSetService.updateDataset(id, ds);
-        if (updated == null) {
-            return ResponseEntity.ok(Map.of("ok", false, "error", "数据集不存在"));
+        try {
+            requireAdmin();
+            DataSet updated = dataSetService.updateDataset(id, ds);
+            if (updated == null) {
+                return ResponseEntity.ok(Map.of("ok", false, "error", "数据集不存在"));
+            }
+            return ResponseEntity.ok(Map.of("ok", true, "data", updated));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("ok", false, "error", e.getMessage()));
         }
-        return ResponseEntity.ok(Map.of("ok", true, "data", updated));
     }
 
     @DeleteMapping("/datasets/{id}")
     public ResponseEntity<Map<String, Object>> deleteDataset(@PathVariable String id) {
-        boolean deleted = dataSetService.deleteDataset(id);
-        if (!deleted) {
-            return ResponseEntity.ok(Map.of("ok", false, "error", "数据集不存在"));
+        try {
+            requireAdmin();
+            boolean deleted = dataSetService.deleteDataset(id);
+            if (!deleted) {
+                return ResponseEntity.ok(Map.of("ok", false, "error", "数据集不存在"));
+            }
+            return ResponseEntity.ok(Map.of("ok", true));
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(Map.of("ok", false, "error", e.getMessage()));
         }
-        return ResponseEntity.ok(Map.of("ok", true));
     }
 
     @GetMapping("/datasets/{id}/records")

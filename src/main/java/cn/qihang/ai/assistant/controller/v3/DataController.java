@@ -1,6 +1,8 @@
 package cn.qihang.ai.assistant.controller.v3;
 
 import cn.qihang.ai.assistant.entity.KnowledgeBaseEntity;
+import cn.qihang.ai.assistant.entity.SysUser;
+import cn.qihang.ai.assistant.security.common.SecurityUtils;
 import cn.qihang.ai.assistant.service.KnowledgeBaseService;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
@@ -37,6 +39,12 @@ public class DataController {
             if (kb != null) {
                 model.put("selectedKb", kb);
             }
+        }
+
+        try {
+            model.put("isAdmin", SysUser.isAdmin(SecurityUtils.getUserId()));
+        } catch (Exception e) {
+            model.put("isAdmin", false);
         }
 
         return "3.0/data";

@@ -1,5 +1,6 @@
 package cn.qihang.ai.assistant.datacenter.model;
 
+import cn.qihang.ai.assistant.model.CollabConfig;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import java.util.HashMap;
 import java.util.Map;
@@ -14,6 +15,7 @@ public class DataSet {
     private DataSchema schema;
     private String outputDir;
     private Map<String, ImportConfig> importConfigs = new HashMap<>();
+    private CollabConfig collabConfig;
     private String moduleId;
     private int recordCount;
     private String createdAt;
@@ -44,6 +46,9 @@ public class DataSet {
 
     public Map<String, ImportConfig> getImportConfigs() { return importConfigs; }
     public void setImportConfigs(Map<String, ImportConfig> importConfigs) { this.importConfigs = importConfigs; }
+
+    public CollabConfig getCollabConfig() { return collabConfig; }
+    public void setCollabConfig(CollabConfig collabConfig) { this.collabConfig = collabConfig; }
 
     public String getModuleId() { return moduleId; }
     public void setModuleId(String moduleId) { this.moduleId = moduleId; }

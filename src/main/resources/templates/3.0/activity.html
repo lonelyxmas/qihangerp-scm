@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>启航AI工作台 - 动态流</title>
     <link rel="stylesheet" href="/css/app.css">
+    <script src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.js"></script>
     <style>
         .activity-filters { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
         .filter-btn { padding: 6px 14px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 13px; cursor: pointer; background: white; color: var(--text-secondary); transition: all 0.2s; }
@@ -15,30 +16,28 @@
         .activity-item { position: relative; margin-bottom: 20px; padding: 16px; background: white; border: 1px solid var(--border); border-radius: var(--radius-md); transition: all 0.2s; }
         .activity-item:hover { box-shadow: var(--shadow-sm); }
         .activity-item::before { content: ''; position: absolute; left: -24px; top: 20px; width: 10px; height: 10px; border-radius: 50%; background: var(--primary); border: 2px solid white; }
-        .activity-item.type-note::before { background: #22c55e; }
-        .activity-item.type-data::before { background: #3b82f6; }
-        .activity-item.type-task::before { background: #f59e0b; }
-        .activity-item.type-approval::before { background: #a855f7; }
-        .activity-item.type-notification::before { background: #ec4899; }
-        .activity-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
-        .activity-type { font-size: 11px; padding: 2px 8px; border-radius: 4px; font-weight: 500; }
-        .activity-type.note { background: rgba(34,197,94,0.1); color: #16a34a; }
-        .activity-type.data { background: rgba(59,130,246,0.1); color: #2563eb; }
-        .activity-type.task { background: rgba(245,158,11,0.1); color: #d97706; }
-        .activity-type.approval { background: rgba(168,85,247,0.1); color: #9333ea; }
-        .activity-type.notification { background: rgba(236,72,153,0.1); color: #db2777; }
+        .activity-item.type-create_note::before { background: #22c55e; }
+        .activity-item.type-create_record::before { background: #3b82f6; }
+        .activity-item.type-assign_task::before { background: #f59e0b; }
+        .activity-item.type-approval_request::before { background: #a855f7; }
+        .activity-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+        .activity-type-badge { font-size: 11px; padding: 2px 8px; border-radius: 4px; font-weight: 500; }
+        .activity-type-badge.note { background: rgba(34,197,94,0.1); color: #16a34a; }
+        .activity-type-badge.data { background: rgba(59,130,246,0.1); color: #2563eb; }
+        .activity-type-badge.task { background: rgba(245,158,11,0.1); color: #d97706; }
+        .activity-type-badge.approval { background: rgba(168,85,247,0.1); color: #9333ea; }
+        .activity-type-badge.system { background: rgba(148,163,184,0.1); color: #64748b; }
         .activity-time { font-size: 12px; color: var(--text-muted); margin-left: auto; }
         .activity-desc { font-size: 14px; color: var(--text-primary); line-height: 1.6; }
         .activity-user { font-size: 12px; color: var(--text-secondary); margin-top: 8px; display: flex; align-items: center; gap: 6px; }
         .activity-user .avatar { width: 20px; height: 20px; border-radius: 50%; background: var(--primary-light); display: flex; align-items: center; justify-content: center; color: white; font-size: 10px; }
-        .activity-actions { display: flex; gap: 8px; margin-top: 8px; }
-        .activity-actions a { font-size: 12px; color: var(--primary); text-decoration: none; }
-        .activity-actions a:hover { text-decoration: underline; }
+        .activity-footer { display: flex; align-items: center; gap: 12px; margin-top: 8px; font-size: 12px; color: var(--text-muted); }
+        .type-icon { font-size: 11px; margin-right: 2px; }
     </style>
 </head>
 <body>
     <th:block th:replace="3.0/fragments/sidebar::sidebar(${currentNav})"></th:block>
-    <main class="main-content">
+    <main class="main-content" id="activityApp">
         <div class="content-header">
             <h1 class="content-title">动态流</h1>
             <div style="display:flex;gap:8px;align-items:center;">
@@ -47,25 +46,109 @@
         </div>
         <div class="content-body">
             <div class="activity-filters">
-                <button class="filter-btn active" onclick="filterActivity('all', this)">全部</button>
-                <button class="filter-btn" onclick="filterActivity('note', this)">知识库</button>
-                <button class="filter-btn" onclick="filterActivity('data', this)">数据集</button>
-                <button class="filter-btn" onclick="filterActivity('task', this)">任务</button>
-                <button class="filter-btn" onclick="filterActivity('approval', this)">审批</button>
+                <button v-for="f in filters" :key="f.key" class="filter-btn"
+                        :class="{ active: currentFilter === f.key }"
+                        @click="switchFilter(f.key)">{{ f.label }}</button>
             </div>
-            <div class="empty-state" id="emptyState">
+            <div v-if="loading" class="empty-state">
+                <div class="loading" style="display:flex;align-items:center;justify-content:center;gap:8px;font-size:14px;color:var(--text-secondary);">
+                    <span class="loading-dot"></span><span class="loading-dot"></span><span class="loading-dot"></span>加载中...
+                </div>
+            </div>
+            <div v-else-if="items.length === 0" class="empty-state">
                 <div class="empty-icon">📜</div>
                 <div class="empty-title">暂无动态</div>
                 <div class="empty-desc">AI 协作操作将在这里实时展示，追溯每一次 AI 的操作记录</div>
             </div>
-            <div class="activity-timeline" id="activityTimeline" style="display:none;"></div>
+            <div v-else class="activity-timeline">
+                <div v-for="item in items" :key="item.id"
+                     class="activity-item"
+                     :class="'type-' + item.actionType">
+                    <div class="activity-header">
+                        <span class="activity-type-badge" :class="typeClass(item.actionType)">
+                            {{ typeLabel(item.actionType) }}
+                        </span>
+                        <span class="activity-time">{{ item.createdAt }}</span>
+                    </div>
+                    <div class="activity-desc">{{ item.actionDesc }}</div>
+                    <div class="activity-footer">
+                        <span v-if="item.triggeredName">👤 {{ item.triggeredName }}</span>
+                        <span v-if="item.targetName">→ {{ item.targetName }}</span>
+                    </div>
+                </div>
+            </div>
         </div>
     </main>
+    <style>
+        .loading-dot { width: 8px; height: 8px; background: var(--primary); border-radius: 50%; animation: loadPulse 1.4s infinite ease-in-out both; }
+        .loading-dot:nth-child(1) { animation-delay: -0.32s; }
+        .loading-dot:nth-child(2) { animation-delay: -0.16s; }
+        @keyframes loadPulse { 0%,80%,100% { transform: scale(0.6); opacity: 0.5; } 40% { transform: scale(1); opacity: 1; } }
+    </style>
     <script>
-        function filterActivity(type, btn) {
-            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-        }
+        const { createApp, ref, onMounted } = Vue;
+        createApp({
+            setup() {
+                const items = ref([]);
+                const loading = ref(true);
+                const currentFilter = ref('all');
+                const filters = [
+                    { key: 'all', label: '全部' },
+                    { key: 'create_note', label: '知识库' },
+                    { key: 'create_record', label: '数据集' },
+                    { key: 'assign_task', label: '任务' },
+                    { key: 'approval_request', label: '审批' }
+                ];
+
+                async function loadData() {
+                    loading.value = true;
+                    try {
+                        let url = '/api/collab/activity/list?limit=50';
+                        if (currentFilter.value !== 'all') {
+                            url += '&type=' + currentFilter.value;
+                        }
+                        const r = await fetch(url);
+                        const d = await r.json();
+                        items.value = d.ok ? d.data : [];
+                    } catch (e) {
+                        console.error(e);
+                    } finally {
+                        loading.value = false;
+                    }
+                }
+
+                function switchFilter(key) {
+                    currentFilter.value = key;
+                    loadData();
+                }
+
+                function typeClass(type) {
+                    if (!type) return 'system';
+                    if (type.includes('note')) return 'note';
+                    if (type.includes('record') || type.includes('data')) return 'data';
+                    if (type.includes('task')) return 'task';
+                    if (type.includes('approval')) return 'approval';
+                    return 'system';
+                }
+
+                function typeLabel(type) {
+                    if (!type) return '系统';
+                    if (type.includes('create_note') || type.includes('update_note')) return '📄 笔记';
+                    if (type.includes('create_record')) return '📊 新增记录';
+                    if (type.includes('update_record')) return '📊 更新记录';
+                    if (type.includes('assign_task')) return '📋 任务指派';
+                    if (type.includes('approval_request')) return '✅ 审批请求';
+                    if (type.includes('approval_result')) return '✅ 审批结果';
+                    if (type.includes('notification')) return '🔔 通知';
+                    if (type.includes('report')) return '📈 报告';
+                    if (type.includes('analyze')) return '🔍 分析';
+                    return '系统';
+                }
+
+                onMounted(loadData);
+                return { items, loading, filters, currentFilter, switchFilter, typeClass, typeLabel };
+            }
+        }).mount('#activityApp');
     </script>
 </body>
 </html>
