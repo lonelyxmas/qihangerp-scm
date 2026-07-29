@@ -267,7 +267,15 @@ public class DataSetService {
         LambdaQueryWrapper<DataSetRecordEntity> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(DataSetRecordEntity::getDatasetId, datasetId)
                .eq(DataSetRecordEntity::getRecordId, recordId);
-        return recordDbService.remove(wrapper);
+        DataSetRecordEntity entity = recordDbService.getOne(wrapper);
+        if (entity == null) return false;
+
+        DataSet ds = getDataset(datasetId);
+        if (ds != null) {
+            collabEngine.processDeletedRecord(ds, entity);
+        }
+
+        return recordDbService.removeById(entity);
     }
 
     public Map<String, Object> updateRecord(String datasetId, String recordId, Map<String, Object> newData, Long userId, String userName) {

@@ -70,6 +70,25 @@ public class CollabEngine {
         }
     }
 
+    public void processDeletedRecord(DataSet ds, DataSetRecordEntity entity) {
+        if (ds == null || ds.getCollabConfig() == null) return;
+        CollabConfig cfg = ds.getCollabConfig();
+
+        notificationDbService.addNotification(
+                1L,
+                "记录删除",
+                "「" + ds.getName() + "」记录 #" + entity.getRecordNum() + " 已删除",
+                "record_delete", "dataset", entity.getRecordId()
+        );
+        activityLogDbService.addLog("record_delete",
+                "记录 #" + entity.getRecordNum() + " 在「" + ds.getName() + "」已删除",
+                "system", null, "系统");
+
+        if (Boolean.TRUE.equals(cfg.getFeishuNotify())) {
+            sendFeishu("记录删除", "「" + ds.getName() + "」记录 #" + entity.getRecordNum() + " 已删除");
+        }
+    }
+
     private void sendFeishu(String title, String content) {
         var config = configService.load();
         String webhookUrl = config.getFeishuWebhookUrl();
