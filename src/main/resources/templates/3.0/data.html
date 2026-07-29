@@ -191,31 +191,11 @@
                 </div>
 
                 <div style="margin-top:16px;border-top:1px solid var(--border);padding-top:12px;">
-                    <div onclick="toggleCollabSection()" style="cursor:pointer;display:flex;align-items:center;gap:6px;user-select:none;">
-                        <span id="collabToggleIcon">▶</span>
-                        <span style="font-size:13px;font-weight:600;color:var(--text-primary);">🤝 通知配置</span>
-                        <span style="font-size:11px;color:var(--text-muted);">（数据变更通知）</span>
-                    </div>
-                    <div id="collabConfigSection" style="display:none;margin-top:12px;">
-                        <div class="form-group">
-                            <label>负责人字段（从 Schema 字段中匹配，如"负责人"）</label>
-                            <input id="dsAssignedToField" type="text" placeholder="如：负责人">
-                        </div>
-                        <div style="display:flex;gap:16px;margin-top:4px;margin-bottom:12px;">
-                            <label style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer;">
-                                <input id="dsNotifyOnCreate" type="checkbox" checked>
-                                新增时通知负责人
-                            </label>
-                            <label style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer;">
-                                <input id="dsNotifyOnUpdate" type="checkbox">
-                                更新时通知负责人
-                            </label>
-                        </div>
-                        <div class="form-group">
-                            <label>飞书群 Webhook URL（可选，数据变更时自动推送到飞书群）</label>
-                            <input id="dsFeishuWebhook" type="text" placeholder="https://open.feishu.cn/open-apis/bot/v2/hook/...">
-                        </div>
-                    </div>
+                    <div style="font-size:13px;font-weight:600;color:var(--text-primary);margin-bottom:8px;">🤝 通知配置</div>
+                    <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;">
+                        <input id="dsFeishuNotify" type="checkbox">
+                        飞书通知（数据变更时通过飞书群推送通知）
+                    </label>
                 </div>
             </div>
             <div class="modal-footer">
@@ -322,18 +302,6 @@ function closeModal(id) {
 
 function showModal(id) {
     document.getElementById(id).classList.add('active');
-}
-
-function toggleCollabSection() {
-    const section = document.getElementById('collabConfigSection');
-    const icon = document.getElementById('collabToggleIcon');
-    if (section.style.display === 'none') {
-        section.style.display = 'block';
-        icon.textContent = '▼';
-    } else {
-        section.style.display = 'none';
-        icon.textContent = '▶';
-    }
 }
 
 async function loadModules() {
@@ -573,10 +541,7 @@ function showCreateDataset(moduleId) {
     document.getElementById('dsSchema').value = '';
     document.getElementById('dsTypeOptions').value = '';
     document.getElementById('dsStatusOptions').value = '';
-    document.getElementById('dsAssignedToField').value = '';
-    document.getElementById('dsNotifyOnCreate').checked = true;
-    document.getElementById('dsNotifyOnUpdate').checked = false;
-    document.getElementById('dsFeishuWebhook').value = '';
+    document.getElementById('dsFeishuNotify').checked = false;
     document.getElementById('collabConfigSection').style.display = 'none';
     document.getElementById('collabToggleIcon').textContent = '▶';
     showModal('dsModal');
@@ -607,10 +572,7 @@ function showEditDataset(id) {
         document.getElementById('dsStatusOptions').value = '';
     }
     const cc = ds.collabConfig || {};
-    document.getElementById('dsAssignedToField').value = cc.assignedToField || '';
-    document.getElementById('dsNotifyOnCreate').checked = cc.notifyAssigneeOnCreate !== false;
-    document.getElementById('dsNotifyOnUpdate').checked = cc.notifyOnUpdate === true;
-    document.getElementById('dsFeishuWebhook').value = cc.feishuWebhookUrl || '';
+    document.getElementById('dsFeishuNotify').checked = cc.feishuNotify === true;
     showModal('dsModal');
 }
 
@@ -626,10 +588,7 @@ async function saveDataset() {
         statusOptions: document.getElementById('dsStatusOptions').value.split('\n').map(function(s){ return s.trim(); }).filter(function(s){ return s; })
     };
     const collabConfig = {
-        assignedToField: document.getElementById('dsAssignedToField').value || null,
-        notifyAssigneeOnCreate: document.getElementById('dsNotifyOnCreate').checked,
-        notifyOnUpdate: document.getElementById('dsNotifyOnUpdate').checked,
-        feishuWebhookUrl: document.getElementById('dsFeishuWebhook').value || null
+        feishuNotify: document.getElementById('dsFeishuNotify').checked
     };
     const data = {
         moduleId: editingDsId ? undefined : _creatingDsModuleId,

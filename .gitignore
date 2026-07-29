@@ -37,7 +37,6 @@ config.json
 !config.template.json
 
 # ========== AI 相关 ==========
-/AI/
 .claude/
 .mimocode/
 AGENTS.md
