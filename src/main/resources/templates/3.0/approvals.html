@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>启航AI工作台 - 审批中心</title>
+    <link rel="stylesheet" href="/css/app.css">
+    <style>
+        .approval-tabs { display: flex; gap: 0; margin-bottom: 20px; border-bottom: 1px solid var(--border); }
+        .approval-tab { padding: 10px 20px; font-size: 14px; border: none; background: none; cursor: pointer; color: var(--text-secondary); border-bottom: 2px solid transparent; transition: all 0.2s; }
+        .approval-tab:hover { color: var(--text-primary); }
+        .approval-tab.active { color: var(--primary); border-bottom-color: var(--primary); font-weight: 500; }
+        .approval-tab .count { margin-left: 6px; padding: 1px 6px; background: #ef4444; color: white; border-radius: 10px; font-size: 11px; }
+        .approval-list { display: flex; flex-direction: column; gap: 8px; }
+        .approval-item { display: flex; gap: 12px; padding: 16px; background: white; border: 1px solid var(--border); border-radius: var(--radius-md); transition: all 0.2s; }
+        .approval-item:hover { box-shadow: var(--shadow-sm); }
+        .approval-icon { width: 36px; height: 36px; border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+        .approval-body { flex: 1; }
+        .approval-title { font-size: 14px; font-weight: 500; color: var(--text-primary); margin-bottom: 4px; }
+        .approval-desc { font-size: 13px; color: var(--text-secondary); margin-bottom: 8px; line-height: 1.5; }
+        .approval-meta { display: flex; gap: 16px; font-size: 12px; color: var(--text-muted); }
+        .approval-status { padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 500; }
+        .approval-status.pending { background: rgba(245,158,11,0.1); color: #d97706; }
+        .approval-status.approved { background: rgba(34,197,94,0.1); color: #16a34a; }
+        .approval-status.rejected { background: rgba(239,68,68,0.1); color: #dc2626; }
+        .approval-actions { display: flex; gap: 8px; margin-top: 8px; }
+    </style>
+</head>
+<body>
+    <th:block th:replace="3.0/fragments/sidebar::sidebar(${currentNav})"></th:block>
+    <main class="main-content">
+        <div class="content-header">
+            <h1 class="content-title">审批中心</h1>
+            <div style="display:flex;gap:8px;align-items:center;">
+                <span style="font-size:12px;color:var(--text-muted);">AI 自动提交，主管一键审批</span>
+            </div>
+        </div>
+        <div class="content-body">
+            <div class="approval-tabs">
+                <button class="approval-tab active" onclick="switchApprovalTab('pending', this)">待我审批 <span class="count">0</span></button>
+                <button class="approval-tab" onclick="switchApprovalTab('submitted', this)">我提交的</button>
+                <button class="approval-tab" onclick="switchApprovalTab('history', this)">已处理</button>
+            </div>
+            <div class="empty-state">
+                <div class="empty-icon">✅</div>
+                <div class="empty-title">暂无审批请求</div>
+                <div class="empty-desc">AI 检测到需要审批的操作时，将自动提交审批请求</div>
+            </div>
+            <div class="approval-list" id="approvalList" style="display:none;"></div>
+        </div>
+    </main>
+    <script>
+        function switchApprovalTab(tab, btn) {
+            document.querySelectorAll('.approval-tab').forEach(t => t.classList.remove('active'));
+            btn.classList.add('active');
+        }
+    </script>
+</body>
+</html>

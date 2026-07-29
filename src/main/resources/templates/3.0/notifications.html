@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>启航AI工作台 - 通知中心</title>
+    <link rel="stylesheet" href="/css/app.css">
+    <style>
+        .notif-tabs { display: flex; gap: 0; margin-bottom: 20px; border-bottom: 1px solid var(--border); }
+        .notif-tab { padding: 10px 20px; font-size: 14px; border: none; background: none; cursor: pointer; color: var(--text-secondary); border-bottom: 2px solid transparent; transition: all 0.2s; }
+        .notif-tab:hover { color: var(--text-primary); }
+        .notif-tab.active { color: var(--primary); border-bottom-color: var(--primary); font-weight: 500; }
+        .notif-tab .count { margin-left: 6px; padding: 1px 6px; background: var(--primary); color: white; border-radius: 10px; font-size: 11px; }
+        .notif-list { display: flex; flex-direction: column; gap: 8px; }
+        .notif-item { display: flex; gap: 12px; padding: 16px; background: white; border: 1px solid var(--border); border-radius: var(--radius-md); transition: all 0.2s; cursor: pointer; }
+        .notif-item:hover { box-shadow: var(--shadow-sm); border-color: var(--primary-light); }
+        .notif-item.unread { border-left: 3px solid var(--primary); }
+        .notif-icon { width: 36px; height: 36px; border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+        .notif-body { flex: 1; }
+        .notif-title { font-size: 14px; font-weight: 500; color: var(--text-primary); margin-bottom: 4px; }
+        .notif-desc { font-size: 13px; color: var(--text-secondary); line-height: 1.5; }
+        .notif-time { font-size: 12px; color: var(--text-muted); margin-top: 6px; }
+        .notif-actions { display: flex; gap: 8px; margin-top: 8px; }
+    </style>
+</head>
+<body>
+    <th:block th:replace="3.0/fragments/sidebar::sidebar(${currentNav})"></th:block>
+    <main class="main-content">
+        <div class="content-header">
+            <h1 class="content-title">通知中心</h1>
+            <div style="display:flex;gap:8px;align-items:center;">
+                <button class="btn btn-secondary" style="padding:6px 12px;font-size:12px;" onclick="markAllRead()">全部已读</button>
+            </div>
+        </div>
+        <div class="content-body">
+            <div class="notif-tabs">
+                <button class="notif-tab active" onclick="switchNotifTab('all', this)">全部</button>
+                <button class="notif-tab" onclick="switchNotifTab('task', this)">任务 <span class="count">0</span></button>
+                <button class="notif-tab" onclick="switchNotifTab('approval', this)">审批 <span class="count">0</span></button>
+                <button class="notif-tab" onclick="switchNotifTab('system', this)">系统</button>
+            </div>
+            <div class="empty-state" id="emptyNotifState">
+                <div class="empty-icon">🔔</div>
+                <div class="empty-title">暂无通知</div>
+                <div class="empty-desc">当有任务指派、审批请求或系统通知时，将在这里展示</div>
+            </div>
+            <div class="notif-list" id="notifList" style="display:none;"></div>
+        </div>
+    </main>
+    <script>
+        function switchNotifTab(tab, btn) {
+            document.querySelectorAll('.notif-tab').forEach(t => t.classList.remove('active'));
+            btn.classList.add('active');
+        }
+        function markAllRead() {}
+    </script>
+</body>
+</html>

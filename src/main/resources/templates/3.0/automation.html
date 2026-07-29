@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>启航AI工作台 - 自动化规则</title>
+    <link rel="stylesheet" href="/css/app.css">
+    <style>
+        .auto-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+        .auto-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; }
+        .auto-card { background: white; border: 1px solid var(--border); border-radius: var(--radius-md); padding: 20px; transition: all 0.2s; }
+        .auto-card:hover { box-shadow: var(--shadow-md); }
+        .auto-card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+        .auto-card-title { font-size: 14px; font-weight: 600; color: var(--text-primary); }
+        .auto-toggle { position: relative; width: 36px; height: 20px; cursor: pointer; }
+        .auto-toggle input { opacity: 0; width: 0; height: 0; }
+        .auto-toggle-slider { position: absolute; inset: 0; background: var(--border); border-radius: 10px; transition: 0.3s; }
+        .auto-toggle input:checked + .auto-toggle-slider { background: var(--primary); }
+        .auto-toggle-slider::before { content: ''; position: absolute; width: 16px; height: 16px; left: 2px; bottom: 2px; background: white; border-radius: 50%; transition: 0.3s; }
+        .auto-toggle input:checked + .auto-toggle-slider::before { transform: translateX(16px); }
+        .auto-trigger { padding: 6px 10px; background: rgba(99,102,241,0.08); border-radius: var(--radius-sm); font-size: 12px; color: var(--primary); display: inline-flex; align-items: center; gap: 4px; margin-bottom: 8px; }
+        .auto-action { padding: 6px 10px; background: rgba(34,197,94,0.08); border-radius: var(--radius-sm); font-size: 12px; color: #16a34a; display: inline-flex; align-items: center; gap: 4px; margin-bottom: 8px; }
+        .auto-desc { font-size: 13px; color: var(--text-secondary); line-height: 1.5; margin-bottom: 12px; }
+        .auto-meta { font-size: 12px; color: var(--text-muted); }
+    </style>
+</head>
+<body>
+    <th:block th:replace="3.0/fragments/sidebar::sidebar(${currentNav})"></th:block>
+    <main class="main-content">
+        <div class="content-header">
+            <h1 class="content-title">自动化规则</h1>
+            <div style="display:flex;gap:8px;align-items:center;">
+                <button class="btn btn-primary" style="padding:6px 14px;font-size:12px;" onclick="showAddRule()">+ 新建规则</button>
+            </div>
+        </div>
+        <div class="content-body">
+            <div class="empty-state" id="emptyAutoState">
+                <div class="empty-icon">🤖</div>
+                <div class="empty-title">暂无自动化规则</div>
+                <div class="empty-desc">配置自动化规则后，AI 将根据条件自动执行操作，如数据变更通知、定时巡检、异常告警</div>
+                <button class="btn btn-primary" style="margin-top:16px;" onclick="showAddRule()">创建第一条规则</button>
+            </div>
+            <div class="auto-grid" id="autoRuleGrid" style="display:none;"></div>
+        </div>
+    </main>
+    <script>
+        function showAddRule() {}
+    </script>
+</body>
+</html>

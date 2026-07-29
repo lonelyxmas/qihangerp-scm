@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>启航AI工作台 - 用户管理</title>
+    <link rel="stylesheet" href="/css/app.css">
+    <style>
+        .admin-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+        .admin-tabs { display: flex; gap: 0; margin-bottom: 20px; border-bottom: 1px solid var(--border); }
+        .admin-tab { padding: 10px 20px; font-size: 14px; border: none; background: none; cursor: pointer; color: var(--text-secondary); border-bottom: 2px solid transparent; transition: all 0.2s; }
+        .admin-tab:hover { color: var(--text-primary); }
+        .admin-tab.active { color: var(--primary); border-bottom-color: var(--primary); font-weight: 500; }
+        .user-table { width: 100%; border-collapse: collapse; }
+        .user-table th { text-align: left; padding: 10px 16px; font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid var(--border); }
+        .user-table td { padding: 12px 16px; font-size: 13px; color: var(--text-primary); border-bottom: 1px solid var(--border); }
+        .user-table tr:hover td { background: var(--hover); }
+        .user-avatar { width: 32px; height: 32px; border-radius: 50%; background: var(--primary-light); display: inline-flex; align-items: center; justify-content: center; color: white; font-size: 12px; }
+        .role-badge { padding: 2px 8px; border-radius: 4px; font-size: 11px; }
+        .role-badge.admin { background: rgba(239,68,68,0.1); color: #dc2626; }
+        .role-badge.manager { background: rgba(245,158,11,0.1); color: #d97706; }
+        .role-badge.member { background: rgba(99,102,241,0.1); color: #6366f1; }
+        .role-badge.reader { background: rgba(148,163,184,0.1); color: #64748b; }
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 6px; }
+        .status-dot.active { background: #22c55e; }
+        .status-dot.inactive { background: #94a3b8; }
+    </style>
+</head>
+<body>
+    <th:block th:replace="3.0/fragments/sidebar::sidebar(${currentNav})"></th:block>
+    <main class="main-content">
+        <div class="content-header">
+            <h1 class="content-title">用户管理</h1>
+            <div style="display:flex;gap:8px;align-items:center;">
+                <button class="btn btn-primary" style="padding:6px 14px;font-size:12px;" onclick="showAddUser()">+ 添加用户</button>
+            </div>
+        </div>
+        <div class="content-body">
+            <div class="admin-tabs">
+                <button class="admin-tab active" onclick="switchAdminTab('users', this)">用户列表</button>
+                <button class="admin-tab" onclick="switchAdminTab('roles', this)">角色管理</button>
+            </div>
+            <div class="card" style="padding:0;overflow:hidden;">
+                <table class="user-table">
+                    <thead>
+                        <tr>
+                            <th>用户</th>
+                            <th>账号</th>
+                            <th>部门</th>
+                            <th>角色</th>
+                            <th>状态</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="userTableBody">
+                        <tr>
+                            <td colspan="6" style="text-align:center;padding:40px;color:var(--text-muted);">加载中...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+    <script>
+        function switchAdminTab(tab, btn) {
+            document.querySelectorAll('.admin-tab').forEach(t => t.classList.remove('active'));
+            btn.classList.add('active');
+        }
+        function showAddUser() {}
+    </script>
+</body>
+</html>
