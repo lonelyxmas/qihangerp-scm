@@ -304,7 +304,7 @@
                 </div>
                 <div class="form-group">
                     <label>Schema 字段（每行一个）</label>
-                    <textarea id="dcDsSchema" rows="3" style="resize:vertical;font-family:monospace;font-size:12px;" placeholder="地址&#10;电话&#10;负责人"></textarea>
+                    <textarea id="dcDsSchema" rows="8" style="resize:vertical;font-family:monospace;font-size:12px;" placeholder="地址&#10;电话&#10;负责人"></textarea>
                 </div>
                 <div class="form-group">
                     <label>类型选项（每行一个）</label>
@@ -602,14 +602,18 @@
         var name = document.getElementById('dcDsName').value.trim();
         if (!name) { toast('请输入数据集名称', 'error'); return; }
         var fields = document.getElementById('dcDsSchema').value.split('\n').map(function(s){ return s.trim(); }).filter(function(s){ return s; });
+        var typeOptions = document.getElementById('dcDsTypeOptions').value.split('\n').map(function(s){ return s.trim(); }).filter(function(s){ return s; });
+        var statusOptions = document.getElementById('dcDsStatusOptions').value.split('\n').map(function(s){ return s.trim(); }).filter(function(s){ return s; });
         var schema = {
             fields: fields.map(function(n){ return { name: n, displayName: n, type: 'text' }; }),
-            typeOptions: document.getElementById('dcDsTypeOptions').value.split('\n').map(function(s){ return s.trim(); }).filter(function(s){ return s; }),
-            statusOptions: document.getElementById('dcDsStatusOptions').value.split('\n').map(function(s){ return s.trim(); }).filter(function(s){ return s; })
+            typeOptions: typeOptions,
+            statusOptions: statusOptions
         };
         var data = {
             name: name,
             description: document.getElementById('dcDsDesc').value,
+            type: typeOptions.length > 0 ? typeOptions[0] : '',
+            status: statusOptions.length > 0 ? statusOptions[0] : '',
             schema: schema,
             collabConfig: {
                 feishuNotify: document.getElementById('dcDsFeishuNotify').checked

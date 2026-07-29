@@ -171,11 +171,11 @@
                 </div>
                 <div class="form-group">
                     <label>类型</label>
-                    <input id="dsType" type="text" placeholder="如：项目管理">
+                    <select id="dsType"><option value="">请选择</option></select>
                 </div>
                 <div class="form-group">
                     <label>状态</label>
-                    <input id="dsStatus" type="text" placeholder="如：启用">
+                    <select id="dsStatus"><option value="">请选择</option></select>
                 </div>
                 <div class="form-group">
                     <label>Schema 字段（每行一个）</label>
@@ -183,11 +183,11 @@
                 </div>
                 <div class="form-group">
                     <label>类型选项（每行一个）</label>
-                    <textarea id="dsTypeOptions" rows="2" style="resize:vertical;font-family:monospace;font-size:12px;" placeholder="需求&#10;Bug&#10;优化"></textarea>
+                    <textarea id="dsTypeOptions" rows="2" style="resize:vertical;font-family:monospace;font-size:12px;" placeholder="需求&#10;Bug&#10;优化" oninput="syncDsOptions()"></textarea>
                 </div>
                 <div class="form-group">
                     <label>状态选项（每行一个）</label>
-                    <textarea id="dsStatusOptions" rows="2" style="resize:vertical;font-family:monospace;font-size:12px;" placeholder="待办&#10;进行中&#10;已完成"></textarea>
+                    <textarea id="dsStatusOptions" rows="2" style="resize:vertical;font-family:monospace;font-size:12px;" placeholder="待办&#10;进行中&#10;已完成" oninput="syncDsOptions()"></textarea>
                 </div>
 
                 <div style="margin-top:16px;border-top:1px solid var(--border);padding-top:12px;">
@@ -531,14 +531,27 @@ function handleRecordSearchBtn() {
 
 let _creatingDsModuleId = null;
 
+function populateDsSelect(selectId, options) {
+    var sel = document.getElementById(selectId);
+    sel.innerHTML = '<option value="">请选择</option>';
+    options.forEach(function(o){ var opt = document.createElement('option'); opt.value = o; opt.textContent = o; sel.appendChild(opt); });
+}
+
+function syncDsOptions() {
+    var typeOptions = document.getElementById('dsTypeOptions').value.split('\n').map(function(s){ return s.trim(); }).filter(function(s){ return s; });
+    var statusOptions = document.getElementById('dsStatusOptions').value.split('\n').map(function(s){ return s.trim(); }).filter(function(s){ return s; });
+    populateDsSelect('dsType', typeOptions);
+    populateDsSelect('dsStatus', statusOptions);
+}
+
 function showCreateDataset(moduleId) {
     _creatingDsModuleId = moduleId;
     editingDsId = null;
     document.getElementById('dsModalTitle').textContent = '新建数据集';
     document.getElementById('dsName').value = '';
     document.getElementById('dsDesc').value = '';
-    document.getElementById('dsType').value = '';
-    document.getElementById('dsStatus').value = '';
+    populateDsSelect('dsType', []);
+    populateDsSelect('dsStatus', []);
     document.getElementById('dsSchema').value = '';
     document.getElementById('dsTypeOptions').value = '';
     document.getElementById('dsStatusOptions').value = '';
@@ -555,22 +568,26 @@ function showEditDataset(id) {
     document.getElementById('dsModalTitle').textContent = '编辑数据集';
     document.getElementById('dsName').value = ds.name;
     document.getElementById('dsDesc').value = ds.description || '';
+    if (ds.schema && ds.schema.typeOptions) {
+        document.getElementById('dsTypeOptions').value = ds.schema.typeOptions.join('\n');
+        populateDsSelect('dsType', ds.schema.typeOptions);
+    } else {
+        document.getElementById('dsTypeOptions').value = '';
+        populateDsSelect('dsType', []);
+    }
     document.getElementById('dsType').value = ds.type || '';
+    if (ds.schema && ds.schema.statusOptions) {
+        document.getElementById('dsStatusOptions').value = ds.schema.statusOptions.join('\n');
+        populateDsSelect('dsStatus', ds.schema.statusOptions);
+    } else {
+        document.getElementById('dsStatusOptions').value = '';
+        populateDsSelect('dsStatus', []);
+    }
     document.getElementById('dsStatus').value = ds.status || '';
     if (ds.schema && ds.schema.fields) {
         document.getElementById('dsSchema').value = ds.schema.fields.map(function(f){ return f.displayName || f.name; }).join('\n');
     } else {
         document.getElementById('dsSchema').value = '';
-    }
-    if (ds.schema && ds.schema.typeOptions) {
-        document.getElementById('dsTypeOptions').value = ds.schema.typeOptions.join('\n');
-    } else {
-        document.getElementById('dsTypeOptions').value = '';
-    }
-    if (ds.schema && ds.schema.statusOptions) {
-        document.getElementById('dsStatusOptions').value = ds.schema.statusOptions.join('\n');
-    } else {
-        document.getElementById('dsStatusOptions').value = '';
     }
     const cc = ds.collabConfig || {};
     document.getElementById('dsFeishuNotify').checked = cc.feishuNotify === true;

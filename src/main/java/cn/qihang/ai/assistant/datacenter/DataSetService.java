@@ -19,13 +19,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 public class DataSetService {
@@ -380,16 +376,32 @@ public class DataSetService {
         DataSetEntity existing = dataSetDbService.getOne(wrapper);
 
         try {
-            String schemaJson = ds.getSchema() != null ? mapper.writeValueAsString(ds.getSchema()) : null;
+            String typeStr = null;
+            String statusStr = null;
+            String fieldsJson = null;
+            if (ds.getSchema() != null) {
+                if (ds.getSchema().getTypeOptions() != null && !ds.getSchema().getTypeOptions().isEmpty()) {
+                    typeStr = mapper.writeValueAsString(ds.getSchema().getTypeOptions());
+                }
+                if (ds.getSchema().getStatusOptions() != null && !ds.getSchema().getStatusOptions().isEmpty()) {
+                    statusStr = mapper.writeValueAsString(ds.getSchema().getStatusOptions());
+                }
+                if (ds.getSchema().getFields() != null && !ds.getSchema().getFields().isEmpty()) {
+                    fieldsJson = mapper.writeValueAsString(ds.getSchema().getFields());
+                }
+            } else {
+                typeStr = ds.getType();
+                statusStr = ds.getStatus();
+            }
             String importJson = ds.getImportConfigs() != null ? mapper.writeValueAsString(ds.getImportConfigs()) : null;
             String collabJson = ds.getCollabConfig() != null ? mapper.writeValueAsString(ds.getCollabConfig()) : null;
 
             if (existing != null) {
                 existing.setName(ds.getName());
                 existing.setDescription(ds.getDescription());
-                existing.setType(ds.getType());
-                existing.setStatus(ds.getStatus());
-                existing.setSchemaJson(schemaJson);
+                existing.setType(typeStr);
+                existing.setStatus(statusStr);
+                existing.setSchemaJson(fieldsJson);
                 existing.setImportConfigsJson(importJson);
                 existing.setCollabConfigJson(collabJson);
                 existing.setModuleId(ds.getModuleId());
@@ -400,9 +412,9 @@ public class DataSetService {
                 entity.setDatasetId(ds.getId());
                 entity.setName(ds.getName());
                 entity.setDescription(ds.getDescription());
-                entity.setType(ds.getType());
-                entity.setStatus(ds.getStatus());
-                entity.setSchemaJson(schemaJson);
+                entity.setType(typeStr);
+                entity.setStatus(statusStr);
+                entity.setSchemaJson(fieldsJson);
                 entity.setImportConfigsJson(importJson);
                 entity.setCollabConfigJson(collabJson);
                 entity.setModuleId(ds.getModuleId());
@@ -458,10 +470,35 @@ public class DataSetService {
         ds.setModuleId(entity.getModuleId());
         ds.setCreatedAt(entity.getCreatedAt());
         ds.setUpdatedAt(entity.getUpdatedAt());
+
+        DataSchema schema = new DataSchema();
         try {
             if (entity.getSchemaJson() != null) {
-                ds.setSchema(mapper.readValue(entity.getSchemaJson(), DataSchema.class));
+                schema.setFields(mapper.readValue(entity.getSchemaJson(),
+                        new TypeReference<List<DataField>>() {}));
             }
+        } catch (Exception e) {
+            log.warn("Failed to parse schema fields: {}", e.getMessage());
+        }
+        try {
+            if (entity.getType() != null && !entity.getType().isBlank()) {
+                schema.setTypeOptions(mapper.readValue(entity.getType(),
+                        new TypeReference<List<String>>() {}));
+            }
+        } catch (Exception e) {
+            log.warn("Failed to parse type options: {}", e.getMessage());
+        }
+        try {
+            if (entity.getStatus() != null && !entity.getStatus().isBlank()) {
+                schema.setStatusOptions(mapper.readValue(entity.getStatus(),
+                        new TypeReference<List<String>>() {}));
+            }
+        } catch (Exception e) {
+            log.warn("Failed to parse status options: {}", e.getMessage());
+        }
+        ds.setSchema(schema);
+
+        try {
             if (entity.getImportConfigsJson() != null) {
                 ds.setImportConfigs(mapper.readValue(entity.getImportConfigsJson(),
                         new TypeReference<Map<String, ImportConfig>>() {}));
@@ -470,7 +507,7 @@ public class DataSetService {
                 ds.setCollabConfig(mapper.readValue(entity.getCollabConfigJson(), CollabConfig.class));
             }
         } catch (Exception e) {
-            log.warn("Failed to parse schema: {}", e.getMessage());
+            log.warn("Failed to parse config: {}", e.getMessage());
         }
         return ds;
     }
