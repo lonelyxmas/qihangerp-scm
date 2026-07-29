@@ -120,7 +120,6 @@
         </div>
         <div class="flex" style="gap:8px;margin-top:8px;">
             <button class="btn btn-primary" onclick="saveCodingConfig()">💾 保存配置</button>
-            <button class="btn btn-secondary" onclick="testCoding()" id="testCodingBtn">📡 发送测试消息</button>
             <span id="codingStatus" class="text-muted"></span>
         </div>
     </div>
@@ -178,7 +177,7 @@
         <div class="step"><div class="num">3</div><div class="content"><strong>配置事件订阅</strong><p>在应用详情 → 事件订阅 → 添加 <code>im.message.receive_v1</code> 事件，推送方式选择 <strong>WebSocket</strong>。</p></div></div>
         <div class="step"><div class="num">4</div><div class="content"><strong>启用机器人并发布</strong><p>在应用详情 → 机器人 → 启用机器人能力。发布后将机器人拉入目标群。</p></div></div>
         <div class="step"><div class="num">5</div><div class="content"><strong>配置群 ID</strong><p>在配置页填入群 ID（chat_id），格式 <code>oc_xxxxxxxxxxxx</code>。</p></div></div>
-        <div class="step"><div class="num">6</div><div class="content"><strong>启动服务</strong><p>重启 笔灵AI助理，编程机器人 WebSocket 自动连接。即可在飞书群中 @编程机器人 开始排查代码。</p></div></div>
+        <div class="step"><div class="num">6</div><div class="content"><strong>启动服务</strong><p>重启 启航 AI 协作平台，编程机器人 WebSocket 自动连接。即可在飞书群中 @编程机器人 开始排查代码。</p></div></div>
     </div>
 
     <div class="card help-section">
@@ -273,17 +272,6 @@ async function saveCodingConfig() {
     const status = document.getElementById('codingStatus');
     if (data.ok) { status.textContent = '✅ 已保存（重启生效）'; setTimeout(() => status.textContent = '', 4000); }
     else { status.textContent = '❌ ' + (data.error || '保存失败'); }
-}
-
-async function testCoding() {
-    const btn = document.getElementById('testCodingBtn');
-    btn.disabled = true; btn.textContent = '⏳ 发送中...';
-    const res = await fetch('/coding/test', { method: 'POST' });
-    const data = await res.json();
-    btn.disabled = false; btn.textContent = '📡 发送测试消息';
-    const status = document.getElementById('codingStatus');
-    if (data.ok) { status.textContent = '✅ ' + (data.message || '已发送'); }
-    else { status.textContent = '❌ ' + (data.error || '发送失败'); }
 }
 
 async function runDebug() {

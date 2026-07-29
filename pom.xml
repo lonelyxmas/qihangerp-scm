@@ -10,11 +10,11 @@
         <relativePath/>
     </parent>
 
-    <groupId>com.laoqi</groupId>
-    <artifactId>ai-assistant</artifactId>
+    <groupId>cn.qihang.ai</groupId>
+    <artifactId>qihang-ai-team</artifactId>
     <version>1.0.0</version>
     <name>Qihang AI Workbench</name>
-    <description>启航 AI 工作台 — AI 驱动的企业协作智能体</description>
+    <description>启航 AI 协作平台 �?AI 驱动的企业协作智能体</description>
 
     <properties>
         <java.version>17</java.version>
@@ -68,7 +68,15 @@
             <artifactId>commons-io</artifactId>
             <version>2.18.0</version>
         </dependency>
-        <!-- Excel 导入已停用 -->
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-lang3</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.fasterxml.jackson.datatype</groupId>
+            <artifactId>jackson-datatype-jsr310</artifactId>
+        </dependency>
+        <!-- Excel 导入已停�?-->
         <dependency>
             <groupId>org.commonmark</groupId>
             <artifactId>commonmark</artifactId>
@@ -90,8 +98,46 @@
             <version>2.3.2</version>
         </dependency>
 
-        <!-- Spring AI 2.0 — OpenAI 兼容客户端 -->
-        <!-- DeepSeekApi 用 RestClient.Builder，支持自定义 baseUrl 切换厂商 -->
+        <!-- Spring Security -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-security</artifactId>
+        </dependency>
+
+        <!-- Redis -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-redis</artifactId>
+        </dependency>
+
+        <!-- JWT -->
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-api</artifactId>
+            <version>0.12.6</version>
+        </dependency>
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-impl</artifactId>
+            <version>0.12.6</version>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-jackson</artifactId>
+            <version>0.12.6</version>
+            <scope>runtime</scope>
+        </dependency>
+
+        <!-- UserAgentUtils -->
+        <dependency>
+            <groupId>eu.bitwalker</groupId>
+            <artifactId>UserAgentUtils</artifactId>
+            <version>1.21</version>
+        </dependency>
+
+        <!-- Spring AI 2.0 �?OpenAI 兼容客户�?-->
+        <!-- DeepSeekApi �?RestClient.Builder，支持自定义 baseUrl 切换厂商 -->
         <dependency>
             <groupId>org.springframework.ai</groupId>
             <artifactId>spring-ai-starter-model-deepseek</artifactId>

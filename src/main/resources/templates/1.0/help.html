@@ -1,12 +1,12 @@
 <div style="margin-bottom:24px;">
     <h1 style="font-size:22px;font-weight:600;margin-bottom:4px;">帮助中心</h1>
-    <p class="text-muted">笔灵AI助理 v1.0 — 功能指南与常见问题</p>
+    <p class="text-muted">启航 AI 协作平台 v1.0 — 功能指南与常见问题</p>
 </div>
 
 <!-- 快速开始 -->
 <div class="card">
     <h2>🚀 快速开始</h2>
-    <p class="text-muted mb-2">笔灵AI助理基于 Spring AI 2.0 + Spring Boot 4.1，直连 LLM API，无需外部编排服务。启动后访问 <a href="/config" style="color:#7c5cfc;">/config</a> 配置 LLM API Key 和笔记库即可使用全部功能。</p>
+    <p class="text-muted mb-2">启航 AI 协作平台基于 Spring AI 2.0 + Spring Boot 4.1，直连 LLM API，无需外部编排服务。启动后访问 <a href="/config" style="color:#7c5cfc;">/config</a> 配置 LLM API Key 和笔记库即可使用全部功能。</p>
     <h3 style="font-size:13px;font-weight:600;margin:12px 0 8px;color:#5c5f66;">前置依赖</h3>
     <table class="log-table" style="margin-bottom:12px;">
         <tr><th>依赖</th><th>说明</th><th>必须</th></tr>
@@ -18,7 +18,7 @@
     <pre style="background:#1e1e2e;color:#cdd6f4;padding:12px 14px;border-radius:6px;font-size:12px;line-height:1.6;overflow-x:auto;margin:0;"># 1. 编译
 mvn package -q
 # 2. 启动
-java -jar target/ai-assistant-1.0.0.jar
+java -jar target/qihang-ai-team-1.0.0.jar
 # 3. 打开浏览器访问 http://localhost:6790
 # 4. 在 /config 页面配置 LLM API Key + 笔记库路径</pre>
     <p style="font-size:12px;color:#7c5cfc;background:#f5f3ff;padding:8px 12px;border-radius:6px;margin-top:8px;">提示：先配 API Key 和笔记库路径，否则 AI 功能和文件操作不可用。支持多 LLM 模型同时配置，可在对话页切换。</p>
@@ -46,7 +46,7 @@ java -jar target/ai-assistant-1.0.0.jar
     <h2>📚 多笔记库系统</h2>
     <p class="text-muted mb-2">v1.0 核心架构——一个实例同时管理多个笔记库（如工作、学习），数据、对话、目录、任务完全隔离。</p>
     <h3 style="font-size:13px;font-weight:600;margin:12px 0 8px;color:#5c5f66;">导航结构</h3>
-    <pre style="background:#1e1e2e;color:#cdd6f4;padding:12px 14px;border-radius:6px;font-size:12px;line-height:1.6;overflow-x:auto;margin:0;">[笔灵AI助理]  💬 对话  🖼️ 识图  🗂️ 数据  📋 计划  📚 笔记库▾  💻 编程AI  ⚙️ 配置  📝 日志
+    <pre style="background:#1e1e2e;color:#cdd6f4;padding:12px 14px;border-radius:6px;font-size:12px;line-height:1.6;overflow-x:auto;margin:0;">[启航 AI 协作平台]  💬 对话  🖼️ 识图  🗂️ 数据  📋 计划  📚 笔记库▾  💻 编程AI  ⚙️ 配置  📝 日志
                                          │
                               ┌───────────┼───────────┐
                               │ 📊 全部笔记库           │

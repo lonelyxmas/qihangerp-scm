@@ -130,7 +130,7 @@ mysql -h <host> -u <user> -p < docs/init.sql
 mvn package -q
 
 # 3. 启动（使用 dev 配置）
-java -jar target/ai-assistant-1.0.0.jar --spring.profiles.active=dev
+java -jar target/qihang-ai-team-1.0.0.jar --spring.profiles.active=dev
 
 # 4. 浏览器打开 http://localhost:6790
 ```

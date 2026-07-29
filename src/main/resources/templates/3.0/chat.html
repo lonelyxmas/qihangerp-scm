@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>笔灵 AI - 对话</title>
+    <title>启航 AI 协作平台 - 对话</title>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.21/dist/katex.min.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.21/dist/contrib/auto-render.min.js"
@@ -566,7 +566,7 @@
             var div = document.createElement('div');
             div.className = 'message ' + role;
             var avatar = role === 'user' ? '👤' : '🤖';
-            var author = role === 'user' ? '我' : '笔灵 AI';
+            var author = role === 'user' ? '我' : '启航 AI 协作平台';
             var timeStr = time ? formatTime(time) : '';
             var displayContent = role === 'user' ? highlightMentions(content) : parseMarkdown(content);
             div.innerHTML = `
@@ -646,7 +646,7 @@
                                             replyDiv.innerHTML = `
                                                 <div class="message-avatar">🤖</div>
                                                 <div class="message-content-wrapper">
-                                                    <div class="message-header"><span class="message-author">笔灵 AI</span></div>
+                                                    <div class="message-header"><span class="message-author">启航 AI 协作平台</span></div>
                                                     <div class="message-content markdown-content"></div>
                                                 </div>
                                             `;
@@ -696,7 +696,7 @@
             div.innerHTML = `
                 <div class="message-avatar">🤖</div>
                 <div class="message-content-wrapper">
-                    <div class="message-header"><span class="message-author">笔灵 AI</span></div>
+                    <div class="message-header"><span class="message-author">启航 AI 协作平台</span></div>
                     <div class="message-content"><div class="typing-indicator"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div></div>
                 </div>
             `;
