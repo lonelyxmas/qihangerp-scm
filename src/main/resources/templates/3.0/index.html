@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>启航 AI 协作平台 - 概览</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --primary: #6366f1;
+            --primary-light: #818cf8;
+            --primary-dark: #4f46e5;
+            --bg-main: #f8fafc;
+            --bg-sidebar: #ffffff;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --text-muted: #94a3b8;
+            --border: #e2e8f0;
+            --hover: #f1f5f9;
+            --radius-sm: 8px;
+            --radius-md: 12px;
+            --radius-lg: 16px;
+            --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+            --shadow-md: 0 4px 6px rgba(0,0,0,0.05);
+            --shadow-lg: 0 10px 15px rgba(0,0,0,0.08);
+        }
+        html, body { height: 100%; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+        body { display: flex; background: var(--bg-main); color: var(--text-primary); }
+
+        .sidebar { width: 64px; background: var(--bg-sidebar); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 16px 0; flex-shrink: 0; align-items: center; }
+        .sidebar-header { padding: 0 8px 16px; }
+        .sidebar-title { font-size: 20px; font-weight: 700; color: var(--primary); display: flex; align-items: center; gap: 8px; }
+        .sidebar-title svg { width: 24px; height: 24px; }
+        .nav-menu { flex: 1; overflow-y: auto; padding: 8px 0; display: flex; flex-direction: column; align-items: center; }
+        .nav-item { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px 8px; cursor: pointer; color: var(--text-secondary); font-size: 11px; transition: all 0.2s; border-radius: var(--radius-md); text-decoration: none; width: 48px; }
+        .nav-item:hover { background: var(--hover); color: var(--text-primary); }
+        .nav-item.active { background: rgba(99, 102, 241, 0.1); color: var(--primary); font-weight: 500; }
+        .nav-item svg { width: 20px; height: 20px; flex-shrink: 0; }
+        .sidebar-footer { display: flex; flex-direction: column; align-items: center; gap: 4px; padding-bottom: 16px; }
+
+        .main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+        .content-header { padding: 16px 24px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; background: white; }
+        .content-title { font-size: 18px; font-weight: 600; color: var(--text-primary); }
+
+        .content-body { flex: 1; overflow-y: auto; padding: 24px; background: #f5f5f5; }
+
+        .features-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
+        .feature-card { background: white; border-radius: var(--radius-lg); border: 1px solid var(--border); padding: 20px; transition: all 0.2s; display: flex; flex-direction: column; }
+        .feature-card:hover { box-shadow: var(--shadow-md); border-color: var(--primary-light); transform: translateY(-1px); }
+        .feature-icon { width: 44px; height: 44px; border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; font-size: 22px; margin-bottom: 12px; }
+        .feature-name { font-size: 15px; font-weight: 600; color: var(--text-primary); margin-bottom: 6px; }
+        .feature-desc { font-size: 13px; color: var(--text-secondary); line-height: 1.6; flex: 1; }
+        .feature-links { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+        .feature-link { padding: 6px 12px; font-size: 12px; border: none; border-radius: var(--radius-sm); cursor: pointer; transition: all 0.2s; text-decoration: none; display: inline-flex; align-items: center; gap: 4px; }
+        .feature-link.primary { background: var(--primary); color: white; }
+        .feature-link.primary:hover { background: var(--primary-dark); }
+        .feature-link.secondary { background: var(--hover); color: var(--text-secondary); }
+        .feature-link.secondary:hover { background: #e2e8f0; color: var(--text-primary); }
+
+        .project-header-section { display: flex; align-items: center; gap: 16px; margin-bottom: 24px; }
+        .project-logo { width: 56px; height: 56px; background: linear-gradient(135deg, #6366f1, #8b5cf6); border-radius: var(--radius-lg); display: flex; align-items: center; justify-content: center; font-size: 28px; color: white; flex-shrink: 0; }
+        .project-info h1 { font-size: 22px; font-weight: 700; color: var(--text-primary); margin-bottom: 4px; }
+        .project-info p { font-size: 14px; color: var(--text-secondary); }
+
+        .tech-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+        .tech-tag { padding: 2px 10px; background: rgba(99, 102, 241, 0.08); color: var(--primary); border-radius: 12px; font-size: 11px; }
+
+        .section-title { font-size: 16px; font-weight: 600; color: var(--text-primary); margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+        .section-title svg { width: 20px; height: 20px; color: var(--primary); }
+
+        .stat-badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; background: rgba(34, 197, 94, 0.1); color: #16a34a; border-radius: 10px; font-size: 11px; }
+        .stat-badge.blue { background: rgba(99, 102, 241, 0.1); color: var(--primary); }
+        .stat-badge.amber { background: rgba(245, 158, 11, 0.1); color: #d97706; }
+
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+    </style>
+</head>
+<body>
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <div class="sidebar-title">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+                </svg>
+            </div>
+        </div>
+        
+        <nav class="nav-menu">
+            <a href="/" class="nav-item" th:classappend="${currentNav == 'home' ? 'active' : ''}">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                    <polyline points="9 22 9 12 15 12 15 22"/>
+                </svg>
+                <span>首页</span>
+            </a>
+            <a href="/chat" class="nav-item" th:classappend="${currentNav == 'chat' ? 'active' : ''}">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                </svg>
+                <span>对话</span>
+            </a>
+            <a href="/insights" class="nav-item" th:classappend="${currentNav == 'insights' ? 'active' : ''}">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M15 3h6v6m-6 0V3m0 6H9m6 6h6v-6m-6 0v6m0-6H9"/>
+                    <circle cx="12" cy="12" r="3"/>
+                </svg>
+                <span>洞察</span>
+            </a>
+            <a href="/notes" class="nav-item" th:classappend="${currentNav == 'notes' ? 'active' : ''}">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                    <polyline points="14 2 14 8 20 8"/>
+                    <line x1="16" y1="13" x2="8" y2="13"/>
+                    <line x1="16" y1="17" x2="8" y2="17"/>
+                    <polyline points="10 9 9 9 8 9"/>
+                </svg>
+                <span>笔记</span>
+            </a>
+            <a href="/data" class="nav-item" th:classappend="${currentNav == 'data' ? 'active' : ''}">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                    <line x1="9" y1="9" x2="15" y2="9"/>
+                    <line x1="9" y1="15" x2="15" y2="15"/>
+                    <line x1="12" y1="12" x2="12" y2="15"/>
+                    <line x1="12" y1="9" x2="12" y2="12"/>
+                </svg>
+                <span>数据</span>
+            </a>
+            <a href="/planner" class="nav-item" th:classappend="${currentNav == 'planner' ? 'active' : ''}">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                    <line x1="16" y1="2" x2="16" y2="6"/>
+                    <line x1="8" y1="2" x2="8" y2="6"/>
+                    <line x1="3" y1="10" x2="21" y2="10"/>
+                </svg>
+                <span>任务</span>
+            </a>
+            <a href="/tools" class="nav-item" th:classappend="${currentNav == 'tools' ? 'active' : ''}">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+                </svg>
+                <span>工具</span>
+            </a>
+        </nav>
+        
+        <div class="sidebar-footer">
+            <a href="/config" class="nav-item">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="3"/>
+                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                </svg>
+                <span>配置</span>
+            </a>
+            <a href="/log" class="nav-item">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                    <line x1="9" y1="9" x2="15" y2="9"/>
+                    <line x1="9" y1="13" x2="15" y2="13"/>
+                    <line x1="9" y1="17" x2="13" y2="17"/>
+                </svg>
+                <span>日志</span>
+            </a>
+            <a href="/help" class="nav-item">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"/>
+                    <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+                    <line x1="12" y1="17" x2="12.01" y2="17"/>
+                </svg>
+                <span>帮助</span>
+            </a>
+        </div>
+    </aside>
+    
+    <main class="main-content">
+        <div class="content-header">
+            <h1 class="content-title">启航AI工作台</h1>
+            <div style="display:flex;gap:8px;align-items:center;">
+                <span class="stat-badge blue">Electron + Vue 3</span>
+                <span class="stat-badge">v0.1.0</span>
+            </div>
+        </div>
+        
+        <div class="content-body">
+            <div class="project-header-section">
+                <div class="project-logo">AI</div>
+                <div class="project-info">
+                    <h1>启航AI工作台</h1>
+                    <p>桌面端 AI 工作台，集成多 Agent 编程、知识库管理、数据管理、任务规划与飞书协作</p>
+                    <div class="tech-tags">
+                        <span class="tech-tag">Vue 3</span>
+                        <span class="tech-tag">TypeScript</span>
+                        <span class="tech-tag">Electron</span>
+                        <span class="tech-tag">AI Agent</span>
+                        <span class="tech-tag">RAG</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section-title">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+                    <line x1="3" y1="9" x2="21" y2="9"/>
+                    <line x1="9" y1="21" x2="9" y2="9"/>
+                </svg>
+                功能模块
+            </div>
+
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon" style="background:rgba(99,102,241,0.1);color:#6366f1;">💻</div>
+                    <div class="feature-name">工作台</div>
+                    <div class="feature-desc">AI 编程工作台，支持 pi-agent、opencode、Claude Code 三种 Agent 切换。项目管理、会话管理、流式对话、Markdown 渲染。</div>
+                    <div class="feature-links">
+                        <a href="/chat" class="feature-link primary">进入对话</a>
+                    </div>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon" style="background:rgba(34,197,94,0.1);color:#22c55e;">📚</div>
+                    <div class="feature-name">知识库</div>
+                    <div class="feature-desc">基于文件树的 Markdown 笔记浏览与语义搜索。支持 Ollama / OpenAI 嵌入，自动分块索引与向量检索。</div>
+                    <div class="feature-links">
+                        <a href="/notes" class="feature-link primary">浏览笔记</a>
+                        <a href="/config" class="feature-link secondary">配置</a>
+                    </div>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon" style="background:rgba(59,130,246,0.1);color:#3b82f6;">📊</div>
+                    <div class="feature-name">数据集</div>
+                    <div class="feature-desc">模块化数据集管理，支持自定义 Schema、记录 CRUD、JSON/URL 导入、自定义状态与类型选项。</div>
+                    <div class="feature-links">
+                        <a href="/data" class="feature-link primary">管理数据</a>
+                    </div>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon" style="background:rgba(245,158,11,0.1);color:#f59e0b;">📋</div>
+                    <div class="feature-name">任务看板</div>
+                    <div class="feature-desc">看板式待办管理（待处理/进行中/已完成），支持优先级和截止日期。定时提醒（每日/每周/每月/每年/单次）。</div>
+                    <div class="feature-links">
+                        <a href="/planner" class="feature-link primary">查看任务</a>
+                    </div>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon" style="background:rgba(251,146,60,0.1);color:#fb923c;">🛠️</div>
+                    <div class="feature-name">工具集</div>
+                    <div class="feature-desc">通用图片识别、题目解答、试卷识别、数据导入、数据采集、数据处理等多种工具。</div>
+                    <div class="feature-links">
+                        <a href="/tools" class="feature-link primary">打开工具</a>
+                    </div>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon" style="background:rgba(168,85,247,0.1);color:#a855f7;">📈</div>
+                    <div class="feature-name">洞察分析</div>
+                    <div class="feature-desc">仪表盘展示统计信息、知识库索引管理（扫描/分块/嵌入）、语义搜索、日报查阅、待办与提醒速览。</div>
+                    <div class="feature-links">
+                        <a href="/insights" class="feature-link primary">查看洞察</a>
+                    </div>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon" style="background:rgba(236,72,153,0.1);color:#ec4899;">⚙️</div>
+                    <div class="feature-name">系统配置</div>
+                    <div class="feature-desc">嵌入模型配置（Ollama / OpenAI 兼容）、Agent 状态检查、定时任务管理、飞书 Webhook/Bot、日报设置。</div>
+                    <div class="feature-links">
+                        <a href="/config" class="feature-link primary">系统设置</a>
+                    </div>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon" style="background:rgba(148,163,184,0.1);color:#64748b;">📄</div>
+                    <div class="feature-name">日志与帮助</div>
+                    <div class="feature-desc">实时日志查看器，支持级别过滤、文件选择与自动刷新。帮助中心包含功能指南、技术架构及常见问题。</div>
+                    <div class="feature-links">
+                        <a href="/log" class="feature-link secondary">日志</a>
+                        <a href="/help" class="feature-link secondary">帮助</a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section-title" style="margin-top:24px;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"/>
+                    <path d="M12 6v6l4 2"/>
+                </svg>
+                技术栈
+            </div>
+
+            <div style="background:white;border-radius:var(--radius-lg);border:1px solid var(--border);padding:20px;">
+                <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px;">
+                    <div>
+                        <div style="font-size:12px;color:var(--text-muted);margin-bottom:4px;">前端框架</div>
+                        <div style="font-size:14px;font-weight:500;">Vue 3 + TypeScript</div>
+                    </div>
+                    <div>
+                        <div style="font-size:12px;color:var(--text-muted);margin-bottom:4px;">桌面壳层</div>
+                        <div style="font-size:14px;font-weight:500;">Electron 33</div>
+                    </div>
+                    <div>
+                        <div style="font-size:12px;color:var(--text-muted);margin-bottom:4px;">构建工具</div>
+                        <div style="font-size:14px;font-weight:500;">Vite 6</div>
+                    </div>
+                    <div>
+                        <div style="font-size:12px;color:var(--text-muted);margin-bottom:4px;">状态管理</div>
+                        <div style="font-size:14px;font-weight:500;">Pinia</div>
+                    </div>
+                    <div>
+                        <div style="font-size:12px;color:var(--text-muted);margin-bottom:4px;">路由</div>
+                        <div style="font-size:14px;font-weight:500;">Vue Router 4</div>
+                    </div>
+                    <div>
+                        <div style="font-size:12px;color:var(--text-muted);margin-bottom:4px;">数据库</div>
+                        <div style="font-size:14px;font-weight:500;">SQLite (sql.js)</div>
+                    </div>
+                    <div>
+                        <div style="font-size:12px;color:var(--text-muted);margin-bottom:4px;">AI 引擎</div>
+                        <div style="font-size:14px;font-weight:500;">pi-agent / opencode SDK / Claude Agent SDK</div>
+                    </div>
+                    <div>
+                        <div style="font-size:12px;color:var(--text-muted);margin-bottom:4px;">语义检索</div>
+                        <div style="font-size:14px;font-weight:500;">RAG (Ollama / OpenAI)</div>
+                    </div>
+                    <div>
+                        <div style="font-size:12px;color:var(--text-muted);margin-bottom:4px;">飞书集成</div>
+                        <div style="font-size:14px;font-weight:500;">Webhook + Bot SDK</div>
+                    </div>
+                    <div>
+                        <div style="font-size:12px;color:var(--text-muted);margin-bottom:4px;">定时任务</div>
+                        <div style="font-size:14px;font-weight:500;">node-cron</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+</body>
+</html>

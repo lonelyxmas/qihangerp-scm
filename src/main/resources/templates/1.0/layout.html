@@ -387,7 +387,7 @@
             if (kbId) {
                 document.querySelectorAll('.nav-inner a').forEach(function(a) {
                     var href = a.getAttribute('href');
-                    if (href === '/v1/chat' || href.startsWith('/image')) {
+                    if (href.startsWith('/image')) {
                         a.href = href + '?kbId=' + kbId;
                     }
                 });
