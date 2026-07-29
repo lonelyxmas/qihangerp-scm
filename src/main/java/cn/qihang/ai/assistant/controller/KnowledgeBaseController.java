@@ -136,27 +136,6 @@ public class KnowledgeBaseController {
         return "2.0/layout";
     }
 
-    @GetMapping("/kb/{id}/chat")
-    public String kbChat(@PathVariable Long id, Map<String, Object> model) {
-        KnowledgeBaseEntity kb = kbService.getById(id);
-        if (kb == null) return "redirect:/config";
-
-        model.put("currentKb", kb);
-        model.put("kb", kb);
-
-        List<LlmProfileEntity> chatModels = llmConfigResolver.getAllProfiles()
-                .stream()
-                .filter(p -> !LlmProfileEntity.TYPE_EMBEDDING.equals(p.getModelType()))
-                .collect(Collectors.toList());
-        model.put("chatModels", chatModels);
-        LlmProfileEntity defaultProfile = llmConfigResolver.getDefaultProfile();
-        model.put("defaultModel", defaultProfile != null ? defaultProfile.getName() : "");
-
-        model.put("pageTitle", kb.getName() + " · 对话");
-        model.put("contentFragment", "2.0/chat");
-        return "2.0/layout";
-    }
-
     // 任务/提醒页面已迁移到 /planner
 
     @GetMapping("/kb/{id}/index")
