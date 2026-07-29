@@ -12,6 +12,8 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import jakarta.servlet.http.HttpServletRequest;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -25,6 +27,8 @@ import java.util.concurrent.TimeUnit;
 
 @Component
 public class TokenService {
+    private static final Logger log = LoggerFactory.getLogger(TokenService.class);
+
     @Value("${token.secret:'abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijk'}")
     private String secret;
 
@@ -45,10 +49,14 @@ public class TokenService {
                 Claims claims = parseToken(token);
                 String uuid = (String) claims.get(Constants.LOGIN_USER_KEY);
                 String userKey = getTokenKey(uuid);
-                LoginUser user = (LoginUser) redisTemplate.opsForValue().get(userKey);
-                return user;
+                Object value = redisTemplate.opsForValue().get(userKey);
+                if (value == null) {
+                    log.warn("Token对应Redis key不存在: {}", userKey);
+                    return null;
+                }
+                return (LoginUser) value;
             } catch (Exception e) {
-                System.err.println("Token验证失败: " + e.getMessage());
+                log.error("Token验证失败: {}", e.getMessage(), e);
             }
         }
         return null;

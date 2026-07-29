@@ -11,10 +11,10 @@
     </parent>
 
     <groupId>cn.qihang.ai</groupId>
-    <artifactId>qihang-ai-team</artifactId>
+    <artifactId>qihang-ai-workbench</artifactId>
     <version>1.0.0</version>
     <name>Qihang AI Workbench</name>
-    <description>启航 AI 协作平台 �?AI 驱动的企业协作智能体</description>
+    <description>启航 AI 协作平台 �?AI 驱动的企业协作智能体</description>
 
     <properties>
         <java.version>17</java.version>
@@ -76,7 +76,7 @@
             <groupId>com.fasterxml.jackson.datatype</groupId>
             <artifactId>jackson-datatype-jsr310</artifactId>
         </dependency>
-        <!-- Excel 导入已停�?-->
+        <!-- Excel 导入已停�?-->
         <dependency>
             <groupId>org.commonmark</groupId>
             <artifactId>commonmark</artifactId>
@@ -136,8 +136,8 @@
             <version>1.21</version>
         </dependency>
 
-        <!-- Spring AI 2.0 �?OpenAI 兼容客户�?-->
-        <!-- DeepSeekApi �?RestClient.Builder，支持自定义 baseUrl 切换厂商 -->
+        <!-- Spring AI 2.0 �?OpenAI 兼容客户�?-->
+        <!-- DeepSeekApi �?RestClient.Builder，支持自定义 baseUrl 切换厂商 -->
         <dependency>
             <groupId>org.springframework.ai</groupId>
             <artifactId>spring-ai-starter-model-deepseek</artifactId>

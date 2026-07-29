@@ -1,10 +1,12 @@
 package cn.qihang.ai.assistant.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import java.io.Serializable;
 import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.Set;
 
-public class SysRole {
+public class SysRole implements Serializable {
     private static final long serialVersionUID = 1L;
 
     private Long roleId;
@@ -27,6 +29,7 @@ public class SysRole {
     private String remark;
     private Map<String, Object> params;
 
+    @JsonIgnore
     public Map<String, Object> getParams() { return params; }
     public void setParams(Map<String, Object> params) { this.params = params; }
 
@@ -41,6 +44,7 @@ public class SysRole {
     public void setUpdateTime(LocalDateTime updateTime) { this.updateTime = updateTime; }
     public Long getRoleId() { return roleId; }
     public void setRoleId(Long roleId) { this.roleId = roleId; }
+    @JsonIgnore
     public boolean isAdmin() { return isAdmin(this.roleId); }
     public static boolean isAdmin(Long roleId) { return roleId != null && 1L == roleId; }
     public String getUpdateBy() { return updateBy; }

@@ -360,6 +360,22 @@
     </style>
 
     <script>
+    // 带认证的 fetch 包装：自动注入 Admin-Token
+    function apiFetch(url, options) {
+        if (!options) options = {};
+        if (!options.headers) options.headers = {};
+        var token = localStorage.getItem('Admin-Token');
+        if (token) options.headers['Authorization'] = 'Bearer ' + token;
+        return fetch(url, options);
+    }
+
+    // 登录弹窗控制
+    function showLoginOverlay() {
+        localStorage.removeItem('Admin-Token');
+        document.getElementById('loginOverlay').classList.add('active');
+        document.getElementById('loginUsername').focus();
+    }
+
     function doLogin() {
         const username = document.getElementById('loginUsername').value.trim();
         const password = document.getElementById('loginPassword').value;
@@ -387,13 +403,30 @@
             btn.disabled = false; btn.textContent = '登 录';
         });
     }
+    // ====== 初始加载 ======
     document.addEventListener('DOMContentLoaded', function() {
-        if (localStorage.getItem('Admin-Token')) {
-            document.getElementById('loginOverlay').classList.remove('active');
-        } else {
-            document.getElementById('loginOverlay').classList.add('active');
-            document.getElementById('loginUsername').focus();
+        var token = localStorage.getItem('Admin-Token');
+        if (!token) {
+            showLoginOverlay();
+            return;
         }
+        // 验证 token 是否真正有效（后端会校验 Redis 中是否存在）
+        apiFetch('/api/sys-api/getInfo').then(function(r) {
+            if (r.status === 401) throw new Error('unauthorized');
+            return r.json();
+        }).then(function(data) {
+            if (data.code === 200 || data.ok) {
+                document.getElementById('loginOverlay').classList.remove('active');
+                // 登录有效，开始加载数据
+                loadLabels();
+                loadLlmModels();
+                loadEmbeddingModel();
+            } else {
+                showLoginOverlay();
+            }
+        }).catch(function() {
+            showLoginOverlay();
+        });
     });
 
     var dcModules = [], dcAllDatasets = [];
@@ -414,8 +447,8 @@
 
     function loadDataCenter() {
         Promise.all([
-            fetch('/api/datacenter/modules').then(function(r){ return r.json(); }),
-            fetch('/api/datacenter/datasets').then(function(r){ return r.json(); })
+            apiFetch('/api/datacenter/modules').then(function(r){ return r.json(); }),
+            apiFetch('/api/datacenter/datasets').then(function(r){ return r.json(); })
         ]).then(function(results) {
             dcModules = results[0].ok ? results[0].data || [] : [];
             dcAllDatasets = results[1].ok ? results[1].data || [] : [];
@@ -609,26 +642,21 @@
         if (name === 'datacenter') loadDataCenter();
     }
 
-    fetch('/api/config').then(r => r.json()).then(cfg => {
+    // 加载飞书配置（需要登录态）
+    apiFetch('/api/config').then(r => r.json()).then(cfg => {
         const input = document.getElementById('webhookUrl');
         if (cfg.feishuWebhookUrl) input.value = cfg.feishuWebhookUrl;
         if (cfg.feishuAppId) document.getElementById('feishuAppId').value = cfg.feishuAppId;
         if (cfg.feishuAppSecret) document.getElementById('feishuAppSecret').value = cfg.feishuAppSecret;
         if (cfg.feishuChatId) document.getElementById('feishuChatId').value = cfg.feishuChatId;
         if (cfg.feishuPollingEnabled) document.getElementById('feishuPollingEnabled').checked = true;
-    }).catch(() => {});
-
-    document.addEventListener('DOMContentLoaded', function() {
-        setTimeout(loadLabels, 100);
-        setTimeout(loadLlmModels, 200);
-        setTimeout(loadEmbeddingModel, 300);
-    });
+    }).catch(function(){ /* ignore - login overlay handles auth */ });
 
     function saveWebhook() {
         const url = document.getElementById('webhookUrl').value.trim();
         if (!url.startsWith('https://')) { document.getElementById('webhookStatus').textContent = '❌ URL 必须以 https:// 开头'; return; }
         const form = new FormData(); form.append('url', url);
-        fetch('/api/config/webhook', { method: 'POST', body: form }).then(r => r.json()).then(data => {
+        apiFetch('/api/config/webhook', { method: 'POST', body: form }).then(r => r.json()).then(data => {
             const status = document.getElementById('webhookStatus');
             if (data.ok) { status.textContent = '✅ 已保存'; setTimeout(() => status.textContent = '', 3000); } else { status.textContent = '❌ ' + (data.error || '保存失败'); }
         }).catch(() => { document.getElementById('webhookStatus').textContent = '❌ 请求失败'; });
@@ -641,7 +669,7 @@
         form.append('appSecret', document.getElementById('feishuAppSecret').value.trim());
         form.append('chatId', document.getElementById('feishuChatId').value.trim());
         form.append('pollingEnabled', document.getElementById('feishuPollingEnabled').checked ? 'on' : 'off');
-        const res = await fetch('/api/config/feishu', { method: 'POST', body: form });
+        const res = await apiFetch('/api/config/feishu', { method: 'POST', body: form });
         const data = await res.json();
         const status = document.getElementById('feishuStatus');
         if (data.ok) { status.textContent = '✅ 已保存'; setTimeout(() => status.textContent = '', 3000); } else { status.textContent = '❌ ' + (data.error || '保存失败'); }
@@ -656,7 +684,7 @@
         if (!appId || !appSecret) { toast('请先填写 App ID 和 App Secret', 'error'); return; }
         btn.disabled = true; btn.textContent = '⏳ 查询中...'; list.style.display = 'none';
         const form = new FormData(); form.append('appId', appId); form.append('appSecret', appSecret);
-        const res = await fetch('/api/config/feishu/chats', { method: 'POST', body: form });
+        const res = await apiFetch('/api/config/feishu/chats', { method: 'POST', body: form });
         const data = await res.json();
         btn.disabled = false; btn.textContent = '获取群列表';
         if (!data.ok) { list.innerHTML = '<div style="color:#dc2626;font-size:13px;">❌ ' + (data.error || '查询失败') + '</div>'; list.style.display = 'block'; return; }
@@ -675,14 +703,14 @@
         if (!appId || !appSecret || !chatId) { toast('请先填完 App ID、App Secret 和 Chat ID', 'error'); return; }
         btn.disabled = true; btn.textContent = '⏳ 发送中...'; status.textContent = '';
         const form = new FormData(); form.append('appId', appId); form.append('appSecret', appSecret); form.append('chatId', chatId);
-        const res = await fetch('/api/config/feishu/test', { method: 'POST', body: form });
+        const res = await apiFetch('/api/config/feishu/test', { method: 'POST', body: form });
         const data = await res.json();
         btn.disabled = false; btn.textContent = '发送测试消息';
         if (data.ok) { status.textContent = '✅ 测试消息已发送到群，请查看飞书！'; toast('✅ 测试消息发送成功！', 'success'); } else { status.textContent = '❌ ' + (data.error || '发送失败'); toast('❌ ' + (data.error || '发送失败'), 'error'); }
     }
 
     var labelData = {};
-    function loadLabels() { fetch('/api/config/labels').then(r => r.json()).then(data => { if (data.ok) { labelData = data.labels || {}; renderLabels(); } }).catch(() => {}); }
+    function loadLabels() { apiFetch('/api/config/labels').then(r => r.json()).then(data => { if (data.ok) { labelData = data.labels || {}; renderLabels(); } }).catch(function(){ /* ignore */ }); }
     function renderLabels() {
         var container = document.getElementById('labels-container');
         var keys = Object.keys(labelData);
@@ -695,7 +723,7 @@
     function deleteLabelRow(key) { delete labelData[key]; renderLabels(); }
     function saveLabels() {
         document.querySelectorAll('.label-value-input').forEach(function(input) { labelData[input.dataset.key] = input.value.trim(); });
-        fetch('/api/config/labels', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(labelData) }).then(r => r.json()).then(data => {
+        apiFetch('/api/config/labels', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(labelData) }).then(r => r.json()).then(data => {
             var status = document.getElementById('labelsStatus');
             if (data.ok) { status.textContent = '✅ 已保存'; toast('✅ 标签已保存', 'success'); setTimeout(function() { status.textContent = ''; }, 3000); } else { status.textContent = '❌ ' + (data.error || '保存失败'); toast('❌ 保存失败', 'error'); }
         }).catch(function() { document.getElementById('labelsStatus').textContent = '❌ 请求失败'; });
@@ -703,7 +731,7 @@
     function escapeHtml(str) { return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
     let llmModels = []; let llmEditingId = null;
-    function loadLlmModels() { fetch('/api/config/llm-profiles').then(r => r.json()).then(data => { if (data.ok) { llmModels = data.profiles || []; renderLlmModels(); } }).catch(() => {}); }
+    function loadLlmModels() { apiFetch('/api/config/llm-profiles').then(r => r.json()).then(data => { if (data.ok) { llmModels = data.profiles || []; renderLlmModels(); } }).catch(function(){ /* ignore */ }); }
     function renderLlmModels() {
         const container = document.getElementById('llmModelsList'); const empty = document.getElementById('llmModelsEmpty');
         if (!llmModels.length) { container.innerHTML = ''; empty.style.display = 'block'; return; }
@@ -726,7 +754,7 @@
         if (!name) { document.getElementById('llmModelsStatus').textContent = '❌ 请输入模型名称'; return; }
         const payload = { name: name, apiKey: document.getElementById('newModelApiKey').value, baseUrl: document.getElementById('newModelBaseUrl').value || 'https://api.deepseek.com', model: document.getElementById('newModelModel').value || 'deepseek-chat', timeout: parseInt(document.getElementById('newModelTimeout').value) || 600, modelType: document.getElementById('newModelType').value || 'text' };
         if (llmEditingId !== null) { payload.id = llmEditingId; const old = llmModels.find(m => m.id === llmEditingId); if (old) payload.isDefault = old.isDefault; } else payload.isDefault = llmModels.length === 0;
-        try { const res = await fetch('/api/config/llm-profiles', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) }); const data = await res.json(); const status = document.getElementById('llmModelsStatus'); if (data.ok) { status.textContent = llmEditingId !== null ? '✅ 已更新' : '✅ 已添加'; resetLlmForm(); loadLlmModels(); setTimeout(() => status.textContent = '', 3000); } else { status.textContent = '❌ ' + (data.error || '保存失败'); } } catch (e) { document.getElementById('llmModelsStatus').textContent = '❌ 请求失败'; }
+        try { const res = await apiFetch('/api/config/llm-profiles', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) }); const data = await res.json(); const status = document.getElementById('llmModelsStatus'); if (data.ok) { status.textContent = llmEditingId !== null ? '✅ 已更新' : '✅ 已添加'; resetLlmForm(); loadLlmModels(); setTimeout(() => status.textContent = '', 3000); } else { status.textContent = '❌ ' + (data.error || '保存失败'); } } catch (e) { document.getElementById('llmModelsStatus').textContent = '❌ 请求失败'; }
     }
     function editLlmModel(id) {
         const model = llmModels.find(m => m.id === id); if (!model) return;
@@ -735,13 +763,13 @@
         document.getElementById('tab-ai').scrollIntoView({ behavior: 'smooth' });
     }
     function cancelEditLlmModel() { resetLlmForm(); }
-    async function deleteLlmModel(id) { if (!confirm('确定删除该模型？')) return; try { const res = await fetch('/api/config/llm-profiles/' + id, { method: 'DELETE' }); const data = await res.json(); const status = document.getElementById('llmModelsStatus'); if (data.ok) { status.textContent = '✅ 已删除'; if (llmEditingId === id) resetLlmForm(); loadLlmModels(); setTimeout(() => status.textContent = '', 3000); } else { status.textContent = '❌ ' + (data.error || '删除失败'); } } catch (e) { document.getElementById('llmModelsStatus').textContent = '❌ 请求失败'; } }
-    async function setDefaultModel(id) { try { const res = await fetch('/api/config/llm-profiles/' + id + '/default', { method: 'POST' }); const data = await res.json(); const status = document.getElementById('llmModelsStatus'); if (data.ok) { status.textContent = '✅ 默认模型已切换'; loadLlmModels(); setTimeout(() => status.textContent = '', 3000); } else { status.textContent = '❌ ' + (data.error || '设置失败'); } } catch (e) { document.getElementById('llmModelsStatus').textContent = '❌ 请求失败'; } }
+    async function deleteLlmModel(id) { if (!confirm('确定删除该模型？')) return; try { const res = await apiFetch('/api/config/llm-profiles/' + id, { method: 'DELETE' }); const data = await res.json(); const status = document.getElementById('llmModelsStatus'); if (data.ok) { status.textContent = '✅ 已删除'; if (llmEditingId === id) resetLlmForm(); loadLlmModels(); setTimeout(() => status.textContent = '', 3000); } else { status.textContent = '❌ ' + (data.error || '删除失败'); } } catch (e) { document.getElementById('llmModelsStatus').textContent = '❌ 请求失败'; } }
+    async function setDefaultModel(id) { try { const res = await apiFetch('/api/config/llm-profiles/' + id + '/default', { method: 'POST' }); const data = await res.json(); const status = document.getElementById('llmModelsStatus'); if (data.ok) { status.textContent = '✅ 默认模型已切换'; loadLlmModels(); setTimeout(() => status.textContent = '', 3000); } else { status.textContent = '❌ ' + (data.error || '设置失败'); } } catch (e) { document.getElementById('llmModelsStatus').textContent = '❌ 请求失败'; } }
 
-    function loadEmbeddingModel() { fetch('/api/config/embedding-model').then(r => r.json()).then(data => { if (data.ok) { if (data.model) document.getElementById('embeddingModel').value = data.model; if (data.baseUrl) document.getElementById('embeddingBaseUrl').value = data.baseUrl; if (data.apiKey) document.getElementById('embeddingApiKey').value = data.apiKey; if (data.provider) document.getElementById('embeddingProvider').value = data.provider; } }).catch(() => {}); }
+    function loadEmbeddingModel() { apiFetch('/api/config/embedding-model').then(r => r.json()).then(data => { if (data.ok) { if (data.model) document.getElementById('embeddingModel').value = data.model; if (data.baseUrl) document.getElementById('embeddingBaseUrl').value = data.baseUrl; if (data.apiKey) document.getElementById('embeddingApiKey').value = data.apiKey; if (data.provider) document.getElementById('embeddingProvider').value = data.provider; } }).catch(function(){ /* ignore */ }); }
     async function saveEmbeddingModel() {
         const model = document.getElementById('embeddingModel').value.trim() || 'bge-m3'; const baseUrl = document.getElementById('embeddingBaseUrl').value.trim() || 'http://127.0.0.1:11434'; const apiKey = document.getElementById('embeddingApiKey').value.trim(); const provider = document.getElementById('embeddingProvider').value.trim();
-        try { const res = await fetch('/api/config/embedding-model', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({model: model, baseUrl: baseUrl, apiKey: apiKey, provider: provider}) }); const data = await res.json(); const status = document.getElementById('embeddingModelStatus'); if (data.ok) { status.textContent = '✅ 已保存'; setTimeout(() => status.textContent = '', 3000); toast('✅ 语义向量模型已更新', 'success'); } else { status.textContent = '❌ ' + (data.error || '保存失败'); } } catch (e) { document.getElementById('embeddingModelStatus').textContent = '❌ 请求失败'; }
+        try { const res = await apiFetch('/api/config/embedding-model', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({model: model, baseUrl: baseUrl, apiKey: apiKey, provider: provider}) }); const data = await res.json(); const status = document.getElementById('embeddingModelStatus'); if (data.ok) { status.textContent = '✅ 已保存'; setTimeout(() => status.textContent = '', 3000); toast('✅ 语义向量模型已更新', 'success'); } else { status.textContent = '❌ ' + (data.error || '保存失败'); } } catch (e) { document.getElementById('embeddingModelStatus').textContent = '❌ 请求失败'; }
     }
 
     function toast(msg, type) {

@@ -1,10 +1,12 @@
 package cn.qihang.ai.assistant.entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import java.io.Serializable;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
-public class SysUser {
+public class SysUser implements Serializable {
     private static final long serialVersionUID = 1L;
 
     private Long userId;
@@ -32,6 +34,7 @@ public class SysUser {
     private List<SysRole> roles;
     private Map<String, Object> params;
 
+    @JsonIgnore
     public Map<String, Object> getParams() { return params; }
     public void setParams(Map<String, Object> params) { this.params = params; }
 
@@ -44,8 +47,11 @@ public class SysUser {
     public Long getUserId() { return userId; }
     public void setUserId(Long userId) { this.userId = userId; }
 
+    @JsonIgnore
     public boolean isAdmin() { return isAdmin(this.userId); }
-    public static boolean isAdmin(Long userId) { return userId != null && 1L == userId; }
+    public static boolean isAdmin(Long userId) {
+        return userId != null && 1L == userId;
+    }
 
     public Long getDeptId() { return deptId; }
     public void setDeptId(Long deptId) { this.deptId = deptId; }
@@ -63,6 +69,7 @@ public class SysUser {
     public void setSex(String sex) { this.sex = sex; }
     public String getAvatar() { return avatar; }
     public void setAvatar(String avatar) { this.avatar = avatar; }
+    @JsonIgnore
     public String getPassword() { return password; }
     public void setPassword(String password) { this.password = password; }
     public String getStatus() { return status; }

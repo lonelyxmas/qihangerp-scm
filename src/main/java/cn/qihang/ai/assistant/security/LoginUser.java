@@ -6,12 +6,13 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
+import java.io.Serializable;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-public class LoginUser implements UserDetails {
+public class LoginUser implements UserDetails, Serializable {
     private static final long serialVersionUID = 1L;
 
     private Long userId;
@@ -49,6 +50,7 @@ public class LoginUser implements UserDetails {
     @Override
     public String getPassword() { return user.getPassword(); }
 
+    @JsonIgnore
     @Override
     public String getUsername() { return user.getUserName(); }
 
@@ -85,6 +87,7 @@ public class LoginUser implements UserDetails {
     public SysUser getUser() { return user; }
     public void setUser(SysUser user) { this.user = user; }
 
+    @JsonIgnore
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         if (permissions == null || permissions.isEmpty()) {

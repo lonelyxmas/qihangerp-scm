@@ -32,8 +32,12 @@ public class SecurityUtils {
     }
 
     public static LoginUser getLoginUser() {
+        Authentication auth = getAuthentication();
+        if (auth == null || !auth.isAuthenticated() || "anonymousUser".equals(auth.getPrincipal())) {
+            throw new ServiceException("未登录或登录已过期", 401);
+        }
         try {
-            return (LoginUser) getAuthentication().getPrincipal();
+            return (LoginUser) auth.getPrincipal();
         } catch (Exception e) {
             throw new ServiceException("获取用户信息异常", 401);
         }

@@ -18,6 +18,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -35,14 +36,12 @@ public class SecurityConfig {
     @Autowired
     private LogoutSuccessHandlerImpl logoutSuccessHandler;
 
+    @Autowired
+    private TokenService tokenService;
+
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
-    }
-
-    @Bean
-    public JwtAuthenticationTokenFilter authenticationJwtTokenFilter() {
-        return new JwtAuthenticationTokenFilter();
     }
 
     @Bean
@@ -56,41 +55,20 @@ public class SecurityConfig {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(authorizeHttpRequests -> authorizeHttpRequests
                         .dispatcherTypeMatchers(DispatcherType.ASYNC).permitAll()
-                        .requestMatchers("/").permitAll()
-                        .requestMatchers("/login").permitAll()
-                        .requestMatchers("/login.html").permitAll()
-                        .requestMatchers("/api/sys-api/login").permitAll()
-                        .requestMatchers("/api/sys-api/captchaImage").permitAll()
-                        .requestMatchers("/css/**").permitAll()
-                        .requestMatchers("/js/**").permitAll()
-                        .requestMatchers("/favicon.ico").permitAll()
-                        .requestMatchers("/error").permitAll()
+                        // 静态资源
+                        .requestMatchers("/css/**", "/js/**", "/favicon.ico", "/error").permitAll()
+                        // 公开 API（登录、验证码等）
+                        .requestMatchers("/api/sys-api/login", "/api/sys-api/captchaImage", "/api/sys-api/register").permitAll()
+                        // 页面路由（公开，HTML 可正常加载；数据需前端携带 Token）
+                        .requestMatchers("/", "/login", "/login.html", "/config").permitAll()
+                        .requestMatchers("/chat", "/help", "/log", "/tools", "/planner", "/notes").permitAll()
+                        .requestMatchers("/ai-guide", "/insights", "/health", "/activity", "/notifications", "/approvals", "/automation").permitAll()
+                        .requestMatchers("/data/**", "/kb/**", "/image/**", "/coding/**", "/v1/**", "/v3/**", "/admin/**").permitAll()
+                        // API 路由临时开放（后续逐步收紧）
                         .requestMatchers("/api/**").permitAll()
-                        .requestMatchers("/v1/**").permitAll()
-                        .requestMatchers("/v3/**").permitAll()
-                        .requestMatchers("/kb/**").permitAll()
-                        .requestMatchers("/image/**").permitAll()
-                        .requestMatchers("/data/**").permitAll()
-                        .requestMatchers("/coding/**").permitAll()
-                        .requestMatchers("/config").permitAll()
-                        .requestMatchers("/chat").permitAll()
-                        .requestMatchers("/help").permitAll()
-                        .requestMatchers("/log").permitAll()
-                        .requestMatchers("/tools").permitAll()
-                        .requestMatchers("/planner").permitAll()
-                        .requestMatchers("/notes").permitAll()
-                        .requestMatchers("/data").permitAll()
-                        .requestMatchers("/ai-guide").permitAll()
-                        .requestMatchers("/insights").permitAll()
-                        .requestMatchers("/health").permitAll()
-                        .requestMatchers("/activity").permitAll()
-                        .requestMatchers("/notifications").permitAll()
-                        .requestMatchers("/approvals").permitAll()
-                        .requestMatchers("/admin/**").permitAll()
-                        .requestMatchers("/automation").permitAll()
                         .anyRequest().authenticated())
                 .authenticationProvider(authenticationProvider())
-                .addFilterBefore(authenticationJwtTokenFilter(), UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(new JwtAuthenticationTokenFilter(tokenService), UsernamePasswordAuthenticationFilter.class);
         http.logout(logout -> logout.logoutUrl("/api/sys-api/logout").logoutSuccessHandler(logoutSuccessHandler));
         return http.build();
     }

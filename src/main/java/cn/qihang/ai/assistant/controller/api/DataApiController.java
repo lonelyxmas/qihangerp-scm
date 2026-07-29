@@ -9,10 +9,16 @@ import cn.qihang.ai.assistant.datacenter.DataSetService;
 import cn.qihang.ai.assistant.datacenter.model.*;
 import cn.qihang.ai.assistant.service.LlmService;
 
+import cn.qihang.ai.assistant.entity.SysUser;
+import cn.qihang.ai.assistant.security.LoginUser;
+import cn.qihang.ai.assistant.security.TokenService;
 import cn.qihang.ai.assistant.security.common.SecurityUtils;
 import cn.qihang.ai.assistant.service.ConfigService;
 import cn.qihang.ai.assistant.util.FileUtil;
+import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -37,25 +43,51 @@ public class DataApiController {
     private final LlmService llmService;
     private final ConfigService configService;
     private final AiAnalysisCache analysisCache;
+    private final TokenService tokenService;
 
     public DataApiController(DataSetService dataSetService,
                              DataModuleService moduleService,
                              DataSetImportService importService,
                              LlmService llmService,
                              ConfigService configService,
-                             AiAnalysisCache analysisCache) {
+                             AiAnalysisCache analysisCache,
+                             TokenService tokenService) {
         this.dataSetService = dataSetService;
         this.moduleService = moduleService;
         this.importService = importService;
         this.llmService = llmService;
         this.configService = configService;
         this.analysisCache = analysisCache;
+        this.tokenService = tokenService;
+    }
+
+    private HttpServletRequest getCurrentRequest() {
+        ServletRequestAttributes attrs = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+        return attrs != null ? attrs.getRequest() : null;
+    }
+
+    private LoginUser getLoginUser() {
+        HttpServletRequest request = getCurrentRequest();
+        if (request == null) return null;
+        return tokenService.getLoginUser(request);
     }
 
     private void requireAdmin() {
-        if (!cn.qihang.ai.assistant.entity.SysUser.isAdmin(SecurityUtils.getUserId())) {
+        LoginUser loginUser = getLoginUser();
+        if (loginUser == null) {
+            throw new IllegalStateException("未登录");
+        }
+        if (!SysUser.isAdmin(loginUser.getUserId())) {
             throw new IllegalStateException("仅管理员可执行此操作");
         }
+    }
+
+    @GetMapping("/check-auth")
+    public ResponseEntity<Map<String, Object>> checkAuth() {
+        if (getLoginUser() != null) {
+            return ResponseEntity.ok(Map.of("ok", true));
+        }
+        return ResponseEntity.status(401).body(Map.of("ok", false, "error", "未登录"));
     }
 
     private String doAiChat(String systemPrompt, String userMessage) throws Exception {
@@ -254,7 +286,7 @@ public class DataApiController {
     }
 
     @PostMapping("/datasets")
-    public ResponseEntity<Map<String, Object>> createDataset(@RequestBody DataSet ds) {
+    public ResponseEntity<Map<String, Object>> createDataset(@RequestBody DataSet ds, HttpServletRequest request) {
         try {
             requireAdmin();
             DataSet created = dataSetService.createDataset(ds);
@@ -265,7 +297,7 @@ public class DataApiController {
     }
 
     @PutMapping("/datasets/{id}")
-    public ResponseEntity<Map<String, Object>> updateDataset(@PathVariable String id, @RequestBody DataSet ds) {
+    public ResponseEntity<Map<String, Object>> updateDataset(@PathVariable String id, @RequestBody DataSet ds, HttpServletRequest request) {
         try {
             requireAdmin();
             DataSet updated = dataSetService.updateDataset(id, ds);
@@ -279,7 +311,7 @@ public class DataApiController {
     }
 
     @DeleteMapping("/datasets/{id}")
-    public ResponseEntity<Map<String, Object>> deleteDataset(@PathVariable String id) {
+    public ResponseEntity<Map<String, Object>> deleteDataset(@PathVariable String id, HttpServletRequest request) {
         try {
             requireAdmin();
             boolean deleted = dataSetService.deleteDataset(id);
