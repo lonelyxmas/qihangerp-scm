@@ -3,215 +3,407 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>启航AI工作台 - 首页</title>
+    <title>启航AI工作台 - 首页看板</title>
     <link rel="stylesheet" href="/css/app.css">
+    <script src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.js"></script>
     <style>
         .content-body { background: #f5f5f5; }
 
-        .features-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
-        .feature-card { background: white; border-radius: var(--radius-lg); border: 1px solid var(--border); padding: 20px; transition: all 0.2s; display: flex; flex-direction: column; }
-        .feature-card:hover { box-shadow: var(--shadow-md); border-color: var(--primary-light); transform: translateY(-1px); }
-        .feature-icon { width: 44px; height: 44px; border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; font-size: 22px; margin-bottom: 12px; }
-        .feature-name { font-size: 15px; font-weight: 600; color: var(--text-primary); margin-bottom: 6px; }
-        .feature-desc { font-size: 13px; color: var(--text-secondary); line-height: 1.6; flex: 1; }
-        .feature-links { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
-        .feature-link { padding: 6px 12px; font-size: 12px; border: none; border-radius: var(--radius-sm); cursor: pointer; transition: all 0.2s; text-decoration: none; display: inline-flex; align-items: center; gap: 4px; }
-        .feature-link.primary { background: var(--primary); color: white; }
-        .feature-link.primary:hover { background: var(--primary-dark); }
-        .feature-link.secondary { background: var(--hover); color: var(--text-secondary); }
-        .feature-link.secondary:hover { background: #e2e8f0; color: var(--text-primary); }
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; margin-bottom: 20px; }
+        .stat-card { background: white; border-radius: var(--radius-md); border: 1px solid var(--border); padding: 16px; text-align: center; transition: all 0.2s; }
+        .stat-card:hover { box-shadow: var(--shadow-md); transform: translateY(-1px); }
+        .stat-number { font-size: 26px; font-weight: 700; color: var(--primary); line-height: 1.2; }
+        .stat-label { font-size: 12px; color: var(--text-secondary); margin-top: 4px; }
+        .stat-card.sub .stat-number { font-size: 16px; }
+        .stat-card.green .stat-number { color: #22c55e; }
+        .stat-card.amber .stat-number { color: #f59e0b; }
+        .stat-card.blue .stat-number { color: #3b82f6; }
+        .stat-card.pink .stat-number { color: #ec4899; }
+        .stat-card.cyan .stat-number { color: #06b6d4; }
 
-        .project-header-section { display: flex; align-items: center; gap: 16px; margin-bottom: 24px; }
-        .project-logo { width: 56px; height: 56px; background: linear-gradient(135deg, #6366f1, #8b5cf6); border-radius: var(--radius-lg); display: flex; align-items: center; justify-content: center; font-size: 28px; color: white; flex-shrink: 0; }
-        .project-info h1 { font-size: 22px; font-weight: 700; color: var(--text-primary); margin-bottom: 4px; }
-        .project-info p { font-size: 14px; color: var(--text-secondary); }
+        .dashboard-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        @media (max-width: 1100px) { .dashboard-grid { grid-template-columns: 1fr; } }
 
-        .tech-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
-        .tech-tag { padding: 2px 10px; background: rgba(99, 102, 241, 0.08); color: var(--primary); border-radius: 12px; font-size: 11px; }
+        .section-card { background: white; border-radius: var(--radius-md); border: 1px solid var(--border); box-shadow: var(--shadow-sm); margin-bottom: 16px; overflow: hidden; }
+        .section-card-header { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; border-bottom: 1px solid var(--border); }
+        .section-card-title { font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 6px; }
+        .section-card-body { padding: 0; }
+        .section-card-body.padded { padding: 14px 18px; }
 
-        .section-title { font-size: 16px; font-weight: 600; color: var(--text-primary); margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
-        .section-title svg { width: 20px; height: 20px; color: var(--primary); }
+        .item-row { display: flex; align-items: center; padding: 10px 18px; border-bottom: 1px solid #f1f5f9; transition: background 0.15s; }
+        .item-row:last-child { border-bottom: none; }
+        .item-row:hover { background: #f8fafc; }
+        .item-row .item-icon { width: 32px; height: 32px; border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: center; font-size: 15px; margin-right: 12px; flex-shrink: 0; }
+        .item-row .item-content { flex: 1; min-width: 0; }
+        .item-row .item-title { font-size: 13px; font-weight: 500; color: var(--text-primary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .item-row .item-meta { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+        .item-row .item-badge { font-size: 11px; padding: 2px 8px; border-radius: 10px; flex-shrink: 0; margin-left: 8px; }
 
-        .stat-badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; background: rgba(34, 197, 94, 0.1); color: #16a34a; border-radius: 10px; font-size: 11px; }
-        .stat-badge.blue { background: rgba(99, 102, 241, 0.1); color: var(--primary); }
-        .stat-badge.amber { background: rgba(245, 158, 11, 0.1); color: #d97706; }
+        .badge-pending { background: rgba(245,158,11,0.1); color: #d97706; }
+        .badge-progress { background: rgba(59,130,246,0.1); color: #3b82f6; }
+        .badge-done { background: rgba(34,197,94,0.1); color: #16a34a; }
+        .badge-high { background: rgba(239,68,68,0.1); color: #ef4444; }
+        .badge-mid { background: rgba(245,158,11,0.1); color: #d97706; }
+        .badge-low { background: rgba(34,197,94,0.1); color: #16a34a; }
 
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
-        ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+        .report-content { font-size: 12px; color: var(--text-secondary); line-height: 1.7; max-height: 200px; overflow-y: auto; padding: 14px 18px; }
+        .report-content p { margin-bottom: 6px; }
+
+        .empty-row { padding: 30px 18px; text-align: center; color: var(--text-muted); font-size: 13px; }
+
+        .priority-dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; margin-right: 6px; }
+        .priority-dot.high { background: #ef4444; }
+        .priority-dot.mid { background: #f59e0b; }
+        .priority-dot.low { background: #22c55e; }
+
+        .overdue-tag { font-size: 10px; background: rgba(239,68,68,0.1); color: #ef4444; padding: 1px 6px; border-radius: 8px; margin-left: 6px; }
+
+        .loading-skeleton { padding: 40px; text-align: center; color: var(--text-muted); }
+
+        .refresh-btn { padding: 6px 12px; font-size: 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); cursor: pointer; background: white; color: var(--text-secondary); transition: all 0.2s; }
+        .refresh-btn:hover { background: var(--hover); color: var(--text-primary); }
+        .refresh-btn:disabled { opacity: 0.5; cursor: not-allowed; }
     </style>
 </head>
 <body>
     <th:block th:replace="3.0/fragments/sidebar::sidebar(${currentNav})"></th:block>
-    
+
     <main class="main-content">
         <div class="content-header">
             <h1 class="content-title">首页看板</h1>
             <div style="display:flex;gap:8px;align-items:center;">
-                <span class="stat-badge blue">Spring Boot 4.1</span>
-                <span class="stat-badge">v1.0.0</span>
+                <span style="font-size:13px;color:var(--text-muted);">{{ currentTime }}</span>
+                <button class="refresh-btn" @click="loadData" :disabled="loading">⟳ 刷新</button>
             </div>
         </div>
-        
-        <div class="content-body">
-            <div class="project-header-section">
-                <div class="project-logo">AI</div>
-                <div class="project-info">
-                    <h1>启航AI工作台</h1>
-                    <p>企业级 AI 协作智能体平台 — 知识库是记忆，数据集是血液，AI 是协作者</p>
-                    <div class="tech-tags">
-                        <span class="tech-tag">Spring Boot 4.1</span>
-                        <span class="tech-tag">Spring AI 2.0</span>
-                        <span class="tech-tag">AI Agent</span>
-                        <span class="tech-tag">RAG</span>
-                        <span class="tech-tag">DeepSeek</span>
-                        <span class="tech-tag">MySQL</span>
-                    </div>
-                </div>
+
+        <div class="content-body" id="app">
+            <div v-if="loading" class="loading-skeleton">
+                <div style="font-size:32px;margin-bottom:12px;">⏳</div>
+                <div>正在加载看板数据...</div>
             </div>
 
-            <div class="section-title">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
-                    <line x1="3" y1="9" x2="21" y2="9"/>
-                    <line x1="9" y1="21" x2="9" y2="9"/>
-                </svg>
-                功能模块
-            </div>
-
-            <div class="features-grid">
-                <div class="feature-card">
-                    <div class="feature-icon" style="background:rgba(99,102,241,0.1);color:#6366f1;">💬</div>
-                    <div class="feature-name">AI 对话</div>
-                    <div class="feature-desc">工具编排 + 语义召回 + 连续对话，AI 自动分拣信息、路由任务、推送通知，按用户隔离。</div>
-                    <div class="feature-links">
-                        <a href="/chat" class="feature-link primary">开始对话</a>
+            <template v-else>
+                <!-- 1. 业务数据概览 -->
+                <div class="stats-grid">
+                    <div class="stat-card green">
+                        <div class="stat-number">{{ businessStats.knowledgeBases.count }}</div>
+                        <div class="stat-label">📚 知识库</div>
+                    </div>
+                    <div class="stat-card blue">
+                        <div class="stat-number">{{ businessStats.tasks.total }}</div>
+                        <div class="stat-label">📋 任务</div>
+                    </div>
+                    <div class="stat-card" style="border-color:var(--primary);">
+                        <div class="stat-number">{{ businessStats.dataSets.count }}</div>
+                        <div class="stat-label">📊 数据集</div>
+                    </div>
+                    <div class="stat-card pink">
+                        <div class="stat-number">{{ businessStats.dataRecords.count }}</div>
+                        <div class="stat-label">📝 数据记录</div>
+                    </div>
+                    <div class="stat-card amber">
+                        <div class="stat-number">{{ businessStats.chatMessages.count }}</div>
+                        <div class="stat-label">💬 对话消息</div>
+                    </div>
+                    <div class="stat-card cyan" v-if="businessStats.unreadNotifications">
+                        <div class="stat-number">{{ businessStats.unreadNotifications }}</div>
+                        <div class="stat-label">🔔 未读通知</div>
                     </div>
                 </div>
 
-                <div class="feature-card">
-                    <div class="feature-icon" style="background:rgba(34,197,94,0.1);color:#22c55e;">📚</div>
-                    <div class="feature-name">知识库</div>
-                    <div class="feature-desc">笔记文章管理，版本历史，多人协作编辑。全文搜索 + 语义向量检索，支持导入导出。</div>
-                    <div class="feature-links">
-                        <a href="/notes" class="feature-link primary">浏览笔记</a>
-                        <a href="/config" class="feature-link secondary">配置</a>
+                <!-- 子统计行 -->
+                <div class="stats-grid" style="grid-template-columns:repeat(auto-fill,minmax(120px,1fr));margin-bottom:20px;">
+                    <div class="stat-card sub">
+                        <div class="stat-number" style="color:#f59e0b;">{{ businessStats.tasks.pending }}</div>
+                        <div class="stat-label">待办任务</div>
+                    </div>
+                    <div class="stat-card sub">
+                        <div class="stat-number" style="color:#3b82f6;">{{ businessStats.tasks.inProgress }}</div>
+                        <div class="stat-label">进行中</div>
+                    </div>
+                    <div class="stat-card sub">
+                        <div class="stat-number" style="color:#22c55e;">{{ businessStats.tasks.done }}</div>
+                        <div class="stat-label">已完成</div>
+                    </div>
+                    <div class="stat-card sub">
+                        <div class="stat-number">{{ businessStats.indexedFiles.count }}</div>
+                        <div class="stat-label">索引文件</div>
+                    </div>
+                    <div class="stat-card sub">
+                        <div class="stat-number">{{ businessStats.reminders.count }}</div>
+                        <div class="stat-label">⏰ 提醒</div>
+                    </div>
+                    <div class="stat-card sub">
+                        <div class="stat-number">{{ businessStats.chatSessions.count }}</div>
+                        <div class="stat-label">会话数</div>
+                    </div>
+                    <div class="stat-card sub">
+                        <div class="stat-number">{{ businessStats.users.count }}</div>
+                        <div class="stat-label">👥 用户</div>
                     </div>
                 </div>
 
-                <div class="feature-card">
-                    <div class="feature-icon" style="background:rgba(59,130,246,0.1);color:#3b82f6;">📊</div>
-                    <div class="feature-name">数据中心</div>
-                    <div class="feature-desc">多数据集管理，Schema 自定义，负责人指派、审批流转、状态管理。AI 自然语言查询。</div>
-                    <div class="feature-links">
-                        <a href="/data" class="feature-link primary">管理数据</a>
+                <!-- 2. 双栏布局 -->
+                <div class="dashboard-grid">
+                    <!-- 左栏 -->
+                    <div>
+                        <!-- 待办任务 -->
+                        <div class="section-card">
+                            <div class="section-card-header">
+                                <span class="section-card-title">📋 待办任务</span>
+                                <span style="font-size:12px;color:var(--text-muted);">{{ recentTasks.length }} 项</span>
+                            </div>
+                            <div class="section-card-body">
+                                <div v-if="overdueTasks.length > 0" style="padding:8px 18px;background:#fef2f2;font-size:12px;color:#ef4444;border-bottom:1px solid #fecaca;">
+                                    ⚠ {{ overdueTasks.length }} 个任务已过期
+                                </div>
+                                <div v-if="recentTasks.length === 0" class="empty-row">暂无待办任务 ✨</div>
+                                <div v-for="task in recentTasks" :key="task.id" class="item-row">
+                                    <div class="item-icon" :style="{ background: task.priority === 'high' ? 'rgba(239,68,68,0.1)' : task.priority === 'mid' ? 'rgba(245,158,11,0.1)' : 'rgba(34,197,94,0.1)' }">
+                                        {{ task.priority === 'high' ? '🔴' : task.priority === 'mid' ? '🟡' : '🟢' }}
+                                    </div>
+                                    <div class="item-content">
+                                        <div class="item-title">{{ task.title }}</div>
+                                        <div class="item-meta">
+                                            <span v-if="task.dueDate">📅 {{ task.dueDate }}</span>
+                                            <span v-if="isOverdue(task)" class="overdue-tag">已过期</span>
+                                        </div>
+                                    </div>
+                                    <span :class="'item-badge ' + (task.status === 'pending' ? 'badge-pending' : 'badge-progress')">
+                                        {{ task.status === 'pending' ? '待办' : '进行中' }}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 提醒 -->
+                        <div class="section-card">
+                            <div class="section-card-header">
+                                <span class="section-card-title">⏰ 提醒</span>
+                                <span style="font-size:12px;color:var(--text-muted);">{{ reminders.length }} 项</span>
+                            </div>
+                            <div class="section-card-body">
+                                <div v-if="reminders.length === 0" class="empty-row">暂无提醒 ⏰</div>
+                                <div v-for="r in reminders" :key="r.id" class="item-row">
+                                    <div class="item-icon" style="background:rgba(99,102,241,0.1);">⏰</div>
+                                    <div class="item-content">
+                                        <div class="item-title">{{ r.name }}</div>
+                                        <div class="item-meta">{{ r.description || '定时提醒' }}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 数据集最近情况 -->
+                        <div class="section-card">
+                            <div class="section-card-header">
+                                <span class="section-card-title">📊 数据集最近情况</span>
+                                <span style="font-size:12px;color:var(--text-muted);">{{ recentDatasets.length }} 项</span>
+                            </div>
+                            <div class="section-card-body">
+                                <div v-if="recentDatasets.length === 0" class="empty-row">暂无数据集 📊</div>
+                                <div v-for="ds in recentDatasets" :key="ds.id" class="item-row">
+                                    <div class="item-icon" style="background:rgba(59,130,246,0.1);">📦</div>
+                                    <div class="item-content">
+                                        <div class="item-title">{{ ds.name }}</div>
+                                        <div class="item-meta">
+                                            {{ ds.recordCount }} 条记录
+                                            <span v-if="ds.type"> · {{ ds.type }}</span>
+                                            <span v-if="ds.updatedAt"> · 更新 {{ formatTime(ds.updatedAt) }}</span>
+                                        </div>
+                                    </div>
+                                    <span v-if="ds.status === 'active'" class="item-badge badge-done">正常</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 右栏 -->
+                    <div>
+                        <!-- 最近日报 -->
+                        <div class="section-card">
+                            <div class="section-card-header">
+                                <span class="section-card-title">📜 最近日报</span>
+                                <span style="font-size:12px;color:var(--text-muted);">{{ recentReports.length }} 项</span>
+                            </div>
+                            <div class="section-card-body">
+                                <div v-if="recentReports.length === 0" class="empty-row">暂无日报 📜</div>
+                                <div v-for="report in recentReports" :key="report.kbId" style="border-bottom:1px solid #f1f5f9;">
+                                    <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 18px;">
+                                        <div>
+                                            <span style="font-size:13px;font-weight:500;">{{ report.kbName }}</span>
+                                            <span v-if="report.reportDate" style="font-size:11px;color:var(--text-muted);margin-left:8px;">{{ report.reportDate }}</span>
+                                        </div>
+                                        <span v-if="!report.reportDate" style="font-size:11px;color:var(--text-muted);">未生成</span>
+                                    </div>
+                                    <div v-if="report.content" class="report-content" v-html="renderReport(report.content)"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 通知与待审批 -->
+                        <div class="section-card">
+                            <div class="section-card-header">
+                                <span class="section-card-title">🔔 通知 & 审批</span>
+                                <div style="display:flex;gap:8px;align-items:center;">
+                                    <span v-if="unreadNotifications.unreadCount > 0" class="item-badge badge-high">{{ unreadNotifications.unreadCount }} 条未读</span>
+                                    <span v-if="pendingApprovals.count > 0" class="item-badge badge-pending">{{ pendingApprovals.count }} 待审批</span>
+                                </div>
+                            </div>
+                            <div class="section-card-body">
+                                <div v-if="unreadNotifications.list.length === 0 && pendingApprovals.list.length === 0" class="empty-row">暂无通知 ✨</div>
+                                <div v-for="n in unreadNotifications.list" :key="n.id" class="item-row">
+                                    <div class="item-icon" style="background:rgba(99,102,241,0.1);">
+                                        {{ n.type === 'approval_request' ? '📋' : n.type === 'task_assignment' ? '📌' : '🔔' }}
+                                    </div>
+                                    <div class="item-content">
+                                        <div class="item-title">{{ n.title }}</div>
+                                        <div class="item-meta">{{ formatTime(n.createdAt) }}</div>
+                                    </div>
+                                    <span v-if="!n.isRead" style="width:6px;height:6px;background:#ef4444;border-radius:50%;flex-shrink:0;"></span>
+                                </div>
+                                <div v-for="a in pendingApprovals.list" :key="a.id" class="item-row" style="background:#fffbeb;">
+                                    <div class="item-icon" style="background:rgba(245,158,11,0.1);">📋</div>
+                                    <div class="item-content">
+                                        <div class="item-title">{{ a.title }}</div>
+                                        <div class="item-meta">来自 {{ a.submitterName }} · {{ formatTime(a.createdAt) }}</div>
+                                    </div>
+                                    <span class="item-badge badge-pending">待审批</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 最新动态 -->
+                        <div class="section-card">
+                            <div class="section-card-header">
+                                <span class="section-card-title">📜 最新动态</span>
+                                <span style="font-size:12px;color:var(--text-muted);">{{ recentActivity.length }} 项</span>
+                            </div>
+                            <div class="section-card-body">
+                                <div v-if="recentActivity.length === 0" class="empty-row">暂无动态 📜</div>
+                                <div v-for="a in recentActivity" :key="a.id" class="item-row">
+                                    <div class="item-icon" style="background:rgba(99,102,241,0.1);font-size:12px;">
+                                        {{ getActionIcon(a.actionType) }}
+                                    </div>
+                                    <div class="item-content">
+                                        <div class="item-title">{{ a.actionDesc || a.actionType }}</div>
+                                        <div class="item-meta">{{ a.triggeredName || '系统' }} · {{ formatTime(a.createdAt) }}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
-
-                <div class="feature-card">
-                    <div class="feature-icon" style="background:rgba(245,158,11,0.1);color:#f59e0b;">📋</div>
-                    <div class="feature-name">任务看板</div>
-                    <div class="feature-desc">看板式待办管理（待处理/进行中/已完成），支持优先级、截止日期、AI 自动指派负责人。</div>
-                    <div class="feature-links">
-                        <a href="/planner" class="feature-link primary">查看任务</a>
-                    </div>
-                </div>
-
-                <div class="feature-card">
-                    <div class="feature-icon" style="background:rgba(168,85,247,0.1);color:#a855f7;">📜</div>
-                    <div class="feature-name">动态流</div>
-                    <div class="feature-desc">AI 协作动态实时追踪：谁说了什么 → AI 做了什么 → 推送给谁，全链路可追溯。</div>
-                    <div class="feature-links">
-                        <a href="/activity" class="feature-link primary">查看动态</a>
-                    </div>
-                </div>
-
-                <div class="feature-card">
-                    <div class="feature-icon" style="background:rgba(236,72,153,0.1);color:#ec4899;">🔔</div>
-                    <div class="feature-name">通知与审批</div>
-                    <div class="feature-desc">通知中心集中管理任务指派、审批请求、系统通知。审批中心支持提交/审批/已处理。</div>
-                    <div class="feature-links">
-                        <a href="/notifications" class="feature-link primary">通知</a>
-                        <a href="/approvals" class="feature-link secondary">审批</a>
-                    </div>
-                </div>
-
-                <div class="feature-card">
-                    <div class="feature-icon" style="background:rgba(251,146,60,0.1);color:#fb923c;">🛠️</div>
-                    <div class="feature-name">工具与图片</div>
-                    <div class="feature-desc">图片识别与分析、AI 图片生成、工具箱（题目解答、数据导入、采集处理等）。</div>
-                    <div class="feature-links">
-                        <a href="/image" class="feature-link primary">图片识别</a>
-                        <a href="/tools" class="feature-link secondary">工具箱</a>
-                    </div>
-                </div>
-
-                <div class="feature-card">
-                    <div class="feature-icon" style="background:rgba(148,163,184,0.1);color:#64748b;">⚙️</div>
-                    <div class="feature-name">系统管理</div>
-                    <div class="feature-desc">用户/角色权限管理、自动化规则配置、LLM/知识库/系统设置、操作日志与帮助中心。</div>
-                    <div class="feature-links">
-                        <a href="/admin/users" class="feature-link secondary">用户</a>
-                        <a href="/automation" class="feature-link secondary">自动化</a>
-                        <a href="/config" class="feature-link secondary">配置</a>
-                    </div>
-                </div>
-            </div>
-
-            <div class="section-title" style="margin-top:24px;">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="12" cy="12" r="10"/>
-                    <path d="M12 6v6l4 2"/>
-                </svg>
-                技术栈
-            </div>
-
-            <div style="background:white;border-radius:var(--radius-lg);border:1px solid var(--border);padding:20px;">
-                <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px;">
-                    <div>
-                        <div style="font-size:12px;color:var(--text-muted);margin-bottom:4px;">后端框架</div>
-                        <div style="font-size:14px;font-weight:500;">Spring Boot 4.1</div>
-                    </div>
-                    <div>
-                        <div style="font-size:12px;color:var(--text-muted);margin-bottom:4px;">AI 框架</div>
-                        <div style="font-size:14px;font-weight:500;">Spring AI 2.0</div>
-                    </div>
-                    <div>
-                        <div style="font-size:12px;color:var(--text-muted);margin-bottom:4px;">前端</div>
-                        <div style="font-size:14px;font-weight:500;">Thymeleaf + 原生 JS</div>
-                    </div>
-                    <div>
-                        <div style="font-size:12px;color:var(--text-muted);margin-bottom:4px;">ORM</div>
-                        <div style="font-size:14px;font-weight:500;">MyBatis-Plus 3.5</div>
-                    </div>
-                    <div>
-                        <div style="font-size:12px;color:var(--text-muted);margin-bottom:4px;">数据库</div>
-                        <div style="font-size:14px;font-weight:500;">MySQL 8.0+</div>
-                    </div>
-                    <div>
-                        <div style="font-size:12px;color:var(--text-muted);margin-bottom:4px;">缓存</div>
-                        <div style="font-size:14px;font-weight:500;">Redis</div>
-                    </div>
-                    <div>
-                        <div style="font-size:12px;color:var(--text-muted);margin-bottom:4px;">LLM</div>
-                        <div style="font-size:14px;font-weight:500;">DeepSeek / 智谱 / 商汤</div>
-                    </div>
-                    <div>
-                        <div style="font-size:12px;color:var(--text-muted);margin-bottom:4px;">语义检索</div>
-                        <div style="font-size:14px;font-weight:500;">Ollama / OpenAI Embedding</div>
-                    </div>
-                    <div>
-                        <div style="font-size:12px;color:var(--text-muted);margin-bottom:4px;">安全</div>
-                        <div style="font-size:14px;font-weight:500;">Spring Security + JWT</div>
-                    </div>
-                    <div>
-                        <div style="font-size:12px;color:var(--text-muted);margin-bottom:4px;">IM 集成</div>
-                        <div style="font-size:14px;font-weight:500;">飞书 Webhook + WebSocket</div>
-                    </div>
-                </div>
-            </div>
+            </template>
         </div>
     </main>
+
+    <script>
+        const { createApp, ref, onMounted } = Vue;
+
+        createApp({
+            setup() {
+                const loading = ref(true);
+                const currentTime = ref('');
+
+                const businessStats = ref({
+                    knowledgeBases: { count: 0 },
+                    tasks: { total: 0, pending: 0, inProgress: 0, done: 0 },
+                    dataSets: { count: 0 },
+                    dataRecords: { count: 0 },
+                    chatMessages: { count: 0 },
+                    chatSessions: { count: 0 },
+                    indexedFiles: { count: 0 },
+                    reminders: { count: 0 },
+                    users: { count: 0 }
+                });
+                const recentTasks = ref([]);
+                const overdueTasks = ref([]);
+                const reminders = ref([]);
+                const recentDatasets = ref([]);
+                const recentReports = ref([]);
+                const recentActivity = ref([]);
+                const unreadNotifications = ref({ unreadCount: 0, list: [] });
+                const pendingApprovals = ref({ count: 0, list: [] });
+
+                function updateTime() {
+                    const now = new Date();
+                    const pad = n => String(n).padStart(2, '0');
+                    currentTime.value = now.getFullYear() + '-' + pad(now.getMonth()+1) + '-' + pad(now.getDate())
+                        + ' ' + pad(now.getHours()) + ':' + pad(now.getMinutes());
+                }
+
+                function isOverdue(task) {
+                    if (!task.dueDate) return false;
+                    const today = new Date().toISOString().split('T')[0];
+                    return task.dueDate < today;
+                }
+
+                function formatTime(t) {
+                    if (!t) return '';
+                    if (t.length >= 16) return t.substring(0, 16).replace('T', ' ');
+                    if (t.length >= 10) return t.substring(0, 10);
+                    return t;
+                }
+
+                function getActionIcon(type) {
+                    const icons = {
+                        'create_note': '📝', 'update_note': '✏️',
+                        'create_record': '➕', 'update_record': '📝',
+                        'create_task': '📌', 'update_task': '🔄', 'delete_task': '🗑️',
+                        'assign_task': '👤', 'approval_request': '📋', 'approval_result': '✅',
+                        'report': '📊', 'notification': '🔔', 'analyze': '🔍'
+                    };
+                    return icons[type] || '📌';
+                }
+
+                function renderReport(content) {
+                    if (!content) return '';
+                    return content
+                        .replace(/</g, '&lt;')
+                        .replace(/>/g, '&gt;')
+                        .replace(/\n/g, '<br>');
+                }
+
+                async function loadData() {
+                    loading.value = true;
+                    try {
+                        const r = await fetch('/api/dashboard/stats');
+                        const d = await r.json();
+                        if (d.ok) {
+                            businessStats.value = { ...businessStats.value, ...d.businessStats };
+                            recentTasks.value = d.recentTasks || [];
+                            overdueTasks.value = d.overdueTasks || [];
+                            reminders.value = d.reminders || [];
+                            recentDatasets.value = d.recentDatasets || [];
+                            recentReports.value = d.recentReports || [];
+                            recentActivity.value = d.recentActivity || [];
+                            unreadNotifications.value = d.unreadNotifications || { unreadCount: 0, list: [] };
+                            pendingApprovals.value = d.pendingApprovals || { count: 0, list: [] };
+                        }
+                    } catch (e) {
+                        console.error('加载看板数据失败:', e);
+                    } finally {
+                        loading.value = false;
+                    }
+                }
+
+                onMounted(() => {
+                    updateTime();
+                    setInterval(updateTime, 60000);
+                    loadData();
+                });
+
+                return {
+                    loading, currentTime,
+                    businessStats, recentTasks, overdueTasks, reminders,
+                    recentDatasets, recentReports, recentActivity,
+                    unreadNotifications, pendingApprovals,
+                    isOverdue, formatTime, getActionIcon, renderReport, loadData
+                };
+            }
+        }).mount('#app');
+    </script>
 </body>
 </html>
