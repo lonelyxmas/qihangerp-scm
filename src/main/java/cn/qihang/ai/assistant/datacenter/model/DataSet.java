@@ -1,0 +1,59 @@
+package cn.qihang.ai.assistant.datacenter.model;
+
+import com.fasterxml.jackson.annotation.JsonInclude;
+import java.util.HashMap;
+import java.util.Map;
+
+@JsonInclude(JsonInclude.Include.NON_NULL)
+public class DataSet {
+    private String id;
+    private String name;
+    private String description;
+    private String type;
+    private String status;
+    private DataSchema schema;
+    private String outputDir;
+    private Map<String, ImportConfig> importConfigs = new HashMap<>();
+    private String moduleId;
+    private int recordCount;
+    private String createdAt;
+    private String updatedAt;
+
+    public DataSet() {}
+
+    public String getId() { return id; }
+    public void setId(String id) { this.id = id; }
+
+    public String getName() { return name; }
+    public void setName(String name) { this.name = name; }
+
+    public String getDescription() { return description; }
+    public void setDescription(String description) { this.description = description; }
+
+    public String getType() { return type; }
+    public void setType(String type) { this.type = type; }
+
+    public String getStatus() { return status; }
+    public void setStatus(String status) { this.status = status; }
+
+    public DataSchema getSchema() { return schema; }
+    public void setSchema(DataSchema schema) { this.schema = schema; }
+
+    public String getOutputDir() { return outputDir; }
+    public void setOutputDir(String outputDir) { this.outputDir = outputDir; }
+
+    public Map<String, ImportConfig> getImportConfigs() { return importConfigs; }
+    public void setImportConfigs(Map<String, ImportConfig> importConfigs) { this.importConfigs = importConfigs; }
+
+    public String getModuleId() { return moduleId; }
+    public void setModuleId(String moduleId) { this.moduleId = moduleId; }
+
+    public int getRecordCount() { return recordCount; }
+    public void setRecordCount(int recordCount) { this.recordCount = recordCount; }
+
+    public String getCreatedAt() { return createdAt; }
+    public void setCreatedAt(String createdAt) { this.createdAt = createdAt; }
+
+    public String getUpdatedAt() { return updatedAt; }
+    public void setUpdatedAt(String updatedAt) { this.updatedAt = updatedAt; }
+}

@@ -1,0 +1,111 @@
+package cn.qihang.ai.assistant.service;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import cn.qihang.ai.assistant.entity.LlmProfileEntity;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.http.client.JdkClientHttpRequestFactory;
+import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestClient;
+
+import java.net.http.HttpClient;
+import java.time.Duration;
+import java.util.List;
+
+@Service
+public class ImageGenerateService {
+
+    private static final Logger log = LoggerFactory.getLogger(ImageGenerateService.class);
+    private static final ObjectMapper mapper = new ObjectMapper();
+
+    private final LlmConfigResolver configResolver;
+    private final RestClient restClient;
+
+    public ImageGenerateService(LlmConfigResolver configResolver, RestClient.Builder restClientBuilder) {
+        this.configResolver = configResolver;
+        HttpClient httpClient = HttpClient.newBuilder()
+                .connectTimeout(Duration.ofSeconds(30))
+                .build();
+        JdkClientHttpRequestFactory requestFactory = new JdkClientHttpRequestFactory(httpClient);
+        requestFactory.setReadTimeout(Duration.ofSeconds(120));
+        this.restClient = restClientBuilder.clone().requestFactory(requestFactory).build();
+    }
+
+    /**
+     * 获取所有可用的图片生成模型
+     */
+    public List<LlmProfileEntity> getImageProfiles() {
+        return configResolver.getAllProfiles().stream()
+                .filter(p -> LlmProfileEntity.TYPE_IMAGE.equals(p.getModelType()))
+                .toList();
+    }
+
+    /**
+     * 根据 profile 生成图片
+     */
+    public String generate(String prompt, String size, String profileName) {
+        LlmProfileEntity profile = null;
+
+        if (profileName != null && !profileName.isBlank()) {
+            profile = configResolver.getProfileByName(profileName);
+        }
+        if (profile == null) {
+            profile = getImageProfiles().stream().findFirst().orElse(null);
+        }
+        if (profile == null) {
+            throw new IllegalStateException("未配置图片生成模型，请在配置页添加");
+        }
+
+        String apiKey = profile.getApiKey();
+        String baseUrl = profile.getBaseUrl();
+        String model = profile.getModel();
+
+        if (apiKey == null || apiKey.isBlank()) {
+            throw new IllegalStateException("模型「" + profile.getName() + "」未配置 API Key");
+        }
+        if (baseUrl == null || baseUrl.isBlank()) {
+            throw new IllegalStateException("模型「" + profile.getName() + "」未配置 API 地址");
+        }
+
+        String url = baseUrl.replaceAll("/$", "") + "/images/generations";
+        String useSize = (size != null && !size.isBlank()) ? size : "2048x2048";
+
+        try {
+            String body = mapper.writeValueAsString(java.util.Map.of(
+                    "model", model != null ? model : "sensenova-u1-fast",
+                    "prompt", prompt,
+                    "n", 1,
+                    "size", useSize
+            ));
+
+            log.info("[ImageGen] 调用: profile={}, model={}, url={}", profile.getName(), model, url);
+
+            String responseBody = restClient.post()
+                    .uri(url)
+                    .header("Authorization", "Bearer " + apiKey)
+                    .body(body)
+                    .retrieve()
+                    .body(String.class);
+
+            JsonNode root = mapper.readTree(responseBody);
+            JsonNode data = root.get("data");
+            if (data != null && data.isArray() && data.size() > 0) {
+                JsonNode first = data.get(0);
+                if (first.has("url")) {
+                    return first.get("url").asText();
+                }
+                if (first.has("b64_json")) {
+                    return "data:image/png;base64," + first.get("b64_json").asText();
+                }
+            }
+
+            throw new RuntimeException("图片生成失败: 响应格式异常");
+        } catch (RuntimeException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("[ImageGen] 生成失败", e);
+            throw new RuntimeException("图片生成失败: " + e.getMessage(), e);
+        }
+    }
+}

@@ -367,7 +367,6 @@
            th:classappend="${requestURI == '/'} ? 'active' : ''"
            href="/" style="color:#909296;">📚 笔记库（暂无）</a>
 
-        <a th:if="${codingEnabled}" th:classappend="${requestURI == '/coding' ? 'active' : ''}" href="/coding">💻 编程AI</a>
         <a th:classappend="${#strings.startsWith(requestURI, '/config')} ? 'active' : ''" href="/config">⚙️ 配置</a>
         <a th:classappend="${requestURI == '/log' ? 'active' : ''}" href="/log">📝 日志</a>
         <a th:classappend="${requestURI == '/help' ? 'active' : ''}" href="/help">❓ 帮助</a>

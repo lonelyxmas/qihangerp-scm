@@ -35,7 +35,6 @@ java -jar target/qihang-ai-team-1.0.0.jar
         <tr><td>📋 计划</td><td><code>/planner</code></td><td>任务看板 + 定时提醒统一管理，按笔记库隔离</td></tr>
         <tr><td>📚 笔记库</td><td><code>/kb</code></td><td>笔记库列表，创建/管理多个笔记库</td></tr>
         <tr><td style="padding-left:24px;">📂 笔记库详情</td><td><code>/kb/{id}</code></td><td>单个笔记库概览、笔记目录、AI 指南、日报</td></tr>
-        <tr><td>💻 编程AI</td><td><code>/coding</code></td><td>独立飞书机器人 + Pi CLI 代码自动排查（可选开启）</td></tr>
         <tr><td>⚙️ 配置</td><td><code>/config</code></td><td>系统配置：多 LLM 模型、语义向量模型、飞书、字段标签等</td></tr>
         <tr><td>📝 日志</td><td><code>/log</code></td><td>操作日志查看</td></tr>
     </table>
@@ -46,7 +45,7 @@ java -jar target/qihang-ai-team-1.0.0.jar
     <h2>📚 多笔记库系统</h2>
     <p class="text-muted mb-2">v1.0 核心架构——一个实例同时管理多个笔记库（如工作、学习），数据、对话、目录、任务完全隔离。</p>
     <h3 style="font-size:13px;font-weight:600;margin:12px 0 8px;color:#5c5f66;">导航结构</h3>
-    <pre style="background:#1e1e2e;color:#cdd6f4;padding:12px 14px;border-radius:6px;font-size:12px;line-height:1.6;overflow-x:auto;margin:0;">[启航 AI 协作平台]  💬 对话  🖼️ 识图  🗂️ 数据  📋 计划  📚 笔记库▾  💻 编程AI  ⚙️ 配置  📝 日志
+    <pre style="background:#1e1e2e;color:#cdd6f4;padding:12px 14px;border-radius:6px;font-size:12px;line-height:1.6;overflow-x:auto;margin:0;">[启航 AI 协作平台]  💬 对话  🖼️ 识图  🗂️ 数据  📋 计划  📚 笔记库▾  ⚙️ 配置  📝 日志
                                          │
                               ┌───────────┼───────────┐
                               │ 📊 全部笔记库           │
@@ -198,17 +197,6 @@ java -jar target/qihang-ai-team-1.0.0.jar
     </ul>
 </div>
 
-<!-- 编程 AI -->
-<div class="card">
-    <h2>💻 编程 AI</h2>
-    <p class="text-muted mb-2">独立飞书机器人 + Pi CLI 代码自动排查，与笔记库系统独立。</p>
-    <ul style="padding-left:20px;margin:8px 0;">
-        <li style="font-size:13px;line-height:1.7;color:#333;margin-bottom:3px;">通过飞书机器人接收代码问题，AI 自动排查</li>
-        <li style="font-size:13px;line-height:1.7;color:#333;margin-bottom:3px;">使用 Pi CLI 执行代码分析</li>
-        <li style="font-size:13px;line-height:1.7;color:#333;margin-bottom:3px;">在配置页可选开启，独立于笔记库系统</li>
-    </ul>
-</div>
-
 <!-- 飞书集成 -->
 <div class="card">
     <h2>✈️ 飞书集成</h2>
@@ -244,7 +232,6 @@ java -jar target/qihang-ai-team-1.0.0.jar
         <tr><td>飞书消息接收</td><td>App ID / Secret / Chat ID，WebSocket 长连接接收消息</td></tr>
         <tr><td>字段标签</td><td>英文 key → 中文标签映射</td></tr>
         <tr><td>采集器输出目录</td><td>采集器数据保存的默认路径</td></tr>
-        <tr><td>编程 AI</td><td>可选开启，独立飞书机器人</td></tr>
     </table>
     <h3 style="font-size:13px;font-weight:600;margin:12px 0 8px;color:#5c5f66;">支持的 LLM 提供商</h3>
     <table class="log-table">

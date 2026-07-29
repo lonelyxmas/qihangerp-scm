@@ -11,7 +11,7 @@
         <h2>📡 状态</h2>
         <div class="status-grid">
             <div class="status-card">
-                <div class="label">编程机器人</div>
+                <div class="label">机器人</div>
                 <div class="value" th:classappend="${connected} ? 'ok' : 'no'" th:text="${connected} ? '已连接' : '未连接'"></div>
             </div>
             <div class="status-card">
@@ -51,7 +51,7 @@
     <div class="card">
         <h2>💬 使用方式</h2>
         <p style="font-size:14px;line-height:1.8;">
-            1️⃣ 在飞书群 <strong>@编程机器人</strong> 发送 bug 描述<br>
+            1️⃣ 在飞书群 <strong>@机器人</strong> 发送 bug 描述<br>
             2️⃣ 机器人自动调用 <strong>Pi CLI</strong> 排查代码<br>
             3️⃣ 排查结果以 <strong>卡片消息</strong> 回复到群中<br><br>
             <span style="background:#f0edff;color:#5c3dcf;padding:2px 8px;border-radius:4px;font-size:12px;">示例</span>
@@ -85,12 +85,11 @@
 <!-- 配置 -->
 <div class="coding-panel" id="panel-config">
     <div class="card cfg-form">
-        <h2>⚙️ 编程AI 配置</h2>
-        <div class="text-muted mb-2">此配置独立于知识库机器人，用于编程 AI 专用的飞书应用。</div>
+        <h2>⚙️ 配置</h2>
         <div style="margin-bottom:16px;">
             <label style="display:flex;align-items:center;gap:10px;cursor:pointer;font-size:14px;font-weight:500;">
                 <input type="checkbox" id="codingEnabled" th:checked="${config.codingPiEnabled}" style="width:18px;height:18px;cursor:pointer;">
-                启用编程机器人
+                启用
             </label>
         </div>
         <div class="form-group">
@@ -166,8 +165,8 @@
 <!-- 帮助 -->
 <div class="coding-panel" id="panel-help">
     <div class="card help-section">
-        <h2>📖 关于编程AI</h2>
-        <p>编程AI 是一个基于 <strong>飞书机器人</strong> + <strong>Pi CLI</strong> 的代码自动排查工具。你只需在飞书群中 @编程机器人 描述 bug，机器人自动调用 Pi CLI 分析项目代码，定位问题并给出修复建议。</p>
+        <h2>📖 关于</h2>
+        <p>本页面基于 <strong>飞书机器人</strong> + <strong>Pi CLI</strong> 的代码自动排查工具。你只需在飞书群中 @机器人 描述 bug，机器人自动调用 Pi CLI 分析项目代码，定位问题并给出修复建议。</p>
     </div>
 
     <div class="card help-section">
@@ -177,14 +176,14 @@
         <div class="step"><div class="num">3</div><div class="content"><strong>配置事件订阅</strong><p>在应用详情 → 事件订阅 → 添加 <code>im.message.receive_v1</code> 事件，推送方式选择 <strong>WebSocket</strong>。</p></div></div>
         <div class="step"><div class="num">4</div><div class="content"><strong>启用机器人并发布</strong><p>在应用详情 → 机器人 → 启用机器人能力。发布后将机器人拉入目标群。</p></div></div>
         <div class="step"><div class="num">5</div><div class="content"><strong>配置群 ID</strong><p>在配置页填入群 ID（chat_id），格式 <code>oc_xxxxxxxxxxxx</code>。</p></div></div>
-        <div class="step"><div class="num">6</div><div class="content"><strong>启动服务</strong><p>重启 启航 AI 协作平台，编程机器人 WebSocket 自动连接。即可在飞书群中 @编程机器人 开始排查代码。</p></div></div>
+        <div class="step"><div class="num">6</div><div class="content"><strong>启动服务</strong><p>重启服务后，机器人 WebSocket 自动连接。即可在飞书群中 @机器人 开始排查代码。</p></div></div>
     </div>
 
     <div class="card help-section">
         <h2>💬 使用示例</h2>
-        <blockquote>@编程机器人 登录页面报错 500，帮忙看看</blockquote>
-        <blockquote>@编程机器人 订单列表查询超时，可能是什么原因？</blockquote>
-        <blockquote>@编程机器人 用户注册后收不到验证码邮件</blockquote>
+        <blockquote>@机器人 登录页面报错 500，帮忙看看</blockquote>
+        <blockquote>@机器人 订单列表查询超时，可能是什么原因？</blockquote>
+        <blockquote>@机器人 用户注册后收不到验证码邮件</blockquote>
     </div>
 
     <div class="card help-section">

@@ -1,0 +1,621 @@
+package cn.qihang.ai.assistant.service;
+
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
+import cn.qihang.ai.assistant.config.AppConfig;
+import cn.qihang.ai.assistant.entity.CodingRecordEntity;
+import cn.qihang.ai.assistant.model.Config;
+import cn.qihang.ai.assistant.service.db.CodingRecordDbService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Service;
+
+import jakarta.annotation.PostConstruct;
+import jakarta.annotation.PreDestroy;
+import org.springframework.web.client.RestClient;
+import java.io.*;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.time.Duration;
+import java.time.LocalDateTime;
+import java.lang.reflect.Method;
+import java.time.format.DateTimeFormatter;
+import java.util.*;
+import java.util.concurrent.*;
+
+/**
+ * 代码排查飞书机器人 WebSocket 长连接
+ * 独立于知识库机器人，接收消息后调用 pi CLI 排查代码
+ * 对应 Python 版 app.py 的飞书 WebSocket + process_bug_report()
+ */
+@Service
+public class FeishuCodingBotService {
+
+    private static final Logger log = LoggerFactory.getLogger(FeishuCodingBotService.class);
+
+    private final ConfigService configService;
+    private final CodePiService codePiService;
+    private final LogService logService;
+    private final CodingRecordDbService recordDbService;
+    @SuppressWarnings("unused")
+    private final AppConfig appConfig;
+    private final RestClient restClient;
+
+    private com.lark.oapi.ws.Client wsClient;
+    private com.lark.oapi.Client client;
+    private final Set<String> processedMessages = ConcurrentHashMap.newKeySet();
+
+    private final ExecutorService messageExecutor = Executors.newFixedThreadPool(2, r -> {
+        Thread t = new Thread(r, "coding-msg");
+        t.setDaemon(true);
+        return t;
+    });
+
+    // 飞书 API token 缓存
+    private volatile String cachedToken;
+    private volatile long tokenExpiresAt;
+    private final Object tokenLock = new Object();
+
+    public FeishuCodingBotService(ConfigService configService,
+                                  CodePiService codePiService,
+                                  LogService logService,
+                                  CodingRecordDbService recordDbService,
+                                  AppConfig appConfig,
+                                  RestClient.Builder restClientBuilder) {
+        this.configService = configService;
+        this.codePiService = codePiService;
+        this.logService = logService;
+        this.recordDbService = recordDbService;
+        this.appConfig = appConfig;
+        var httpClient = java.net.http.HttpClient.newBuilder()
+                .connectTimeout(Duration.ofSeconds(10))
+                .build();
+        var factory = new org.springframework.http.client.JdkClientHttpRequestFactory(httpClient);
+        factory.setReadTimeout(Duration.ofSeconds(30));
+        this.restClient = restClientBuilder.clone().requestFactory(factory).build();
+    }
+
+    @PostConstruct
+    public void init() {
+        Config config = configService.load();
+        if (!Boolean.TRUE.equals(config.isCodingPiEnabled())) {
+            log.info("[Coding] 未启用，跳过初始化");
+            return;
+        }
+
+        String appId = config.getCodingFeishuAppId();
+        String appSecret = config.getCodingFeishuAppSecret();
+
+        if (appId == null || appId.isEmpty() || appSecret == null || appSecret.isEmpty()) {
+            log.warn("[Coding] 配置不完整，跳过初始化");
+            codingLog("配置", "App ID/Secret 未配置");
+            return;
+        }
+
+        try {
+            startLongConnection(appId, appSecret);
+        } catch (Exception e) {
+            log.error("[Coding] 初始化失败: {}", e.getMessage(), e);
+            codingLog("初始化", e.getMessage());
+        }
+    }
+
+    public void startLongConnection(String appId, String appSecret) {
+        try {
+            log.info("[Coding] 正在启动 WebSocket... appId={}",
+                    appId.substring(0, Math.min(8, appId.length())) + "...");
+
+            client = new com.lark.oapi.Client.Builder(appId, appSecret).build();
+
+            com.lark.oapi.event.EventDispatcher dispatcher =
+                    com.lark.oapi.event.EventDispatcher.newBuilder("", "")
+                    .onP2MessageReceiveV1(new com.lark.oapi.service.im.ImService.P2MessageReceiveV1Handler() {
+                        @Override
+                        public void handle(com.lark.oapi.service.im.v1.model.P2MessageReceiveV1 event) throws Exception {
+                            handleMessage(event);
+                        }
+                    })
+                    .build();
+
+            wsClient = new com.lark.oapi.ws.Client.Builder(appId, appSecret)
+                    .eventHandler(dispatcher)
+                    .build();
+
+            new Thread(() -> {
+                try {
+                    wsClient.start();
+                    log.info("[Coding] ✅ WebSocket 启动成功");
+                    codingLog("WebSocket", "启动成功");
+                } catch (Exception e) {
+                    log.error("[Coding] ❌ WebSocket 启动失败: {}", e.getMessage(), e);
+                    codingLog("WebSocket", "启动失败: " + e.getMessage());
+                }
+            }, "coding-ws-connector").start();
+
+        } catch (Exception e) {
+            log.error("[Coding] ❌ 初始化失败: {}", e.getMessage(), e);
+            codingLog("初始化", e.getMessage());
+        }
+    }
+
+    private void handleMessage(com.lark.oapi.service.im.v1.model.P2MessageReceiveV1 event) {
+        try {
+            String msgType = event.getEvent().getMessage().getMessageType();
+            String chatId = event.getEvent().getMessage().getChatId();
+            String content = event.getEvent().getMessage().getContent();
+            String chatType = event.getEvent().getMessage().getChatType();
+            String messageId = event.getEvent().getMessage().getMessageId();
+
+            if (processedMessages.contains(messageId)) return;
+            processedMessages.add(messageId);
+            if (processedMessages.size() > 1000) {
+                var it = processedMessages.iterator();
+                int toRemove = 500;
+                while (it.hasNext() && toRemove-- > 0) { it.next(); it.remove(); }
+            }
+
+            if (!"p2p".equals(chatType)) {
+                var mentions = event.getEvent().getMessage().getMentions();
+                if (mentions == null || mentions.length == 0) return;
+            }
+
+            String text = "";
+            String imagePath = null;
+
+            if ("text".equals(msgType)) {
+                try {
+                    Map<String, String> contentMap = new Gson().fromJson(content,
+                            new TypeToken<Map<String, String>>() {}.getType());
+                    text = contentMap.get("text");
+                    String imageKey = contentMap.get("image_key");
+                    if (imageKey != null && !imageKey.isEmpty()) {
+                        imagePath = downloadFeishuMedia(imageKey, "image", messageId);
+                    }
+                } catch (Exception e) {
+                    log.warn("[Coding] 解析文本消息失败: {}", e.getMessage());
+                    return;
+                }
+            } else if ("post".equals(msgType)) {
+                try {
+                    Map<String, Object> contentMap = new Gson().fromJson(content,
+                            new TypeToken<Map<String, Object>>() {}.getType());
+                    Object contentObj = contentMap.get("content");
+                    if (contentObj instanceof List) {
+                        for (Object para : (List<?>) contentObj) {
+                            if (para instanceof List) {
+                                for (Object node : (List<?>) para) {
+                                    if (node instanceof Map) {
+                                        Map<String, Object> nodeMap = (Map<String, Object>) node;
+                                        String tag = (String) nodeMap.get("tag");
+                                        if ("text".equals(tag) && nodeMap.get("text") != null) {
+                                            text += nodeMap.get("text");
+                                        } else if ("img".equals(tag) && nodeMap.get("image_key") != null) {
+                                            if (imagePath == null) {
+                                                imagePath = downloadFeishuMedia(
+                                                        (String) nodeMap.get("image_key"), "post", messageId);
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } catch (Exception e) {
+                    log.warn("[Coding] 解析富文本失败: {}", e.getMessage());
+                    return;
+                }
+            } else if ("image".equals(msgType)) {
+                try {
+                    Map<String, String> contentMap = new Gson().fromJson(content,
+                            new TypeToken<Map<String, String>>() {}.getType());
+                    String imageKey = contentMap.get("image_key");
+                    if (imageKey != null) {
+                        imagePath = downloadFeishuMedia(imageKey, "image", messageId);
+                    }
+                } catch (Exception e) {
+                    log.warn("[Coding] 解析图片消息失败: {}", e.getMessage());
+                    return;
+                }
+            } else {
+                return;
+            }
+
+            if (text == null) text = "";
+            text = text.replaceAll("@[^\\s]+\\s*", "").trim();
+            if (text.isEmpty() && imagePath == null) return;
+
+            String userMsg = (imagePath != null ? "(截图: " + imagePath + ")\n" : "") + text;
+
+            log.info("[Coding] 收到消息: {}... | chatId={} | chatType={} | msgId={}",
+                    userMsg.length() > 60 ? userMsg.substring(0, 60) + "..." : userMsg,
+                    chatId, chatType, messageId);
+            log.debug("[Coding] 原始消息: msgType={} | content={}",
+                    msgType, content.length() > 200 ? content.substring(0, 200) + "..." : content);
+
+            String fChatId = chatId, fChatType = chatType, fMsgId = messageId, fMsg = userMsg;
+            messageExecutor.execute(() -> processCodingRequest(fMsg, fChatId, fChatType, fMsgId));
+
+        } catch (Exception e) {
+            log.error("[Coding] handleMessage异常: {}", e.getMessage(), e);
+        }
+    }
+
+    private void processCodingRequest(String userMsg, String chatId, String chatType, String messageId) {
+        String projectDir = "";
+        String startTime = java.time.LocalDateTime.now()
+                .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+        Long recordId = null;
+        try {
+            sendImmediateReply(chatId, chatType, messageId);
+            Config config = configService.load();
+            projectDir = config.getCodingProjectDir();
+            int timeout = config.getCodingPiTimeout() != null ? config.getCodingPiTimeout() : 300;
+
+            if (projectDir == null || projectDir.trim().isEmpty()) {
+                sendReply(chatId, chatType, messageId, "⚠️ 请先在配置页面设置「项目目录」");
+                return;
+            }
+
+            log.info("[Coding] 开始排查: chatId={}, msgId={}, dir={}", chatId, messageId, projectDir);
+            recordId = saveRecord(userMsg, "🔄 正在排查中...", "处理中", false, "feishu", projectDir);
+            long startMs = System.currentTimeMillis();
+            CodePiService.CodePiResult result = codePiService.analyze(userMsg, projectDir, timeout);
+            long endMs = System.currentTimeMillis();
+            log.info("[Coding] 排查完成: result={}, elapsed={}, output_len={}",
+                    result.isSuccess() ? "成功" : "失败", result.getElapsedStr(),
+                    result.isSuccess() ? result.getOutput().length() : 0);
+            codingLog("排查", String.format("耗时 %s | %s | dir=%s", result.getElapsedStr(),
+                    result.isSuccess() ? "成功" : "失败", projectDir));
+
+            String endTime = java.time.LocalDateTime.now()
+                    .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+            CodingRecordEntity entity = recordId != null ? getRecordById(recordId) : null;
+
+            if (result.isSuccess()) {
+                String output = result.getOutput();
+                // 数据库存完整结果（不截断）
+                if (entity != null) {
+                    entity.setEndTime(endTime);
+                    entity.setDuration((int) ((endMs - startMs) / 1000));
+                    entity.setResponse(output);
+                    entity.setSuccess(true);
+                    entity.setElapsed(result.getElapsedStr());
+                    updateRecord(entity);
+                }
+                // 飞书卡片截断展示
+                String cardOutput = output;
+                if (cardOutput.length() > 15000) cardOutput = cardOutput.substring(0, 15000) + "\n\n...（截断）";
+                String cardBody = "**排查结果如下：**\n" + cardOutput;
+                sendCardReply(chatId, chatType, messageId, cardBody, "代码排查 ⏱" + result.getElapsedStr());
+            } else {
+                String err = result.getError() != null ? result.getError() : "未知错误";
+                sendReply(chatId, chatType, messageId, "⚠️ 排查失败（" + result.getElapsedStr() + "）：" + err);
+                if (entity != null) {
+                    entity.setEndTime(endTime);
+                    entity.setDuration((int) ((endMs - startMs) / 1000));
+                    entity.setResponse("失败: " + err);
+                    entity.setSuccess(false);
+                    entity.setElapsed(result.getElapsedStr());
+                    updateRecord(entity);
+                }
+            }
+        } catch (Exception e) {
+            log.error("[Coding] 排查异常: {}", e.getMessage(), e);
+            sendReply(chatId, chatType, messageId, "❌ 排查异常: " + e.getMessage());
+            if (recordId != null) {
+                CodingRecordEntity entity = getRecordById(recordId);
+                if (entity != null) {
+                    entity.setEndTime(java.time.LocalDateTime.now()
+                            .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
+                    entity.setResponse("异常: " + e.getMessage());
+                    entity.setSuccess(false);
+                    entity.setElapsed("失败");
+                    updateRecord(entity);
+                }
+            }
+        }
+    }
+
+    // ===== 消息发送 =====
+
+    private void sendImmediateReply(String chatId, String chatType, String messageId) {
+        try {
+            String waitingMsg = "{\"text\":\"🔍 正在排查中，请稍候...\"}";
+            if ("p2p".equals(chatType)) {
+                var req = com.lark.oapi.service.im.v1.model.CreateMessageReq.newBuilder()
+                        .receiveIdType(com.lark.oapi.service.im.v1.enums.ReceiveIdTypeEnum.CHAT_ID.getValue())
+                        .createMessageReqBody(com.lark.oapi.service.im.v1.model.CreateMessageReqBody.newBuilder()
+                                .receiveId(chatId).msgType("text").content(waitingMsg).build())
+                        .build();
+                var resp = client.im().message().create(req);
+                if (resp.getData() != null && resp.getData().getMessageId() != null)
+                    processedMessages.add(resp.getData().getMessageId());
+            } else {
+                var req = com.lark.oapi.service.im.v1.model.ReplyMessageReq.newBuilder()
+                        .messageId(messageId)
+                        .replyMessageReqBody(com.lark.oapi.service.im.v1.model.ReplyMessageReqBody.newBuilder()
+                                .content(waitingMsg).msgType("text").build())
+                        .build();
+                client.im().message().reply(req);
+            }
+        } catch (Exception e) {
+            log.warn("[Coding] 发送等待提示失败: {}", e.getMessage());
+        }
+    }
+
+    private void sendReply(String chatId, String chatType, String messageId, String text) {
+        try {
+            String content = "{\"text\":\"" + escapeJson(text) + "\"}";
+            if ("p2p".equals(chatType)) {
+                var req = com.lark.oapi.service.im.v1.model.CreateMessageReq.newBuilder()
+                        .receiveIdType(com.lark.oapi.service.im.v1.enums.ReceiveIdTypeEnum.CHAT_ID.getValue())
+                        .createMessageReqBody(com.lark.oapi.service.im.v1.model.CreateMessageReqBody.newBuilder()
+                                .receiveId(chatId).msgType("text").content(content).build())
+                        .build();
+                var resp = client.im().message().create(req);
+                if (resp.getData() != null && resp.getData().getMessageId() != null)
+                    processedMessages.add(resp.getData().getMessageId());
+            } else {
+                var req = com.lark.oapi.service.im.v1.model.ReplyMessageReq.newBuilder()
+                        .messageId(messageId)
+                        .replyMessageReqBody(com.lark.oapi.service.im.v1.model.ReplyMessageReqBody.newBuilder()
+                                .content(content).msgType("text").build())
+                        .build();
+                client.im().message().reply(req);
+            }
+        } catch (Exception e) {
+            log.error("[Coding] 发送回复失败: {}", e.getMessage());
+        }
+    }
+
+    private void sendCardReply(String chatId, String chatType, String messageId, String md, String title) {
+        String card = String.format(
+                "{\"config\":{\"wide_screen_mode\":true},\"header\":{\"title\":{\"tag\":\"plain_text\",\"content\":\"%s\"},\"template\":\"blue\"},\"elements\":[{\"tag\":\"markdown\",\"content\":\"%s\"}]}",
+                escapeJson(title), escapeJson(md));
+        try {
+            if ("p2p".equals(chatType)) {
+                var req = com.lark.oapi.service.im.v1.model.CreateMessageReq.newBuilder()
+                        .receiveIdType(com.lark.oapi.service.im.v1.enums.ReceiveIdTypeEnum.CHAT_ID.getValue())
+                        .createMessageReqBody(com.lark.oapi.service.im.v1.model.CreateMessageReqBody.newBuilder()
+                                .receiveId(chatId).msgType("interactive").content(card).build())
+                        .build();
+                var resp = client.im().message().create(req);
+                if (resp.getData() != null && resp.getData().getMessageId() != null)
+                    processedMessages.add(resp.getData().getMessageId());
+            } else {
+                var req = com.lark.oapi.service.im.v1.model.ReplyMessageReq.newBuilder()
+                        .messageId(messageId)
+                        .replyMessageReqBody(com.lark.oapi.service.im.v1.model.ReplyMessageReqBody.newBuilder()
+                                .content(card).msgType("interactive").build())
+                        .build();
+                client.im().message().reply(req);
+            }
+        } catch (Exception e) {
+            log.warn("[Coding] 卡片发送失败，降级为文本: {}", e.getMessage());
+            sendReply(chatId, chatType, messageId, md);
+        }
+    }
+
+    public void sendTestMessage(String chatId, String text) throws Exception {
+        String content = "{\"text\":\"" + escapeJson(text) + "\"}";
+        var req = com.lark.oapi.service.im.v1.model.CreateMessageReq.newBuilder()
+                .receiveIdType(com.lark.oapi.service.im.v1.enums.ReceiveIdTypeEnum.CHAT_ID.getValue())
+                .createMessageReqBody(com.lark.oapi.service.im.v1.model.CreateMessageReqBody.newBuilder()
+                        .receiveId(chatId).msgType("text").content(content).build())
+                .build();
+        var resp = client.im().message().create(req);
+        if (resp.getCode() != 0) {
+            throw new RuntimeException("飞书API错误: " + resp.getCode() + " " + resp.getMsg());
+        }
+    }
+
+    // ===== 飞书文件下载 =====
+
+    private String downloadFeishuMedia(String fileKey, String msgType, String messageId) {
+        Config config = configService.load();
+        String projectDir = config.getCodingProjectDir();
+        if (projectDir == null || projectDir.trim().isEmpty()) return null;
+
+        File uploadDir = new File(projectDir, ".feishu_uploads");
+        uploadDir.mkdirs();
+
+        String token = getTenantToken();
+        if (token == null) return null;
+
+        try {
+            String url;
+            if (messageId != null && ("image".equals(msgType) || "post".equals(msgType))) {
+                url = "https://open.feishu.cn/open-apis/im/v1/messages/"
+                        + URLEncoder.encode(messageId, "UTF-8") + "/resources/"
+                        + URLEncoder.encode(fileKey, "UTF-8") + "?type=image";
+            } else if ("image".equals(msgType)) {
+                url = "https://open.feishu.cn/open-apis/im/v1/images/" + URLEncoder.encode(fileKey, "UTF-8");
+            } else {
+                url = "https://open.feishu.cn/open-apis/im/v1/files/" + URLEncoder.encode(fileKey, "UTF-8") + "?type=file";
+            }
+
+            var entity = restClient.get()
+                    .uri(url)
+                    .header("Authorization", "Bearer " + token)
+                    .retrieve()
+                    .toEntity(byte[].class);
+
+            if (!entity.getStatusCode().is2xxSuccessful()) {
+                log.warn("[Coding] 下载媒体失败 HTTP {}: {}", entity.getStatusCode(), "响应异常");
+                return null;
+            }
+
+            byte[] data = entity.getBody();
+            if (data.length == 0) return null;
+
+            String ext = guessExt(data);
+            String filename = fileKey.substring(0, Math.min(20, fileKey.length())) + "_"
+                    + System.currentTimeMillis() + "." + ext;
+            File outFile = new File(uploadDir, filename);
+            try (FileOutputStream fos = new FileOutputStream(outFile)) {
+                fos.write(data);
+            }
+            return outFile.getAbsolutePath();
+
+        } catch (Exception e) {
+            log.warn("[Coding] 下载媒体失败: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    private String guessExt(byte[] data) {
+        if (data.length < 4) return "bin";
+        if (data[0] == (byte)0x89 && data[1] == (byte)0x50 && data[2] == (byte)0x4E && data[3] == (byte)0x47) return "png";
+        if (data[0] == (byte)0xFF && data[1] == (byte)0xD8) return "jpg";
+        if (data[0] == (byte)0x47 && data[1] == (byte)0x49 && data[2] == (byte)0x46) return "gif";
+        if (data[0] == (byte)0x52 && data[1] == (byte)0x49 && data[2] == (byte)0x46 && data[3] == (byte)0x46) return "webp";
+        return "bin";
+    }
+
+    private String getTenantToken() {
+        if (cachedToken != null && System.currentTimeMillis() < tokenExpiresAt) {
+            return cachedToken;
+        }
+        synchronized (tokenLock) {
+            if (cachedToken != null && System.currentTimeMillis() < tokenExpiresAt) {
+                return cachedToken;
+            }
+            try {
+                Config config = configService.load();
+                String appId = config.getCodingFeishuAppId();
+                String appSecret = config.getCodingFeishuAppSecret();
+                String body = "{\"app_id\":\"" + appId + "\",\"app_secret\":\"" + appSecret + "\"}";
+                String resp = restClient.post()
+                        .uri("https://open.feishu.cn/open-apis/auth/v3/tenant_access_token/internal")
+                        .header("Content-Type", "application/json")
+                        .body(body)
+                        .retrieve()
+                        .body(String.class);
+                @SuppressWarnings("unchecked")
+                Map<String, Object> json = new Gson().fromJson(resp, Map.class);
+                String token = (String) json.get("tenant_access_token");
+                if (token != null) {
+                    cachedToken = token;
+                    tokenExpiresAt = System.currentTimeMillis() + 5400_000;
+                    return token;
+                }
+            } catch (Exception e) {
+                log.warn("[Coding] 获取token失败: {}", e.getMessage());
+            }
+            return null;
+        }
+    }
+
+    // ===== 记录管理 =====
+
+    public void codingLog(String action, String detail) {
+        log.info("[Coding] {} | {}", action, detail);
+        logService.add("代码排查", action, detail);
+    }
+
+    public Long saveRecord(String message, String response, String elapsed, boolean success, String source, String projectDir) {
+        try {
+            String now = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+            CodingRecordEntity entity = new CodingRecordEntity();
+            entity.setTime(now);
+            entity.setStartTime(now);
+            entity.setAiEngine("pi");
+            entity.setMessage(message.length() > 1000 ? message.substring(0, 1000) : message);
+            entity.setResponse(response.length() > 15000 ? response.substring(0, 15000) : response);
+            entity.setElapsed(elapsed);
+            entity.setSuccess(success);
+            entity.setSource(source);
+            entity.setProjectDir(projectDir != null && projectDir.length() > 200 ? projectDir.substring(0, 200) : projectDir);
+            recordDbService.save(entity);
+            log.debug("[Coding] 记录已保存: source={}, success={}, elapsed={}, id={}", source, success, elapsed, entity.getId());
+            return entity.getId();
+        } catch (Exception e) {
+            log.error("[Coding] 保存记录失败: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    public List<CodingRecordEntity> getRecentRecords(int limit) {
+        try {
+            return recordDbService.findRecent(limit);
+        } catch (Exception e) {
+            log.warn("[Coding] 查询记录失败: {}", e.getMessage());
+            return List.of();
+        }
+    }
+
+    public List<CodingRecordEntity> getAllRecords() {
+        try {
+            return recordDbService.list();
+        } catch (Exception e) {
+            log.warn("[Coding] 查询全部记录失败: {}", e.getMessage());
+            return List.of();
+        }
+    }
+
+    public void updateRecord(CodingRecordEntity entity) {
+        try {
+            recordDbService.updateById(entity);
+        } catch (Exception e) {
+            log.error("[Coding] 更新记录失败: {}", e.getMessage());
+        }
+    }
+
+    public CodingRecordEntity getRecordById(Long id) {
+        try {
+            return recordDbService.getById(id);
+        } catch (Exception e) {
+            log.warn("[Coding] 查询记录失败: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    // ===== 工具方法 =====
+
+    private String escapeJson(String s) {
+        if (s == null) return "";
+        return s.replace("\\", "\\\\")
+                .replace("\"", "\\\"")
+                .replace("\n", "\\n")
+                .replace("\r", "\\r")
+                .replace("\t", "\\t");
+    }
+
+    @PreDestroy
+    public void destroy() {
+        if (wsClient != null) {
+            // 直接调用 SDK 的 close() 方法（如果存在），否则跳过
+            try {
+                Method method = wsClient.getClass().getDeclaredMethod("stop");
+                method.setAccessible(true);
+                method.invoke(wsClient);
+            } catch (Exception e) {
+                log.info("[Coding] SDK stop() 不可用，依赖 JVM 清理");
+            }
+            wsClient = null;
+        }
+        messageExecutor.shutdown();
+        log.info("[Coding] 已关闭");
+    }
+
+    private void closeWsOnly() {
+        if (wsClient != null) {
+            try { wsClient.getClass().getMethod("stop").invoke(wsClient); } catch (Exception ignored) {}
+            wsClient = null;
+        }
+    }
+
+    public void restart() {
+        closeWsOnly();
+        Config config = configService.load();
+        String appId = config.getCodingFeishuAppId();
+        String appSecret = config.getCodingFeishuAppSecret();
+        if (appId != null && !appId.isEmpty() && appSecret != null && !appSecret.isEmpty()) {
+            startLongConnection(appId, appSecret);
+        }
+    }
+
+    public boolean isConnected() {
+        return wsClient != null;
+    }
+}

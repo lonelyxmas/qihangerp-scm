@@ -495,10 +495,6 @@
                style="display:flex;align-items:center;gap:10px;padding:8px 16px;font-size:13px;color:#5c5f66;text-decoration:none;">
                 <span class="nav-icon" style="width:18px;text-align:center;font-size:14px;">⚙️</span><span>配置</span>
             </a>
-            <a th:if="${codingEnabled}" th:classappend="${requestURI == '/coding'} ? 'active' : ''" href="/coding"
-               style="display:flex;align-items:center;gap:10px;padding:8px 16px;font-size:13px;color:#5c5f66;text-decoration:none;">
-                <span class="nav-icon" style="width:18px;text-align:center;font-size:14px;">💻</span><span>编程AI</span>
-            </a>
             <a th:classappend="${requestURI == '/log'} ? 'active' : ''" href="/log"
                style="display:flex;align-items:center;gap:10px;padding:8px 16px;font-size:13px;color:#5c5f66;text-decoration:none;">
                 <span class="nav-icon" style="width:18px;text-align:center;font-size:14px;">📝</span><span>日志</span>
