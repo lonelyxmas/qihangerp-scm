@@ -462,12 +462,7 @@
                    th:classappend="${requestURI == '/image/generate'} ? 'active' : ''">
                     <span class="nav-icon">🎨</span><span>AI 绘图</span>
                 </a>
-                <a href="/image/solve"
-                   th:classappend="${requestURI == '/image/solve'} ? 'active' : ''">
-                    <span class="nav-icon">📷</span><span>拍照解题</span>
-                </a>
-            </div>
-
+                
             <div class="sidebar-group">
                 <div class="sidebar-group-label">数据</div>
                 <th:block th:each="ds : ${dataSets}">
