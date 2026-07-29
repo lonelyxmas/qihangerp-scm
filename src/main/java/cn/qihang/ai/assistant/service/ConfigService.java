@@ -62,25 +62,6 @@ public class ConfigService {
         if (config.isFeishuPollingEnabled() == null) {
             config.setFeishuPollingEnabled(defaultConfig.isFeishuPollingEnabled());
         }
-        // 代码排查默认值
-        if (config.isCodingPiEnabled() == null) {
-            config.setCodingPiEnabled(false);
-        }
-        if (config.getCodingPiTimeout() == null || config.getCodingPiTimeout() <= 0) {
-            config.setCodingPiTimeout(300);
-        }
-        if (config.getCodingFeishuAppId() == null) {
-            config.setCodingFeishuAppId("");
-        }
-        if (config.getCodingFeishuAppSecret() == null) {
-            config.setCodingFeishuAppSecret("");
-        }
-        if (config.getCodingFeishuChatId() == null) {
-            config.setCodingFeishuChatId("");
-        }
-        if (config.getCodingProjectDir() == null) {
-            config.setCodingProjectDir("");
-        }
     }
 
     public String getNotesDir() {

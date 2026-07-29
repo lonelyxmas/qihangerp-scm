@@ -26,14 +26,6 @@ public class Config {
     private String embeddingApiKey = "";
     private String embeddingProvider = "";
 
-    // 代码排查配置
-    private String codingFeishuAppId = "";
-    private String codingFeishuAppSecret = "";
-    private String codingFeishuChatId = "";
-    private String codingProjectDir = "";
-    private Boolean codingPiEnabled = false;
-    private Integer codingPiTimeout = 300;
-
     public Config() {}
 
     public static Config defaultConfig(String webhookUrl, String notesDir) {
@@ -73,17 +65,4 @@ public class Config {
     public void setEmbeddingApiKey(String v) { this.embeddingApiKey = v; }
     public String getEmbeddingProvider() { return embeddingProvider; }
     public void setEmbeddingProvider(String v) { this.embeddingProvider = v; }
-
-    public String getCodingFeishuAppId() { return codingFeishuAppId; }
-    public void setCodingFeishuAppId(String v) { this.codingFeishuAppId = v; }
-    public String getCodingFeishuAppSecret() { return codingFeishuAppSecret; }
-    public void setCodingFeishuAppSecret(String v) { this.codingFeishuAppSecret = v; }
-    public String getCodingFeishuChatId() { return codingFeishuChatId; }
-    public void setCodingFeishuChatId(String v) { this.codingFeishuChatId = v; }
-    public String getCodingProjectDir() { return codingProjectDir; }
-    public void setCodingProjectDir(String v) { this.codingProjectDir = v; }
-    public Boolean isCodingPiEnabled() { return codingPiEnabled; }
-    public void setCodingPiEnabled(Boolean v) { this.codingPiEnabled = v; }
-    public Integer getCodingPiTimeout() { return codingPiTimeout; }
-    public void setCodingPiTimeout(Integer v) { this.codingPiTimeout = v; }
 }

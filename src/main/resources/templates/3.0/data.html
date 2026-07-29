@@ -439,6 +439,7 @@ async function openDataset(dsId) {
     if (!ds) return;
     currentDs = ds;
     currentDsId = dsId;
+    localStorage.setItem('lastDatasetId', dsId);
     renderModuleList();
     await loadRecords(0);
 }
@@ -454,6 +455,7 @@ function showDatasetList() {
 function renderDatasetView() {
     if (!currentDs) return '';
     let html = '<div class="toolbar">';
+    html += '<button class="btn btn-sm btn-primary" onclick="showAddRecord()">+ 新增记录</button>';
     html += '<button class="btn btn-sm btn-secondary" onclick="showDatasetList()">← 数据集列表</button>';
     html += '<div class="search-box"><input type="text" id="recordSearch" placeholder="🔍 搜索记录..." onkeyup="handleRecordSearch(event)"></div>';
     html += '<button class="btn btn-sm btn-secondary" onclick="handleRecordSearchBtn()">搜索</button>';
@@ -517,7 +519,7 @@ async function loadRecords(page) {
     } else {
         allRecords = [];
     }
-    renderDatasetView();
+    document.getElementById('detailPanel').innerHTML = renderDatasetView();
 }
 
 function handleRecordSearch(e) {
@@ -848,6 +850,14 @@ async function doImport() {
 
 async function init() {
     await loadModules();
+    // 自动选中上次浏览的数据集，否则选第一个
+    const lastId = localStorage.getItem('lastDatasetId');
+    const target = lastId ? allDatasets.find(function(d){ return d.id === lastId; }) : null;
+    if (target) {
+        await openDataset(target.id);
+    } else if (allDatasets.length > 0) {
+        await openDataset(allDatasets[0].id);
+    }
 }
 init();
 </script>

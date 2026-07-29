@@ -172,26 +172,6 @@ CREATE TABLE IF NOT EXISTS `data_center_records` (
     KEY `idx_approval_status` (`approval_status`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='数据中心 - 数据集记录';
 
--- 11. 编码记录
-CREATE TABLE IF NOT EXISTS `coding_records` (
-    `id`          BIGINT       NOT NULL AUTO_INCREMENT,
-    `time`        VARCHAR(30)  DEFAULT NULL COMMENT '时间',
-    `start_time`  VARCHAR(30)  DEFAULT NULL COMMENT '开始时间',
-    `end_time`    VARCHAR(30)  DEFAULT NULL COMMENT '结束时间',
-    `duration`    INT          DEFAULT NULL COMMENT '耗时（秒）',
-    `ai_engine`   VARCHAR(100) DEFAULT NULL COMMENT 'AI 引擎',
-    `message`     LONGTEXT     DEFAULT NULL COMMENT '用户消息',
-    `response`    LONGTEXT     DEFAULT NULL COMMENT 'AI 响应',
-    `elapsed`     VARCHAR(50)  DEFAULT NULL COMMENT '耗时描述',
-    `success`     TINYINT      DEFAULT 1 COMMENT '是否成功 0/1',
-    `source`      VARCHAR(50)  DEFAULT NULL COMMENT '来源: debug / feishu',
-    `project_dir` VARCHAR(500) DEFAULT NULL COMMENT '项目目录',
-    PRIMARY KEY (`id`),
-    KEY `idx_source` (`source`),
-    KEY `idx_ai_engine` (`ai_engine`),
-    KEY `idx_time` (`time`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='编码记录';
-
 -- 12. 采集任务
 CREATE TABLE IF NOT EXISTS `collector_tasks` (
     `id`              BIGINT       NOT NULL AUTO_INCREMENT,
