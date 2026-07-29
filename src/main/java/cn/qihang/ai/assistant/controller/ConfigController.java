@@ -39,8 +39,7 @@ public class ConfigController {
         model.addAttribute("config", configService.load());
         List<LlmProfileEntity> allProfiles = llmConfigResolver.getAllProfiles();
         model.addAttribute("llm_models", allProfiles);
-        model.addAttribute("pageTitle", "配置");
-        model.addAttribute("contentFragment", "1.0/config");
-        return "1.0/layout";
+        model.addAttribute("currentNav", "config");
+        return "3.0/config";
     }
 }
