@@ -456,7 +456,6 @@ function renderDatasetView() {
     if (!currentDs) return '';
     let html = '<div class="toolbar">';
     html += '<button class="btn btn-sm btn-primary" onclick="showAddRecord()">+ 新增记录</button>';
-    html += '<button class="btn btn-sm btn-secondary" onclick="showDatasetList()">← 数据集列表</button>';
     html += '<div class="search-box"><input type="text" id="recordSearch" placeholder="🔍 搜索记录..." onkeyup="handleRecordSearch(event)"></div>';
     html += '<button class="btn btn-sm btn-secondary" onclick="handleRecordSearchBtn()">搜索</button>';
     if (IS_ADMIN) {
