@@ -9,8 +9,7 @@ public class HelpController {
 
     @GetMapping("/help")
     public String helpPage(Model model) {
-        model.addAttribute("pageTitle", "帮助");
-        model.addAttribute("contentFragment", "1.0/help");
-        return "1.0/layout";
+        model.addAttribute("currentNav", "help");
+        return "3.0/help";
     }
 }
