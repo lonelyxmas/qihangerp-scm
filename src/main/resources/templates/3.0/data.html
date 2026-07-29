@@ -465,7 +465,7 @@ function renderDatasetView() {
     html += '<button class="btn btn-sm btn-secondary" onclick="showImportModal()">📥 导入</button>';
     html += '</div>';
     
-    html += '<table class="data-table"><thead><tr><th>状态</th>';
+    html += '<table class="data-table"><thead><tr><th>编码</th><th>类型</th><th>状态</th>';
     const fields = getFields(currentDs);
     for (let i = 0; i < fields.length; i++) {
         const f = fields[i];
@@ -477,7 +477,9 @@ function renderDatasetView() {
     
     for (let i = 0; i < allRecords.length; i++) {
         const rec = allRecords[i];
-        html += '<tr><td><span class="badge badge-gray">' + (rec.status || '无') + '</span></td>';
+        html += '<tr><td>' + (rec.recordNum || rec['编号'] || '') + '</td>';
+        html += '<td><span class="badge badge-gray">' + (rec.type || rec['类型'] || '') + '</span></td>';
+        html += '<td><span class="badge badge-gray">' + (rec.status || rec['状态'] || '') + '</span></td>';
         for (let j = 0; j < fields.length; j++) {
             const f = fields[j];
             if (f.name !== 'status' && f.name !== 'type' && f.name !== 'id') {
@@ -670,7 +672,19 @@ function renderRecordForm(record) {
         return;
     }
     
-    let html = '<div class="form-group"><label>状态</label><input id="recordStatus" type="text" value="' + (record ? record.status : '进行中') + '"></div>';
+    let html = '';
+    
+    const recordNum = record ? (record.recordNum || record['编号'] || '') : '';
+    html += '<div class="form-group"><label>编码</label><input id="recordNum" type="text" value="' + recordNum + '" placeholder="自动生成"></div>';
+    
+    const typeOpts = currentDs.schema.typeOptions || [];
+    const curType = record ? (record.type || record['类型'] || '') : '';
+    html += '<div class="form-group"><label>类型</label><select id="recordType"><option value="">请选择</option>';
+    for (let i = 0; i < typeOpts.length; i++) {
+        const sel = typeOpts[i] === curType ? ' selected' : '';
+        html += '<option value="' + typeOpts[i] + '"' + sel + '>' + typeOpts[i] + '</option>';
+    }
+    html += '</select></div>';
     
     const fields = currentDs.schema.fields;
     for (let i = 0; i < fields.length; i++) {
@@ -680,6 +694,15 @@ function renderRecordForm(record) {
         html += '<div class="form-group"><label>' + (f.displayName || f.name) + '</label><input id="recordField_' + f.name + '" type="text" value="' + val + '"></div>';
     }
     
+    const statusOpts = currentDs.schema.statusOptions || [];
+    const curStatus = record ? (record.status || record['状态'] || '') : '';
+    html += '<div class="form-group"><label>状态</label><select id="recordStatus"><option value="">请选择</option>';
+    for (let i = 0; i < statusOpts.length; i++) {
+        const sel = statusOpts[i] === curStatus ? ' selected' : '';
+        html += '<option value="' + statusOpts[i] + '"' + sel + '>' + statusOpts[i] + '</option>';
+    }
+    html += '</select></div>';
+    
     body.innerHTML = html;
 }
 
@@ -688,16 +711,19 @@ function viewRecord(id) {
     if (!viewingRecord) return;
     
     const body = document.getElementById('recordDetailBody');
-    let html = '<div class="detail-row"><div class="label">状态</div><div class="value"><span class="badge badge-gray">' + (viewingRecord.status || '无') + '</span></div></div>';
+    let html = '<div class="detail-row"><div class="label">编码</div><div class="value">' + (viewingRecord.recordNum || viewingRecord['编号'] || '无') + '</div></div>';
+    html += '<div class="detail-row"><div class="label">类型</div><div class="value"><span class="badge badge-gray">' + (viewingRecord.type || viewingRecord['类型'] || '无') + '</span></div></div>';
     
     if (currentDs && currentDs.schema && currentDs.schema.fields) {
         const fields = currentDs.schema.fields;
         for (let i = 0; i < fields.length; i++) {
             const f = fields[i];
-            if (f.name === 'status') continue;
+            if (f.name === 'status' || f.name === 'type') continue;
             html += '<div class="detail-row"><div class="label">' + (f.displayName || f.name) + '</div><div class="value">' + (viewingRecord[f.name] || viewingRecord[f.displayName] || '') + '</div></div>';
         }
     }
+    
+    html += '<div class="detail-row"><div class="label">状态</div><div class="value"><span class="badge badge-gray">' + (viewingRecord.status || viewingRecord['状态'] || '无') + '</span></div></div>';
     
     body.innerHTML = html;
     showModal('detailModal');
@@ -728,8 +754,9 @@ async function saveRecord() {
     if (!currentDs) return;
     
     const record = {
+        type: document.getElementById('recordType').value,
         status: document.getElementById('recordStatus').value,
-        type: currentDs.type || ''
+        recordNum: document.getElementById('recordNum').value
     };
     
     if (currentDs.schema && currentDs.schema.fields) {
@@ -753,7 +780,7 @@ async function saveRecord() {
     const r = await fetch(url, {
         method: method,
         headers: { 'Content-Type': 'application/json' },
-        body: editingRecordId ? JSON.stringify(record) : JSON.stringify({ data: record, useAi: false })
+        body: JSON.stringify({ data: record })
     });
     const d = await r.json();
     if (d.ok) {

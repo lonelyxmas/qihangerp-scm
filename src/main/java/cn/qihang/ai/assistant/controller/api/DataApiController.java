@@ -361,6 +361,29 @@ public class DataApiController {
         return ResponseEntity.ok(Map.of("ok", true));
     }
 
+    @PostMapping("/datasets/{id}/records")
+    public ResponseEntity<Map<String, Object>> createRecord(
+            @PathVariable String id,
+            @RequestBody Map<String, Object> body) {
+        try {
+            DataSet ds = dataSetService.getDataset(id);
+            if (ds == null) {
+                return ResponseEntity.ok(Map.of("ok", false, "error", "数据集不存在"));
+            }
+
+            @SuppressWarnings("unchecked")
+            Map<String, Object> record = (Map<String, Object>) body.get("data");
+            if (record == null) {
+                return ResponseEntity.ok(Map.of("ok", false, "error", "记录数据不能为空"));
+            }
+
+            int count = dataSetService.addRecords(id, List.of(record), "manual");
+            return ResponseEntity.ok(Map.of("ok", true, "count", count));
+        } catch (Exception e) {
+            return ResponseEntity.ok(Map.of("ok", false, "error", e.getMessage()));
+        }
+    }
+
     @PutMapping("/datasets/{id}/records/{recordId}")
     public ResponseEntity<Map<String, Object>> updateRecord(
             @PathVariable String id,
