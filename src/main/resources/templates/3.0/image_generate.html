@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>启航 AI 协作平台 - AI 绘图</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --primary: #6366f1;
+            --primary-light: #818cf8;
+            --primary-dark: #4f46e5;
+            --bg-main: #f8fafc;
+            --bg-sidebar: #ffffff;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --text-muted: #94a3b8;
+            --border: #e2e8f0;
+            --hover: #f1f5f9;
+            --radius-sm: 8px;
+            --radius-md: 12px;
+            --radius-lg: 16px;
+            --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+            --shadow-md: 0 4px 6px rgba(0,0,0,0.05);
+            --shadow-lg: 0 10px 15px rgba(0,0,0,0.08);
+        }
+        html, body { height: 100%; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+        body { display: flex; background: var(--bg-main); color: var(--text-primary); }
+
+        .sidebar { width: 64px; background: var(--bg-sidebar); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 16px 0; flex-shrink: 0; align-items: center; }
+        .sidebar-header { padding: 0 8px 16px; }
+        .sidebar-title { font-size: 20px; font-weight: 700; color: var(--primary); display: flex; align-items: center; gap: 8px; }
+        .sidebar-title svg { width: 24px; height: 24px; }
+        .nav-menu { flex: 1; overflow-y: auto; padding: 8px 0; display: flex; flex-direction: column; align-items: center; }
+        .nav-item { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px 8px; cursor: pointer; color: var(--text-secondary); font-size: 11px; transition: all 0.2s; border-radius: var(--radius-md); text-decoration: none; width: 48px; }
+        .nav-item:hover { background: var(--hover); color: var(--text-primary); }
+        .nav-item.active { background: rgba(99, 102, 241, 0.1); color: var(--primary); font-weight: 500; }
+        .nav-item svg { width: 20px; height: 20px; flex-shrink: 0; }
+        .sidebar-footer { display: flex; flex-direction: column; align-items: center; gap: 4px; padding-bottom: 16px; }
+
+        .main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+        .content-header { padding: 16px 24px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; background: white; }
+        .content-title { font-size: 18px; font-weight: 600; color: var(--text-primary); }
+
+        .content-body { flex: 1; overflow-y: auto; padding: 24px; background: #f5f5f5; }
+
+        .card { background: white; border-radius: var(--radius-lg); border: 1px solid var(--border); box-shadow: var(--shadow-sm); padding: 24px; }
+        .card-header { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+        .card-title { font-size: 16px; font-weight: 600; }
+
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; font-size: 13px; font-weight: 500; color: var(--text-secondary); margin-bottom: 6px; }
+        .form-control { width: 100%; padding: 10px 14px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 14px; outline: none; transition: all 0.2s; font-family: inherit; }
+        .form-control:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(99,102,241,0.1); }
+        select.form-control { background: white; cursor: pointer; }
+        textarea.form-control { resize: vertical; }
+
+        .btn { padding: 8px 16px; border: none; border-radius: var(--radius-sm); font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 6px; }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-primary:hover { background: var(--primary-dark); }
+        .btn-secondary { background: white; color: var(--text-secondary); border: 1px solid var(--border); }
+        .btn-secondary:hover { background: var(--hover); }
+
+        .row { display: flex; gap: 12px; align-items: end; }
+        .row .form-group { flex: 1; }
+
+        .empty-state { text-align: center; padding: 60px 20px; color: var(--text-muted); }
+        .empty-icon { font-size: 48px; margin-bottom: 12px; opacity: 0.5; }
+        .empty-title { font-size: 15px; color: var(--text-secondary); }
+
+        .result-area { display: none; text-align: center; margin-top: 16px; }
+        .result-area img { max-width: 100%; border-radius: var(--radius-md); border: 1px solid var(--border); }
+        .result-actions { margin-top: 12px; }
+
+        .status-msg { display: none; padding: 10px 16px; border-radius: var(--radius-sm); font-size: 13px; margin-bottom: 12px; }
+        .status-msg.info { display: block; background: rgba(99,102,241,0.08); color: var(--primary); }
+        .status-msg.success { display: block; background: #dcfce7; color: #166534; }
+        .status-msg.error { display: block; background: #fee2e2; color: #991b1b; }
+
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+    </style>
+</head>
+<body>
+    <th:block th:replace="3.0/fragments/sidebar::sidebar(${currentNav})"></th:block>
+    
+    <main class="main-content">
+        <div class="content-header">
+            <h1 class="content-title">AI 绘图</h1>
+        </div>
+        
+        <div class="content-body">
+            <div class="card" style="max-width:800px;">
+                <div class="card-header">
+                    <span style="font-size:24px;">🎨</span>
+                    <span class="card-title">AI 绘图</span>
+                </div>
+
+                <div th:if="${#lists.isEmpty(imageProfiles)}" style="text-align:center;padding:30px;background:#fff3cd;border-radius:8px;color:#856404;font-size:13px;">
+                    暂无可用的图片生成模型
+                </div>
+
+                <div th:unless="${#lists.isEmpty(imageProfiles)}">
+                    <div class="form-group">
+                        <label>描述你想生成的图片</label>
+                        <textarea id="genPrompt" class="form-control" rows="3" placeholder="例如：一只橘猫坐在书桌上，窗外是夕阳，日系插画风格"></textarea>
+                    </div>
+
+                    <div class="row">
+                        <div class="form-group">
+                            <label>模型</label>
+                            <select id="genProfile" class="form-control">
+                                <option th:each="p : ${imageProfiles}" th:value="${p.name}" th:text="${p.name} + ' (' + ${p.model} + ')'">模型</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>尺寸</label>
+                            <select id="genSize" class="form-control">
+                                <option value="2048x2048">2048×2048 (正方形)</option>
+                                <option value="2752x1536">2752×1536 (横版)</option>
+                                <option value="1536x2752">1536×2752 (竖版)</option>
+                                <option value="2496x1664">2496×1664 (横版)</option>
+                                <option value="1664x2496">1664×2496 (竖版)</option>
+                                <option value="3072x1376">3072×1376 (超宽)</option>
+                                <option value="1344x3136">1344×3136 (超高)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>&nbsp;</label>
+                            <button id="genBtn" class="btn btn-primary" onclick="doGenerate()" style="padding:10px 28px;">生成</button>
+                        </div>
+                    </div>
+
+                    <div id="genStatus" class="status-msg"></div>
+
+                    <div id="genResult" class="result-area">
+                        <img id="genImage" />
+                        <div class="result-actions">
+                            <a id="genDownload" class="btn btn-secondary" download="ai-image.png" target="_blank">下载图片</a>
+                        </div>
+                    </div>
+
+                    <div id="genEmpty" class="empty-state">
+                        <div class="empty-icon">🎨</div>
+                        <div class="empty-title">输入描述，AI 为你生成图片</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+    function doGenerate() {
+        var prompt = document.getElementById('genPrompt').value.trim();
+        if (!prompt) { alert('请输入描述'); return; }
+
+        var btn = document.getElementById('genBtn');
+        var st = document.getElementById('genStatus');
+        btn.disabled = true; btn.textContent = '⏳ 生成中...';
+        st.className = 'status-msg info';
+        st.textContent = '⏳ 正在生成图片，请稍候...';
+        document.getElementById('genResult').style.display = 'none';
+        document.getElementById('genEmpty').style.display = 'none';
+
+        fetch('/api/image/generate', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                prompt: prompt,
+                size: document.getElementById('genSize').value,
+                profile: document.getElementById('genProfile').value
+            })
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.ok) {
+                st.className = 'status-msg success';
+                st.textContent = '✅ 生成完成';
+                document.getElementById('genImage').src = data.url;
+                document.getElementById('genDownload').href = data.url;
+                document.getElementById('genResult').style.display = 'block';
+            } else {
+                st.className = 'status-msg error';
+                st.textContent = '❌ ' + (data.error || '生成失败');
+            }
+        })
+        .catch(function(e) {
+            st.className = 'status-msg error';
+            st.textContent = '❌ 请求失败: ' + e.message;
+        })
+        .finally(function() {
+            btn.disabled = false;
+            btn.textContent = '生成';
+        });
+    }
+    </script>
+</body>
+</html>

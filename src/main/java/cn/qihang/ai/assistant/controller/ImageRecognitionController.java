@@ -57,10 +57,6 @@ public class ImageRecognitionController {
 
     @GetMapping("/general")
     public String page(@RequestParam(required = false) Long kbId, Model model) {
-        if (!llmService.isAvailable()) {
-            return "redirect:/config#ai-model-section";
-        }
-
         KnowledgeBaseEntity kb = null;
         if (kbId != null) {
             kb = kbService.getById(kbId);
@@ -86,9 +82,9 @@ public class ImageRecognitionController {
                 .filter(p -> p.isMultimodal())
                 .collect(Collectors.toList());
         model.addAttribute("visionModels", visionModels);
-        model.addAttribute("pageTitle", "通用识别");
-        model.addAttribute("contentFragment", "1.0/image");
-        return "1.0/layout";
+        model.addAttribute("kbList", kbService.getAll());
+        model.addAttribute("currentNav", "tools");
+        return "3.0/image";
     }
 
     // ========== SQLite CRUD ==========

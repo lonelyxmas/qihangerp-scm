@@ -1,0 +1,808 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>启航 AI 协作平台 - 通用识别</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --primary: #6366f1;
+            --primary-light: #818cf8;
+            --primary-dark: #4f46e5;
+            --bg-main: #f8fafc;
+            --bg-sidebar: #ffffff;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --text-muted: #94a3b8;
+            --border: #e2e8f0;
+            --hover: #f1f5f9;
+            --radius-sm: 8px;
+            --radius-md: 12px;
+            --radius-lg: 16px;
+            --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+            --shadow-md: 0 4px 6px rgba(0,0,0,0.05);
+            --shadow-lg: 0 10px 15px rgba(0,0,0,0.08);
+        }
+        html, body { height: 100%; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+        body { display: flex; background: var(--bg-main); color: var(--text-primary); }
+
+        .sidebar { width: 64px; background: var(--bg-sidebar); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 16px 0; flex-shrink: 0; align-items: center; }
+        .sidebar-header { padding: 0 8px 16px; }
+        .sidebar-title { font-size: 20px; font-weight: 700; color: var(--primary); display: flex; align-items: center; gap: 8px; }
+        .sidebar-title svg { width: 24px; height: 24px; }
+        .nav-menu { flex: 1; overflow-y: auto; padding: 8px 0; display: flex; flex-direction: column; align-items: center; }
+        .nav-item { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px 8px; cursor: pointer; color: var(--text-secondary); font-size: 11px; transition: all 0.2s; border-radius: var(--radius-md); text-decoration: none; width: 48px; }
+        .nav-item:hover { background: var(--hover); color: var(--text-primary); }
+        .nav-item.active { background: rgba(99, 102, 241, 0.1); color: var(--primary); font-weight: 500; }
+        .nav-item svg { width: 20px; height: 20px; flex-shrink: 0; }
+        .sidebar-footer { display: flex; flex-direction: column; align-items: center; gap: 4px; padding-bottom: 16px; }
+
+        .main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+        .content-header { padding: 16px 24px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; background: white; }
+        .content-title { font-size: 18px; font-weight: 600; color: var(--text-primary); }
+
+        .content-body { flex: 1; overflow-y: auto; padding: 24px; background: #f5f5f5; }
+
+        .card { background: white; border-radius: var(--radius-lg); border: 1px solid var(--border); box-shadow: var(--shadow-sm); padding: 24px; }
+        .card-header { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+        .card-title { font-size: 16px; font-weight: 600; }
+
+        .sr-card { background:#fff; border:1px solid #e1e3e6; border-radius:12px; padding:20px; margin-bottom:16px; }
+        .sr-card h3 { font-size:15px; font-weight:600; margin:0 0 12px; color:#1a1b1e; display:flex; align-items:center; gap:6px; }
+        .sr-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(150px,1fr)); gap:10px; }
+        .sr-img-card { border:2px solid #e1e3e6; border-radius:10px; overflow:hidden; cursor:pointer; transition:all .15s; text-align:center; background:#fafafa; }
+        .sr-img-card:hover { border-color:#7c5cfc; }
+        .sr-img-card.selected { border-color:#7c5cfc; box-shadow:0 0 0 3px rgba(124,92,252,.2); }
+        .sr-img-card .thumb { width:100%; height:110px; object-fit:cover; display:block; background:#f0f0f0; }
+        .sr-img-card .name { padding:5px 8px; font-size:11px; color:#5c5f66; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .sr-scenario-btn { padding:7px 14px; border-radius:8px; font-size:13px; cursor:pointer; transition:all .15s; border:1px solid #e1e3e6; background:#fff; color:#5c5f66; }
+        .sr-scenario-btn:hover { border-color:#7c5cfc; color:#7c5cfc; }
+        .sr-scenario-btn.active { background:#7c5cfc; color:#fff; border-color:#7c5cfc; }
+        .sr-upload-zone { border:2px dashed #d0d5dd; border-radius:12px; padding:36px 20px; text-align:center; cursor:pointer; transition:all .2s; background:#fafafa; }
+        .sr-upload-zone:hover { border-color:#7c5cfc; background:#f5f3ff; }
+        .sr-upload-zone.dragover { border-color:#7c5cfc; background:#f0edff; }
+        @keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+        .sr-result-text { line-height:1.8; font-size:15px; color:#1a1b1e; word-wrap:break-word; }
+        .sr-result-text h1 { font-size:22px; font-weight:700; margin:20px 0 12px; padding-bottom:6px; border-bottom:2px solid #7c5cfc; }
+        .sr-result-text h2 { font-size:18px; font-weight:600; margin:18px 0 10px; padding-left:10px; border-left:3px solid #7c5cfc; }
+        .sr-result-text h3 { font-size:15px; font-weight:600; margin:14px 0 8px; }
+        .sr-result-text p { margin:0 0 10px; }
+        .sr-result-text ul, .sr-result-text ol { margin:8px 0; padding-left:20px; }
+        .sr-result-text li { margin:4px 0; }
+        .sr-result-text blockquote { margin:10px 0; padding:10px 14px; background:#f8f7ff; border-left:4px solid #7c5cfc; border-radius:0 8px 8px 0; }
+        .sr-result-text pre { background:#1e1e2e; color:#cdd6f4; padding:14px 16px; border-radius:8px; overflow-x:auto; margin:10px 0; font-size:13px; }
+        .sr-result-text code { background:#f0edff; padding:2px 6px; border-radius:4px; font-size:13px; color:#5c3dcf; }
+        .sr-result-text table { width:100%; border-collapse:collapse; margin:10px 0; font-size:14px; border-radius:8px; overflow:hidden; }
+        .sr-result-text th, .sr-result-text td { padding:8px 12px; border:1px solid #e1e3e6; text-align:left; }
+        .sr-result-text th { background:#f8f7ff; font-weight:600; color:#5c3dcf; }
+        .sr-breadcrumb a { color:#7c5cfc; text-decoration:none; font-size:13px; }
+        .sr-breadcrumb a:hover { text-decoration:underline; }
+        .sr-loading { text-align:center; color:#909296; padding:40px 0; font-size:14px; grid-column:1/-1; }
+        .sr-empty { text-align:center; color:#909296; padding:40px 0; font-size:14px; grid-column:1/-1; }
+        .sr-tree-item { display:flex; align-items:center; padding:5px 12px; cursor:pointer; color:#3c4043; transition:all .1s; border-left:3px solid transparent; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+        .sr-tree-item:hover { background:#f0edff; color:#7c5cfc; }
+        .sr-tree-item.active { background:#f0edff; color:#7c5cfc; border-left-color:#7c5cfc; font-weight:500; }
+        .sr-tree-item .icon { width:18px; text-align:center; margin-right:4px; flex-shrink:0; }
+        .sr-tree-item .arrow { width:16px; text-align:center; margin-right:2px; flex-shrink:0; font-size:10px; color:#909296; transition:transform .15s; }
+        .sr-tree-item .arrow.expanded { transform:rotate(90deg); }
+        .sr-tree-item .label { overflow:hidden; text-overflow:ellipsis; font-size:13px; }
+        .sr-tree-children { }
+        .sr-tab-bar { display:flex; gap:0; border-bottom:2px solid #e1e3e6; }
+        .sr-tab-btn { padding:10px 24px; font-size:14px; cursor:pointer; transition:all .15s; border:none; background:transparent; color:#5c5f66; border-bottom:2px solid transparent; margin-bottom:-2px; font-weight:500; }
+        .sr-tab-btn:hover { color:#1a1b1e; background:#f5f5f7; border-radius:6px 6px 0 0; }
+        .sr-tab-btn.active { color:#7c5cfc; border-bottom-color:#7c5cfc; font-weight:600; }
+
+        .modal-overlay { display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.4); z-index:1000; justify-content:center; align-items:center; }
+        .modal-overlay.active { display:flex; }
+        .modal { background:#fff; border-radius:16px; padding:28px; max-height:90vh; overflow-y:auto; box-shadow:0 20px 60px rgba(0,0,0,0.15); }
+        .btn { padding:8px 16px; border:none; border-radius:8px; font-size:13px; font-weight:500; cursor:pointer; transition:all .2s; display:inline-flex; align-items:center; gap:6px; }
+        .btn-primary { background:#7c5cfc; color:white; }
+        .btn-primary:hover { background:#6b4ce6; }
+        .btn-secondary { background:white; color:#5c5f66; border:1px solid #e1e3e6; }
+        .btn-secondary:hover { background:#f5f5f5; }
+        .btn-sm { padding:5px 10px; font-size:12px; }
+
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+    </style>
+</head>
+<body>
+    <th:block th:replace="3.0/fragments/sidebar::sidebar(${currentNav})"></th:block>
+    
+    <main class="main-content">
+        <div class="content-header">
+            <h1 class="content-title">🖼️ 通用识别</h1>
+        </div>
+        
+        <div class="content-body">
+            <div class="sr-card" style="padding:14px 20px;">
+                <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;">
+                    <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+                        <span style="font-size:13px;color:#5c5f66;font-weight:500;">🎯 分析场景</span>
+                        <button class="sr-scenario-btn active" data-scenario="exam">📝 试卷识别</button>
+                        <button class="sr-scenario-btn" data-scenario="data">📊 数据统计</button>
+                        <button class="sr-scenario-btn" data-scenario="general">🖼️ 通用识别</button>
+                    </div>
+                    <div th:if="${#lists.size(kbList) > 0}" style="display:flex;gap:8px;align-items:center;">
+                        <span style="font-size:13px;color:#5c5f66;font-weight:500;">📂 知识库</span>
+                        <select id="kbSelector" style="padding:8px 12px;border:1px solid #e1e3e6;border-radius:8px;font-size:13px;background:#fff;outline:none;min-width:140px;">
+                            <option th:each="kb : ${kbList}" th:value="${kb.id}" th:text="${kb.name}" th:selected="${kb.id == currentKbId}">知识库</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="sr-tab-bar">
+                <button class="sr-tab-btn active" data-tab="upload">📤 上传图片</button>
+                <button th:if="${#lists.size(kbList) > 0}" class="sr-tab-btn" data-tab="browse">📚 知识库图片</button>
+                <button class="sr-tab-btn" data-tab="history">📋 分析历史</button>
+            </div>
+
+            <div id="panelUpload" class="sr-card" style="border-radius:0 0 12px 12px;border-top:none;">
+                <div class="sr-upload-zone" id="uploadZone">
+                    <div id="uploadHint" style="color:#909296;font-size:14px;">
+                        <div style="font-size:40px;margin-bottom:8px;">📁</div>
+                        点击选择图片 或 拖拽图片到此处<br>
+                        <span style="font-size:12px;">支持 jpg / png / gif / webp / bmp，最大 10MB</span>
+                    </div>
+                    <div id="uploadPreview" style="display:none;">
+                        <img id="previewImg" style="max-height:320px;border-radius:8px;border:1px solid #e1e3e6;" />
+                        <div id="previewFileName" style="margin-top:8px;font-size:13px;color:#5c5f66;"></div>
+                    </div>
+                </div>
+                <input type="file" id="fileInput" accept="image/*" style="display:none" />
+
+                <div style="margin-top:14px;">
+                    <label style="font-size:12px;color:#5c5f66;font-weight:500;display:block;margin-bottom:4px;">💬 识别提示词</label>
+                    <textarea id="uploadPrompt" rows="2" style="width:100%;padding:8px 12px;border:1px solid #e1e3e6;border-radius:8px;font-size:13px;resize:vertical;outline:none;font-family:inherit;">请识别这张试卷图片中的所有题目，给出每道题的正确答案并详细解析。</textarea>
+                </div>
+
+                <div style="display:flex;gap:8px;margin-top:12px;">
+                    <select id="uploadModelSelector" style="flex:1;padding:8px 12px;border:1px solid #e1e3e6;border-radius:8px;background:#fff;font-size:13px;outline:none;">
+                        <option th:if="${#lists.size(visionModels) > 0}" value="">选择多模态模型...</option>
+                        <option th:unless="${#lists.size(visionModels) > 0}" value="">暂无可用多模态模型</option>
+                        <option th:each="m : ${visionModels}" th:value="${m.name}" th:text="${m.name + ' (' + m.model + ')'}">模型</option>
+                    </select>
+                    <button class="btn btn-primary" id="uploadBtn" style="white-space:nowrap;">🔍 识别</button>
+                </div>
+            </div>
+
+            <div id="panelBrowse" style="display:none;">
+                <div style="display:flex;gap:0;border-radius:0 0 12px 12px;overflow:hidden;border:1px solid #e1e3e6;border-top:none;">
+                    <div style="width:240px;min-width:240px;background:#fafafa;border-right:1px solid #e1e3e6;display:flex;flex-direction:column;">
+                        <div style="padding:10px 12px;font-size:13px;font-weight:600;color:#1a1b1e;border-bottom:1px solid #e1e3e6;">📁 笔记库目录</div>
+                        <div id="dirTree" style="flex:1;overflow-y:auto;padding:6px 0;font-size:13px;">
+                            <div class="sr-loading" style="padding:20px 0;">⌛ 加载目录树...</div>
+                        </div>
+                    </div>
+                    <div style="flex:1;padding:16px;min-width:0;">
+                        <div id="browseBreadcrumb" class="sr-breadcrumb" style="margin-bottom:8px;"></div>
+                        <div style="display:flex;gap:6px;margin-bottom:10px;">
+                            <input type="text" id="searchInput" placeholder="搜索文件名..." style="flex:1;padding:7px 10px;border:1px solid #e1e3e6;border-radius:8px;font-size:13px;outline:none;" />
+                            <button class="btn btn-secondary" id="refreshBtn" style="padding:6px 12px;font-size:12px;">🔄</button>
+                        </div>
+                        <div id="imageGrid" class="sr-grid" style="max-height:340px;overflow-y:auto;padding:2px;">
+                            <div class="sr-loading">⌛ 加载中...</div>
+                        </div>
+                        <div style="margin-top:12px;">
+                            <label style="font-size:12px;color:#5c5f66;font-weight:500;display:block;margin-bottom:4px;">💬 识别提示词</label>
+                            <textarea id="browsePrompt" rows="2" style="width:100%;padding:8px 12px;border:1px solid #e1e3e6;border-radius:8px;font-size:13px;resize:vertical;outline:none;font-family:inherit;">请识别这张试卷图片中的所有题目，给出每道题的正确答案并详细解析。</textarea>
+                        </div>
+                        <div style="display:flex;gap:8px;margin-top:10px;">
+                            <select id="browseModelSelector" style="flex:1;padding:8px 12px;border:1px solid #e1e3e6;border-radius:8px;background:#fff;font-size:13px;outline:none;">
+                                <option th:if="${#lists.size(visionModels) > 0}" value="">选择多模态模型...</option>
+                                <option th:unless="${#lists.size(visionModels) > 0}" value="">暂无可用多模态模型</option>
+                                <option th:each="m : ${visionModels}" th:value="${m.name}" th:text="${m.name + ' (' + m.model + ')'}">模型</option>
+                            </select>
+                            <button class="btn btn-primary" id="browseBtn" style="white-space:nowrap;" disabled>🔍 识别选中</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="panelHistory" style="display:none;">
+                <div class="sr-card" style="border-radius:0 0 12px 12px;border-top:none;">
+                    <div id="historyList" style="max-height:500px;overflow-y:auto;">
+                        <div class="sr-loading">加载中...</div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="resultArea" style="display:none;">
+                <div class="sr-card">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
+                        <h3 style="margin:0;">📸 识别结果</h3>
+                        <div style="display:flex;gap:8px;align-items:center;">
+                            <span id="saveStatus" style="font-size:13px;color:#2b8a3e;"></span>
+                            <button class="btn btn-secondary" id="fullscreenBtn" style="font-size:13px;padding:6px 14px;">🔍 全屏查看</button>
+                            <button class="btn btn-primary" id="saveBtn" style="font-size:13px;padding:6px 14px;">💾 保存到笔记库</button>
+                        </div>
+                    </div>
+                    <div style="text-align:center;margin-bottom:14px;">
+                        <img id="resultImg" style="max-width:100%;max-height:400px;object-fit:contain;border-radius:8px;border:1px solid #e1e3e6;" />
+                    </div>
+                    <div id="resultText" class="sr-result-text" style="max-height:500px;overflow-y:auto;"></div>
+                </div>
+            </div>
+
+            <!-- 全屏查看弹窗 -->
+            <div class="modal-overlay" id="resultModal">
+                <div class="modal" style="width:1000px;max-width:95vw;padding:0;overflow:hidden;animation:fadeIn .2s ease;">
+                    <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 24px;border-bottom:1px solid #e1e3e6;">
+                        <div style="display:flex;align-items:center;gap:10px;">
+                            <span style="font-size:18px;">📸</span>
+                            <span style="font-size:16px;font-weight:600;color:#1a1b1e;">全屏查看</span>
+                            <span id="modalSaveStatus" style="font-size:13px;color:#2b8a3e;"></span>
+                        </div>
+                        <div style="display:flex;align-items:center;gap:8px;">
+                            <button class="btn btn-primary" id="modalSaveBtn" style="font-size:13px;padding:7px 16px;">💾 保存到笔记库</button>
+                            <button onclick="closeResultModal()" style="background:none;border:none;font-size:28px;cursor:pointer;color:#5c5f66;padding:0 4px;line-height:1;">&times;</button>
+                        </div>
+                    </div>
+                    <div style="padding:16px 24px;max-height:85vh;overflow-y:auto;">
+                        <div style="text-align:center;margin-bottom:20px;">
+                            <img id="modalResultImg" style="max-width:100%;max-height:60vh;object-fit:contain;border-radius:8px;box-shadow:0 2px 12px rgba(0,0,0,0.1);" />
+                        </div>
+                        <div id="modalResultText" class="sr-result-text" style="line-height:1.7;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 保存弹窗 -->
+            <div class="modal-overlay" id="saveModal">
+                <div class="modal" style="width:520px;">
+                    <h3>💾 保存识图结果到笔记库</h3>
+                    <div style="margin-bottom:12px;">
+                        <label style="font-size:12px;color:#5c5f66;font-weight:500;display:block;margin-bottom:4px;">目标知识库</label>
+                        <select id="saveKbSelector" style="width:100%;padding:8px 10px;border:1px solid #e1e3e6;border-radius:6px;font-size:13px;background:#fff;outline:none;">
+                            <option th:each="kb : ${kbList}" th:value="${kb.id}" th:text="${kb.name}">知识库</option>
+                        </select>
+                    </div>
+                    <div style="margin-bottom:12px;">
+                        <label style="font-size:12px;color:#5c5f66;font-weight:500;display:block;margin-bottom:4px;">文件名</label>
+                        <input type="text" id="saveFilename" style="width:100%;padding:8px 10px;border:1px solid #e1e3e6;border-radius:6px;font-size:13px;outline:none;" />
+                    </div>
+                    <div style="margin-bottom:12px;">
+                        <label style="font-size:12px;color:#5c5f66;font-weight:500;display:block;margin-bottom:4px;">保存路径</label>
+                        <div style="display:flex;gap:6px;">
+                            <input type="text" id="savePathInput" readonly style="flex:1;padding:8px 10px;border:1px solid #e1e3e6;border-radius:6px;font-size:13px;background:#fafafa;" />
+                            <button class="btn btn-secondary btn-sm" id="browseSaveBtn" style="padding:6px 12px;font-size:12px;">浏览</button>
+                        </div>
+                    </div>
+                    <div id="savePathBrowser" style="display:none;margin-bottom:12px;">
+                        <div id="saveBreadcrumb" class="sr-breadcrumb" style="font-size:12px;margin-bottom:8px;"></div>
+                        <div id="saveDirList" style="max-height:180px;overflow-y:auto;border:1px solid #e1e3e6;border-radius:6px;padding:4px;"></div>
+                    </div>
+                    <div style="display:flex;gap:8px;justify-content:flex-end;">
+                        <button class="btn btn-secondary" id="closeSaveBtn">取消</button>
+                        <button class="btn btn-primary" id="confirmSaveBtn">💾 保存</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.21/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.21/dist/contrib/auto-render.min.js"
+            onload="window.__katexLoaded = true"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.21/dist/katex.min.css">
+    <script>
+    const SCENARIO_PROMPTS = {
+        exam: '请识别这张试卷图片中的所有题目，逐题给出正确答案和详细解析。包括：题目类型、考察知识点、解题思路、易错点提示。用中文回答，Markdown 格式。',
+        data: '请分析这张数据统计图片中的内容和数据。包括：数据概览、关键指标、趋势分析、异常点、结论建议。用中文回答，Markdown 格式，适当使用表格。',
+        general: '请详细分析这张图片的内容，识别其中的文字、图表、结构等关键信息。用中文回答，Markdown 格式。'
+    };
+
+    let allImages = [];
+    let selectedImage = null;
+    let currentResultMd = '';
+    let currentBrowseDir = '';
+    let selectedSaveDir = '';
+    let allAnalyses = [];
+
+    function selectScenario(btn) {
+        document.querySelectorAll('.sr-scenario-btn').forEach(function(b) { b.classList.remove('active'); });
+        btn.classList.add('active');
+        var prompt = SCENARIO_PROMPTS[btn.dataset.scenario] || SCENARIO_PROMPTS.general;
+        document.getElementById('uploadPrompt').value = prompt;
+        document.getElementById('browsePrompt').value = prompt;
+    }
+
+    function switchTab(tab) {
+        document.querySelectorAll('.sr-tab-btn').forEach(function(b) {
+            if (b.dataset.tab === tab) b.classList.add('active'); else b.classList.remove('active');
+        });
+        document.getElementById('panelUpload').style.display = tab === 'upload' ? 'block' : 'none';
+        document.getElementById('panelBrowse').style.display = tab === 'browse' ? 'block' : 'none';
+        document.getElementById('panelHistory').style.display = tab === 'history' ? 'block' : 'none';
+        if (tab === 'browse') {
+            if (allImages.length === 0) loadImages();
+            if (document.getElementById('dirTree').children.length <= 1) loadDirTree();
+        }
+        if (tab === 'history') loadHistory();
+    }
+
+    async function loadHistory() {
+        var container = document.getElementById('historyList');
+        container.innerHTML = '<div class="sr-loading">加载中...</div>';
+        try {
+            var resp = await fetch('/image/api/history?limit=50');
+            var data = await resp.json();
+            if (!data.ok || !data.analyses || data.analyses.length === 0) {
+                container.innerHTML = '<div class="sr-empty">暂无分析记录</div>';
+                return;
+            }
+            allAnalyses = data.analyses;
+            var html = '';
+            for (var i = 0; i < data.analyses.length; i++) {
+                var a = data.analyses[i];
+                var statusBadge = a.status === 'completed' ? '<span style="color:#2b8a3e;">✅ 完成</span>'
+                    : a.status === 'failed' ? '<span style="color:#e03131;">❌ 失败</span>'
+                    : '<span style="color:#f59e0b;">⏳ 处理中</span>';
+                html += '<div style="padding:12px 16px;border-bottom:1px solid #e1e3e6;cursor:pointer;" onclick="showHistoryDetail(' + a.id + ')">';
+                html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">';
+                html += '<span style="font-weight:500;font-size:14px;">📷 ' + escapeHtml(a.imageName) + '</span>';
+                html += '<span style="font-size:12px;color:#909296;">' + (a.createdAt || '') + '</span>';
+                html += '</div>';
+                html += '<div style="font-size:12px;color:#5c5f66;margin-bottom:4px;">提示词: ' + escapeHtml((a.prompt || '').substring(0, 80)) + '</div>';
+                html += '<div style="display:flex;gap:8px;align-items:center;">';
+                html += statusBadge;
+                if (a.model) html += '<span style="font-size:11px;color:#909296;">模型: ' + escapeHtml(a.model) + '</span>';
+                html += '</div></div>';
+            }
+            container.innerHTML = html;
+        } catch(e) {
+            container.innerHTML = '<div class="sr-empty">加载失败</div>';
+        }
+    }
+
+    async function showHistoryDetail(id) {
+        var analysis = allAnalyses.find(function(a) { return a.id === id; });
+        if (!analysis) { toast('未找到记录', 'error'); return; }
+
+        var imageUrl = analysis.imagePath ? '/image/thumb?path=' + encodeURIComponent(analysis.imagePath) + '&kbId=' + (analysis.kbId || getKbId()) : null;
+        if (!imageUrl && analysis.source === 'upload') {
+            imageUrl = 'data:' + (analysis.imageType || 'image/jpeg') + ';base64,';
+        }
+
+        var resultMd = analysis.result || '(无结果)';
+        currentResultMd = resultMd;
+
+        document.getElementById('resultArea').style.display = 'block';
+        if (imageUrl && !imageUrl.startsWith('data:')) {
+            document.getElementById('resultImg').src = imageUrl;
+            document.getElementById('modalResultImg').src = imageUrl;
+        }
+        var html = marked.parse(resultMd);
+        document.getElementById('resultText').innerHTML = html;
+        document.getElementById('modalResultText').innerHTML = html;
+        if (window.__katexLoaded || typeof renderMathInElement !== 'undefined') {
+            try {
+                renderMathInElement(document.getElementById('resultText'), { delimiters: [{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}], throwOnError: false });
+                renderMathInElement(document.getElementById('modalResultText'), { delimiters: [{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}], throwOnError: false });
+            } catch(e) {}
+        }
+        document.getElementById('saveStatus').textContent = '';
+        document.getElementById('modalSaveStatus').textContent = '';
+        document.getElementById('resultArea').scrollIntoView({behavior: 'smooth', block: 'start'});
+    }
+
+    function escapeHtml(str) {
+        if (!str) return '';
+        return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    function getKbId() {
+        var el = document.getElementById('kbSelector');
+        if (!el || !el.value) return null;
+        return parseInt(el.value);
+    }
+
+    function onKbChange() {
+        allImages = [];
+        selectedImage = null;
+        currentBrowseDir = '';
+        document.getElementById('browseBtn').disabled = true;
+        document.getElementById('dirTree').innerHTML = '<div class="sr-loading" style="padding:20px 0;">⌛ 加载目录树...</div>';
+        loadImages();
+        browseDir('');
+        loadDirTree();
+    }
+
+    function previewImage(input) {
+        if (!input.files || !input.files[0]) return;
+        var file = input.files[0];
+        var reader = new FileReader();
+        reader.onload = function(e) {
+            document.getElementById('uploadHint').style.display = 'none';
+            document.getElementById('uploadPreview').style.display = 'block';
+            document.getElementById('previewImg').src = e.target.result;
+            document.getElementById('previewFileName').textContent = file.name + ' (' + (file.size/1024).toFixed(1) + 'KB)';
+        };
+        reader.readAsDataURL(file);
+    }
+
+    async function uploadAndRecognize() {
+        var input = document.getElementById('fileInput');
+        if (!input.files || !input.files[0]) { toast('请先选择图片', 'error'); return; }
+        var modelSel = document.getElementById('uploadModelSelector');
+        var modelName = modelSel ? modelSel.value : '';
+        if (!modelName) { toast('请选择多模态模型', 'error'); return; }
+        var btn = document.getElementById('uploadBtn');
+        btn.disabled = true; btn.textContent = '⏳ 识别中...';
+        var fd = new FormData();
+        fd.append('image', input.files[0]);
+        fd.append('prompt', document.getElementById('uploadPrompt').value);
+        fd.append('modelName', modelName);
+        try {
+            var resp = await fetch('/image/recognize-sync', { method: 'POST', body: fd });
+            var data = await resp.json();
+            if (data.ok) showResult(data.image_url, data.result);
+            else toast('识别失败: ' + (data.error || '未知错误'), 'error');
+        } catch(e) { toast('请求失败', 'error'); }
+        btn.disabled = false; btn.textContent = '🔍 识别';
+    }
+
+    async function loadImages() {
+        var grid = document.getElementById('imageGrid');
+        grid.innerHTML = '<div class="sr-loading">⌛ 加载中...</div>';
+        try {
+            var url = '/image/api/images?kbId=' + getKbId() + '&dir=' + encodeURIComponent(currentBrowseDir);
+            var resp = await fetch(url);
+            var data = await resp.json();
+            if (data.ok) { allImages = data.images; renderImages(allImages); }
+            else grid.innerHTML = '<div class="sr-empty">加载失败</div>';
+        } catch(e) { grid.innerHTML = '<div class="sr-empty">请求失败</div>'; }
+    }
+
+    function renderImages(images) {
+        var grid = document.getElementById('imageGrid');
+        if (images.length === 0) { grid.innerHTML = '<div class="sr-empty">📭 此目录下暂无图片</div>'; return; }
+        grid.innerHTML = '';
+        for (var i = 0; i < images.length; i++) {
+            var img = images[i];
+            var card = document.createElement('div');
+            card.className = 'sr-img-card';
+            card.onclick = function(path) { return function() { selectImage(path, this); }; }(img.path);
+            var thumb = document.createElement('img');
+            thumb.className = 'thumb';
+            thumb.src = '/image/thumb?path=' + encodeURIComponent(img.path) + '&kbId=' + getKbId();
+            thumb.loading = 'lazy';
+            thumb.onerror = function() { this.style.display = 'none'; };
+            card.appendChild(thumb);
+            var nameDiv = document.createElement('div');
+            nameDiv.className = 'name';
+            nameDiv.title = img.path;
+            nameDiv.textContent = img.name;
+            card.appendChild(nameDiv);
+            grid.appendChild(card);
+        }
+    }
+
+    function selectImage(path, el) {
+        document.querySelectorAll('.sr-img-card').forEach(function(d) { d.classList.remove('selected'); });
+        el.classList.add('selected');
+        selectedImage = path;
+        document.getElementById('browseBtn').disabled = false;
+    }
+
+    function filterImages() {
+        var q = document.getElementById('searchInput').value.toLowerCase();
+        renderImages(allImages.filter(function(img) { return img.name.toLowerCase().indexOf(q) >= 0 || img.path.toLowerCase().indexOf(q) >= 0; }));
+    }
+
+    async function browseDir(dir) {
+        currentBrowseDir = dir;
+        var bc = document.getElementById('browseBreadcrumb');
+        var html = '<a href="javascript:void(0)" class="sr-bc-link" data-dir="">根目录</a>';
+        if (dir) {
+            var parts = dir.split('/');
+            var accum = '';
+            for (var i = 0; i < parts.length; i++) {
+                accum = accum ? accum + '/' + parts[i] : parts[i];
+                html += ' / <a href="javascript:void(0)" class="sr-bc-link" data-dir="' + accum.replace(/'/g, '&apos;') + '">' + parts[i] + '</a>';
+            }
+        }
+        bc.innerHTML = html;
+        bc.querySelectorAll('.sr-bc-link').forEach(function(a) {
+            a.addEventListener('click', function() { browseDir(this.dataset.dir); });
+        });
+        loadImages();
+    }
+
+    async function loadDirTree() {
+        var container = document.getElementById('dirTree');
+        try {
+            var resp = await fetch('/image/api/dir-tree?kbId=' + getKbId());
+            var data = await resp.json();
+            if (data.ok && data.tree && data.tree.length > 0) {
+                container.innerHTML = '';
+                renderTreeNodes(data.tree, container, '', true);
+            } else if (data.ok) {
+                container.innerHTML = '<div class="sr-empty" style="padding:20px 0;">此知识库无子目录</div>';
+            } else {
+                container.innerHTML = '<div class="sr-empty" style="padding:20px 0;">加载失败</div>';
+            }
+        } catch(e) {
+            container.innerHTML = '<div class="sr-empty" style="padding:20px 0;">请求失败</div>';
+        }
+    }
+
+    function renderTreeNodes(nodes, parentEl, parentPath, expand) {
+        if (!nodes || nodes.length === 0) {
+            if (!parentPath && parentEl.id !== 'dirTree') return;
+            return;
+        }
+        for (var i = 0; i < nodes.length; i++) {
+            var node = nodes[i];
+            var hasChildren = node.children && node.children.length > 0;
+            var item = document.createElement('div');
+            item.className = 'sr-tree-item';
+            if (currentBrowseDir === node.path) item.classList.add('active');
+            var arrow = document.createElement('span');
+            arrow.className = 'arrow';
+            arrow.textContent = '▶';
+            if (hasChildren) {
+                arrow.style.visibility = 'visible';
+                arrow.style.cursor = 'pointer';
+            } else { arrow.style.visibility = 'hidden'; }
+            item.appendChild(arrow);
+            var icon = document.createElement('span');
+            icon.className = 'icon';
+            icon.textContent = '📁';
+            item.appendChild(icon);
+            var label = document.createElement('span');
+            label.className = 'label';
+            label.textContent = node.name;
+            item.appendChild(label);
+            var childContainer = document.createElement('div');
+            childContainer.className = 'sr-tree-children';
+            childContainer.style.paddingLeft = '18px';
+            var shouldExpand = expand === true || (currentBrowseDir && currentBrowseDir.indexOf(node.path) === 0);
+            childContainer.style.display = shouldExpand ? 'block' : 'none';
+            renderTreeNodes(node.children, childContainer, node.path);
+            label.onclick = icon.onclick = function(p, el) {
+                return function() { selectTreeDir(p, el); };
+            }(node.path, item);
+            if (hasChildren) {
+                arrow.onclick = function(cnt, arr) {
+                    return function(e) {
+                        e.stopPropagation();
+                        var hidden = cnt.style.display === 'none';
+                        cnt.style.display = hidden ? 'block' : 'none';
+                        arr.classList.toggle('expanded', hidden);
+                    };
+                }(childContainer, arrow);
+                if (shouldExpand) arrow.classList.add('expanded');
+            }
+            parentEl.appendChild(item);
+            parentEl.appendChild(childContainer);
+        }
+    }
+
+    function selectTreeDir(path, el) {
+        document.querySelectorAll('.sr-tree-item').forEach(function(d) { d.classList.remove('active'); });
+        el.classList.add('active');
+        browseDir(path);
+    }
+
+    async function recognizeFile() {
+        if (!selectedImage) { toast('请先选择一张图片', 'error'); return; }
+        var modelName = document.getElementById('browseModelSelector').value;
+        if (!modelName) { toast('请选择多模态模型', 'error'); return; }
+        var btn = document.getElementById('browseBtn');
+        btn.disabled = true; btn.textContent = '⏳ 识别中...';
+        try {
+            var resp = await fetch('/image/recognize-file', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({path: selectedImage, prompt: document.getElementById('browsePrompt').value, modelName: modelName, kbId: getKbId()})
+            });
+            var data = await resp.json();
+            if (data.ok) showResult(data.image_url, data.result);
+            else toast('识别失败: ' + (data.error || ''), 'error');
+        } catch(e) { toast('请求失败', 'error'); }
+        btn.disabled = false; btn.textContent = '🔍 识别选中';
+    }
+
+    function showResult(imageUrl, resultMd) {
+        currentResultMd = resultMd;
+        document.getElementById('resultArea').style.display = 'block';
+        document.getElementById('resultImg').src = imageUrl;
+        document.getElementById('modalResultImg').src = imageUrl;
+        var html = marked.parse(resultMd);
+        document.getElementById('resultText').innerHTML = html;
+        document.getElementById('modalResultText').innerHTML = html;
+        if (window.__katexLoaded || typeof renderMathInElement !== 'undefined') {
+            try {
+                renderMathInElement(document.getElementById('resultText'), {
+                    delimiters: [
+                        {left: '$$', right: '$$', display: true},
+                        {left: '$', right: '$', display: false}
+                    ],
+                    throwOnError: false
+                });
+                renderMathInElement(document.getElementById('modalResultText'), {
+                    delimiters: [
+                        {left: '$$', right: '$$', display: true},
+                        {left: '$', right: '$', display: false}
+                    ],
+                    throwOnError: false
+                });
+            } catch(e) {}
+        }
+        document.getElementById('saveStatus').textContent = '';
+        document.getElementById('modalSaveStatus').textContent = '';
+        document.getElementById('saveBtn').disabled = false;
+        document.getElementById('modalSaveBtn').disabled = false;
+        document.getElementById('resultModal').classList.add('active');
+        document.getElementById('resultArea').scrollIntoView({behavior: 'smooth', block: 'start'});
+    }
+
+    function closeResultModal() {
+        document.getElementById('resultModal').classList.remove('active');
+    }
+
+    function showSaveModal() {
+        if (!currentResultMd) return;
+        var now = new Date();
+        var ds = now.getFullYear() + String(now.getMonth()+1).padStart(2,'0') + String(now.getDate()).padStart(2,'0');
+        document.getElementById('saveFilename').value = '识图分析_' + ds + '.md';
+        document.getElementById('savePathInput').value = '';
+        selectedSaveDir = '';
+        document.getElementById('saveKbSelector').value = getKbId();
+        document.getElementById('savePathBrowser').style.display = 'none';
+        document.getElementById('saveModal').classList.add('active');
+    }
+
+    function closeSaveModal() { document.getElementById('saveModal').classList.remove('active'); }
+
+    function togglePathBrowser() {
+        var pb = document.getElementById('savePathBrowser');
+        if (pb.style.display === 'block') { pb.style.display = 'none'; return; }
+        pb.style.display = 'block';
+        browseSaveDir('');
+    }
+
+    async function browseSaveDir(dir) {
+        selectedSaveDir = dir;
+        var bc = document.getElementById('saveBreadcrumb');
+        var html = '<a href="javascript:void(0)" class="sr-save-link" data-dir="">根目录</a>';
+        if (dir) {
+            var parts = dir.split('/');
+            var accum = '';
+            for (var i = 0; i < parts.length; i++) {
+                accum = accum ? accum + '/' + parts[i] : parts[i];
+                html += ' / <a href="javascript:void(0)" class="sr-save-link" data-dir="' + accum + '">' + parts[i] + '</a>';
+            }
+        }
+        bc.innerHTML = html;
+        bc.querySelectorAll('.sr-save-link').forEach(function(a) {
+            a.addEventListener('click', function() { browseSaveDir(this.dataset.dir); });
+        });
+        try {
+            var kbId = parseInt(document.getElementById('saveKbSelector').value);
+            var resp = await fetch('/image/subdirs?kbId=' + kbId + '&dir=' + encodeURIComponent(dir));
+            var data = await resp.json();
+            var list = document.getElementById('saveDirList');
+            list.innerHTML = '';
+            if (data.ok && data.subdirs && data.subdirs.length > 0) {
+                for (var i = 0; i < data.subdirs.length; i++) {
+                    var d = data.subdirs[i];
+                    var div = document.createElement('div');
+                    div.textContent = '📁 ' + d.name;
+                    div.style.cssText = 'padding:8px 12px;cursor:pointer;border-radius:6px;font-size:13px;';
+                    div.onmouseover = function() { this.style.background = '#f5f3ff'; this.style.color = '#7c5cfc'; };
+                    div.onmouseout = function() { this.style.background = ''; this.style.color = ''; };
+                    (function(p) { div.onclick = function() { selectSaveDir(p); }; })(d.path);
+                    list.appendChild(div);
+                }
+            } else { list.innerHTML = '<div style="padding:12px;color:#909296;font-size:13px;text-align:center;">无子目录</div>'; }
+        } catch(e) { document.getElementById('saveDirList').innerHTML = '<div style="padding:12px;color:#909296;font-size:13px;">加载失败</div>'; }
+    }
+
+    function selectSaveDir(dir) {
+        selectedSaveDir = dir;
+        document.getElementById('savePathInput').value = dir;
+        browseSaveDir(dir);
+    }
+
+    async function confirmSave() {
+        var filename = document.getElementById('saveFilename').value.trim();
+        if (!filename) { toast('请输入文件名', 'error'); return; }
+        var subdir = document.getElementById('savePathInput').value.trim();
+        var fullPath = subdir ? subdir + '/' + filename : filename;
+        var kbId = parseInt(document.getElementById('saveKbSelector').value);
+        try {
+            var resp = await fetch('/image/save', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({path: fullPath, content: currentResultMd, kbId: kbId})
+            });
+            var data = await resp.json();
+            if (data.ok) {
+                toast('✅ 已保存: ' + data.path);
+                document.getElementById('saveStatus').textContent = '✅ 已保存: ' + data.path;
+                document.getElementById('modalSaveStatus').textContent = '✅ 已保存: ' + data.path;
+                closeSaveModal();
+            } else { toast('保存失败: ' + (data.error || ''), 'error'); }
+        } catch(e) { toast('保存失败', 'error'); }
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll('.sr-scenario-btn').forEach(function(btn) {
+            btn.addEventListener('click', function() { selectScenario(this); });
+        });
+        document.querySelectorAll('.sr-tab-btn').forEach(function(btn) {
+            btn.addEventListener('click', function() { switchTab(this.dataset.tab); });
+        });
+        var uz = document.getElementById('uploadZone');
+        if (uz) {
+            uz.addEventListener('click', function() { document.getElementById('fileInput').click(); });
+            uz.addEventListener('dragover', function(e) { e.preventDefault(); this.classList.add('dragover'); });
+            uz.addEventListener('dragleave', function(e) { this.classList.remove('dragover'); });
+            uz.addEventListener('drop', function(e) {
+                e.preventDefault(); this.classList.remove('dragover');
+                if (e.dataTransfer.files.length > 0) {
+                    document.getElementById('fileInput').files = e.dataTransfer.files;
+                    previewImage(document.getElementById('fileInput'));
+                }
+            });
+        }
+        document.getElementById('fileInput').addEventListener('change', function() { previewImage(this); });
+        document.getElementById('uploadBtn').addEventListener('click', uploadAndRecognize);
+        document.getElementById('browseBtn').addEventListener('click', recognizeFile);
+        document.getElementById('saveBtn').addEventListener('click', showSaveModal);
+        document.getElementById('modalSaveBtn').addEventListener('click', showSaveModal);
+        document.getElementById('fullscreenBtn').addEventListener('click', function() {
+            document.getElementById('resultModal').classList.add('active');
+        });
+        document.getElementById('refreshBtn').addEventListener('click', loadImages);
+        document.getElementById('searchInput').addEventListener('input', filterImages);
+        document.getElementById('browseSaveBtn').addEventListener('click', togglePathBrowser);
+        document.getElementById('closeSaveBtn').addEventListener('click', closeSaveModal);
+        document.getElementById('confirmSaveBtn').addEventListener('click', confirmSave);
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                if (document.getElementById('resultModal').classList.contains('active')) {
+                    closeResultModal();
+                }
+                if (document.getElementById('saveModal').classList.contains('active')) {
+                    closeSaveModal();
+                }
+            }
+        });
+        document.getElementById('saveKbSelector').addEventListener('change', function() {
+            selectedSaveDir = '';
+            document.getElementById('savePathInput').value = '';
+            document.getElementById('savePathBrowser').style.display = 'none';
+        });
+        document.getElementById('kbSelector').addEventListener('change', function() {
+            var newKbId = this.value;
+            if (history.pushState) {
+                var url = new URL(window.location.href);
+                url.searchParams.set('kbId', newKbId);
+                history.replaceState(null, '', url);
+            }
+            allImages = [];
+            selectedImage = null;
+            currentBrowseDir = '';
+            document.getElementById('browseBtn').disabled = true;
+            document.getElementById('dirTree').innerHTML = '<div class="sr-loading" style="padding:20px 0;">⌛ 加载目录树...</div>';
+            browseDir('');
+            loadImages();
+            loadDirTree();
+        });
+        var firstScenario = document.querySelector('.sr-scenario-btn');
+        if (firstScenario) selectScenario(firstScenario);
+        loadImages();
+        browseDir('');
+        loadDirTree();
+    });
+    </script>
+</body>
+</html>

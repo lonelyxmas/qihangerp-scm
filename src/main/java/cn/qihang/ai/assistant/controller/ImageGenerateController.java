@@ -19,9 +19,8 @@ public class ImageGenerateController {
     @GetMapping("/image/generate")
     public String page(Model model) {
         model.addAttribute("imageProfiles", imageGenerateService.getImageProfiles());
-        model.addAttribute("pageTitle", "AI 绘图");
-        model.addAttribute("contentFragment", "2.0/image_generate");
-        return "2.0/layout";
+        model.addAttribute("currentNav", "tools");
+        return "3.0/image_generate";
     }
 
     @PostMapping("/api/image/generate")
