@@ -72,6 +72,24 @@ public class DataApiController {
         return tokenService.getLoginUser(request);
     }
 
+    private void requireLogin() {
+        if (getLoginUser() == null) {
+            throw new IllegalStateException("未登录");
+        }
+    }
+
+    private long getCurrentUserId() {
+        LoginUser loginUser = getLoginUser();
+        return loginUser != null ? loginUser.getUserId() : 0L;
+    }
+
+    private String getCurrentUserName() {
+        LoginUser loginUser = getLoginUser();
+        if (loginUser == null) return null;
+        SysUser user = loginUser.getUser();
+        return user != null ? user.getUserName() : null;
+    }
+
     private void requireAdmin() {
         LoginUser loginUser = getLoginUser();
         if (loginUser == null) {
@@ -354,11 +372,16 @@ public class DataApiController {
 
     @DeleteMapping("/datasets/{id}/records/{recordId}")
     public ResponseEntity<Map<String, Object>> deleteRecord(@PathVariable String id, @PathVariable String recordId) {
-        boolean deleted = dataSetService.deleteRecord(id, recordId);
-        if (!deleted) {
-            return ResponseEntity.ok(Map.of("ok", false, "error", "记录不存在"));
+        try {
+            requireLogin();
+            boolean deleted = dataSetService.deleteRecord(id, recordId);
+            if (!deleted) {
+                return ResponseEntity.ok(Map.of("ok", false, "error", "记录不存在"));
+            }
+            return ResponseEntity.ok(Map.of("ok", true));
+        } catch (Exception e) {
+            return ResponseEntity.ok(Map.of("ok", false, "error", e.getMessage()));
         }
-        return ResponseEntity.ok(Map.of("ok", true));
     }
 
     @PostMapping("/datasets/{id}/records")
@@ -366,6 +389,7 @@ public class DataApiController {
             @PathVariable String id,
             @RequestBody Map<String, Object> body) {
         try {
+            requireLogin();
             DataSet ds = dataSetService.getDataset(id);
             if (ds == null) {
                 return ResponseEntity.ok(Map.of("ok", false, "error", "数据集不存在"));
@@ -377,7 +401,9 @@ public class DataApiController {
                 return ResponseEntity.ok(Map.of("ok", false, "error", "记录数据不能为空"));
             }
 
-            int count = dataSetService.addRecords(id, List.of(record), "manual");
+            long userId = getCurrentUserId();
+            String userName = getCurrentUserName();
+            int count = dataSetService.addRecords(id, List.of(record), "manual", userId, userName);
             return ResponseEntity.ok(Map.of("ok", true, "count", count));
         } catch (Exception e) {
             return ResponseEntity.ok(Map.of("ok", false, "error", e.getMessage()));
@@ -390,6 +416,7 @@ public class DataApiController {
             @PathVariable String recordId,
             @RequestBody Map<String, Object> body) {
         try {
+            requireLogin();
             DataSet ds = dataSetService.getDataset(id);
             if (ds == null) {
                 return ResponseEntity.ok(Map.of("ok", false, "error", "数据集不存在"));
@@ -398,7 +425,9 @@ public class DataApiController {
             @SuppressWarnings("unchecked")
             Map<String, Object> data = (Map<String, Object>) body.get("data");
 
-            Map<String, Object> updated = dataSetService.updateRecord(id, recordId, data);
+            long userId = getCurrentUserId();
+            String userName = getCurrentUserName();
+            Map<String, Object> updated = dataSetService.updateRecord(id, recordId, data, userId, userName);
             if (updated == null) {
                 return ResponseEntity.ok(Map.of("ok", false, "error", "记录不存在"));
             }
@@ -414,15 +443,22 @@ public class DataApiController {
             @PathVariable String id,
             @PathVariable String recordId,
             @RequestBody Map<String, String> body) {
-        String status = body.get("status");
-        if (status == null || status.isBlank()) {
-            return ResponseEntity.ok(Map.of("ok", false, "error", "状态不能为空"));
+        try {
+            requireLogin();
+            String status = body.get("status");
+            if (status == null || status.isBlank()) {
+                return ResponseEntity.ok(Map.of("ok", false, "error", "状态不能为空"));
+            }
+            long userId = getCurrentUserId();
+            String userName = getCurrentUserName();
+            boolean updated = dataSetService.updateRecordField(id, recordId, "status", status, userId, userName);
+            if (!updated) {
+                return ResponseEntity.ok(Map.of("ok", false, "error", "记录不存在"));
+            }
+            return ResponseEntity.ok(Map.of("ok", true));
+        } catch (Exception e) {
+            return ResponseEntity.ok(Map.of("ok", false, "error", e.getMessage()));
         }
-        boolean updated = dataSetService.updateRecordField(id, recordId, "status", status);
-        if (!updated) {
-            return ResponseEntity.ok(Map.of("ok", false, "error", "记录不存在"));
-        }
-        return ResponseEntity.ok(Map.of("ok", true));
     }
 
     @PostMapping("/datasets/{id}/import/excel")
@@ -457,7 +493,10 @@ public class DataApiController {
                 }
             }
 
-            int count = dataSetService.addRecords(id, records, "excel");
+            requireLogin();
+            long userId = getCurrentUserId();
+            String userName = getCurrentUserName();
+            int count = dataSetService.addRecords(id, records, "excel", userId, userName);
             return ResponseEntity.ok(Map.of("ok", true, "count", count, "message", "成功导入 " + count + " 条记录"));
         } catch (Exception e) {
             return ResponseEntity.ok(Map.of("ok", false, "error", "导入失败: " + e.getMessage()));
@@ -510,7 +549,10 @@ public class DataApiController {
                 }
             }
 
-            int count = dataSetService.addRecords(id, records, "manual");
+            requireLogin();
+            long userId = getCurrentUserId();
+            String userName = getCurrentUserName();
+            int count = dataSetService.addRecords(id, records, "manual", userId, userName);
             return ResponseEntity.ok(Map.of("ok", true, "count", count, "message", "成功导入 " + count + " 条记录"));
         } catch (Exception e) {
             return ResponseEntity.ok(Map.of("ok", false, "error", "导入失败: " + e.getMessage()));
@@ -572,7 +614,10 @@ public class DataApiController {
                 return ResponseEntity.ok(Map.of("ok", false, "error", "未能从URL提取到有效数据"));
             }
 
-            int count = dataSetService.addRecords(id, records, "url");
+            requireLogin();
+            long userId = getCurrentUserId();
+            String userName = getCurrentUserName();
+            int count = dataSetService.addRecords(id, records, "url", userId, userName);
             return ResponseEntity.ok(Map.of("ok", true, "count", count, "message", "成功从URL导入 " + count + " 条记录"));
         } catch (Exception e) {
             return ResponseEntity.ok(Map.of("ok", false, "error", "URL导入失败: " + e.getMessage()));

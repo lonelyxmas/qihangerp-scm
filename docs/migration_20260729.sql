@@ -17,3 +17,10 @@ ADD COLUMN approved_by BIGINT DEFAULT NULL COMMENT '审批人用户ID' AFTER app
 
 ALTER TABLE data_center_records
 ADD COLUMN approved_at VARCHAR(32) DEFAULT NULL COMMENT '审批时间' AFTER approved_by;
+
+-- 2026-07-29: data_center_records 增加创建人/修改人字段
+ALTER TABLE data_center_records
+    ADD COLUMN created_by BIGINT NULL COMMENT '创建人用户ID',
+    ADD COLUMN created_by_name VARCHAR(64) NULL COMMENT '创建人用户名',
+    ADD COLUMN updated_by BIGINT NULL COMMENT '最后修改人用户ID',
+    ADD COLUMN updated_by_name VARCHAR(64) NULL COMMENT '最后修改人用户名';

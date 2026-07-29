@@ -17,6 +17,10 @@ public class DataSetRecordEntity {
     private String recordNum;
     private String recordType;
     private String recordStatus;
+    private Long createdBy;
+    private String createdByName;
+    private Long updatedBy;
+    private String updatedByName;
     private Long assignedTo;
     private String assignedAt;
     private String approvalStatus;
@@ -50,6 +54,14 @@ public class DataSetRecordEntity {
     public void setRecordType(String recordType) { this.recordType = recordType; }
     public String getRecordStatus() { return recordStatus; }
     public void setRecordStatus(String recordStatus) { this.recordStatus = recordStatus; }
+    public Long getCreatedBy() { return createdBy; }
+    public void setCreatedBy(Long createdBy) { this.createdBy = createdBy; }
+    public String getCreatedByName() { return createdByName; }
+    public void setCreatedByName(String createdByName) { this.createdByName = createdByName; }
+    public Long getUpdatedBy() { return updatedBy; }
+    public void setUpdatedBy(Long updatedBy) { this.updatedBy = updatedBy; }
+    public String getUpdatedByName() { return updatedByName; }
+    public void setUpdatedByName(String updatedByName) { this.updatedByName = updatedByName; }
     public Long getAssignedTo() { return assignedTo; }
     public void setAssignedTo(Long assignedTo) { this.assignedTo = assignedTo; }
     public String getAssignedAt() { return assignedAt; }

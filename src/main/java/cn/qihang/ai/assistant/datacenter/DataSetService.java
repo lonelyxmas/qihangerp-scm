@@ -216,6 +216,10 @@ public class DataSetService {
                 record.put("_approvalStatus", entity.getApprovalStatus());
                 record.put("_approvedBy", entity.getApprovedBy());
                 record.put("_approvedAt", entity.getApprovedAt());
+                record.put("_createdBy", entity.getCreatedBy());
+                record.put("_createdByName", entity.getCreatedByName());
+                record.put("_updatedBy", entity.getUpdatedBy());
+                record.put("_updatedByName", entity.getUpdatedByName());
                 result.add(record);
             } catch (Exception e) {
                 log.warn("Failed to parse record: {}", e.getMessage());
@@ -229,6 +233,10 @@ public class DataSetService {
     }
 
     public int addRecords(String datasetId, List<Map<String, Object>> newRecords, String source) {
+        return addRecords(datasetId, newRecords, source, null, null);
+    }
+
+    public int addRecords(String datasetId, List<Map<String, Object>> newRecords, String source, Long userId, String userName) {
         long existingCount = recordDbService.countByDataset(datasetId);
         DataSet ds = getDataset(datasetId);
 
@@ -240,7 +248,7 @@ public class DataSetService {
                 skipped += (newRecords.size() - imported - skipped);
                 break;
             }
-            DataSetRecordEntity entity = saveRecordToDb(datasetId, raw, source);
+            DataSetRecordEntity entity = saveRecordToDb(datasetId, raw, source, userId, userName);
             if (entity != null) {
                 if (ds != null) {
                     collabEngine.processNewRecord(ds, entity);
@@ -262,7 +270,7 @@ public class DataSetService {
         return recordDbService.remove(wrapper);
     }
 
-    public Map<String, Object> updateRecord(String datasetId, String recordId, Map<String, Object> newData) {
+    public Map<String, Object> updateRecord(String datasetId, String recordId, Map<String, Object> newData, Long userId, String userName) {
         LambdaQueryWrapper<DataSetRecordEntity> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(DataSetRecordEntity::getDatasetId, datasetId)
                .eq(DataSetRecordEntity::getRecordId, recordId);
@@ -286,6 +294,8 @@ public class DataSetService {
             entity.setRecordType(type);
             entity.setRecordStatus(status);
             if (userRecordNum != null) entity.setRecordNum(userRecordNum);
+            entity.setUpdatedBy(userId);
+            entity.setUpdatedByName(userName);
             entity.setUpdatedAt(now);
             String hash = computeHash(business);
             entity.setContentHash(hash);
@@ -304,6 +314,8 @@ public class DataSetService {
             result.put("状态", status);
             result.put("创建时间", created);
             result.put("更新时间", now);
+            result.put("_updatedBy", entity.getUpdatedBy());
+            result.put("_updatedByName", entity.getUpdatedByName());
             return result;
         } catch (Exception e) {
             log.error("Failed to update record: {}", e.getMessage());
@@ -312,6 +324,10 @@ public class DataSetService {
     }
 
     public boolean updateRecordField(String datasetId, String recordId, String field, String value) {
+        return updateRecordField(datasetId, recordId, field, value, null, null);
+    }
+
+    public boolean updateRecordField(String datasetId, String recordId, String field, String value, Long userId, String userName) {
         LambdaQueryWrapper<DataSetRecordEntity> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(DataSetRecordEntity::getDatasetId, datasetId)
                .eq(DataSetRecordEntity::getRecordId, recordId);
@@ -332,6 +348,8 @@ public class DataSetService {
             }
             String dataJson = mapper.writeValueAsString(record);
             entity.setDataJson(dataJson);
+            entity.setUpdatedBy(userId);
+            entity.setUpdatedByName(userName);
             entity.setUpdatedAt(now);
             String hash = computeHash(record);
             entity.setContentHash(hash);
@@ -427,7 +445,7 @@ public class DataSetService {
         }
     }
 
-    private DataSetRecordEntity saveRecordToDb(String datasetId, Map<String, Object> raw, String source) {
+    private DataSetRecordEntity saveRecordToDb(String datasetId, Map<String, Object> raw, String source, Long userId, String userName) {
         String recordId = UUID.randomUUID().toString().substring(0, 12);
         String rawType = resolveType(raw, datasetId);
         String rawStatus = resolveStatus(raw, datasetId);
@@ -450,6 +468,10 @@ public class DataSetService {
             entity.setRecordNum(recordNum);
             entity.setRecordType(type);
             entity.setRecordStatus(status);
+            entity.setCreatedBy(userId);
+            entity.setCreatedByName(userName);
+            entity.setUpdatedBy(userId);
+            entity.setUpdatedByName(userName);
             entity.setCreatedAt(now);
             entity.setUpdatedAt(now);
             recordDbService.save(entity);

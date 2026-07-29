@@ -102,6 +102,12 @@
         .msg-error { background: #fee2e2; color: #991b1b; }
         .msg-info { background: #dbeafe; color: #1e40af; }
 
+        .login-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); justify-content: center; align-items: center; z-index: 9999; }
+        .login-overlay.active { display: flex; }
+        .login-modal { background: white; border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); width: 360px; overflow: hidden; }
+        .login-modal-header { padding: 20px 24px 0; font-size: 18px; font-weight: 600; text-align: center; }
+        .login-modal-body { padding: 20px 24px 24px; }
+
     </style>
 </head>
 <body>
@@ -659,10 +665,12 @@ async function deleteDataset(id) {
 }
 
 function showAddRecord() {
-    editingRecordId = null;
-    document.getElementById('recordModalTitle').textContent = '新增记录';
-    renderRecordForm();
-    showModal('recordModal');
+    requireLogin(function() {
+        editingRecordId = null;
+        document.getElementById('recordModalTitle').textContent = '新增记录';
+        renderRecordForm();
+        showModal('recordModal');
+    });
 }
 
 function renderRecordForm(record) {
@@ -730,12 +738,14 @@ function viewRecord(id) {
 }
 
 function editRecord(id) {
-    const record = allRecords.find(function(r){ return (r._id || r.id) === id; });
-    if (!record) return;
-    editingRecordId = id;
-    document.getElementById('recordModalTitle').textContent = '编辑记录';
-    renderRecordForm(record);
-    showModal('recordModal');
+    requireLogin(function() {
+        const record = allRecords.find(function(r){ return (r._id || r.id) === id; });
+        if (!record) return;
+        editingRecordId = id;
+        document.getElementById('recordModalTitle').textContent = '编辑记录';
+        renderRecordForm(record);
+        showModal('recordModal');
+    });
 }
 
 function editFromDetail() {
@@ -777,7 +787,7 @@ async function saveRecord() {
         method = 'PUT';
     }
     
-    const r = await fetch(url, {
+    const r = await apiFetch(url, {
         method: method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ data: record })
@@ -794,14 +804,16 @@ async function saveRecord() {
 
 async function deleteRecord(id) {
     if (!confirm('确定要删除这条记录吗？')) return;
-    const r = await fetch(API + '/datasets/' + currentDs.id + '/records/' + id, { method: 'DELETE' });
-    const d = await r.json();
-    if (d.ok) {
-        toast('记录已删除', 'success');
-        await loadRecords(currentPage);
-    } else {
-        toast(d.error || '删除失败', 'error');
-    }
+    requireLogin(async function() {
+        const r = await apiFetch(API + '/datasets/' + currentDs.id + '/records/' + id, { method: 'DELETE' });
+        const d = await r.json();
+        if (d.ok) {
+            toast('记录已删除', 'success');
+            await loadRecords(currentPage);
+        } else {
+            toast(d.error || '删除失败', 'error');
+        }
+    });
 }
 
 function showImportModal() {
@@ -891,6 +903,68 @@ async function doImport() {
     }
 }
 
+let _pendingAction = null;
+
+function apiFetch(url, options) {
+    if (!options) options = {};
+    if (!options.headers) options.headers = {};
+    var token = localStorage.getItem('Admin-Token');
+    if (token) options.headers['Authorization'] = 'Bearer ' + token;
+    return fetch(url, options);
+}
+
+function checkLogin() {
+    return !!localStorage.getItem('Admin-Token');
+}
+
+function requireLogin(action) {
+    if (checkLogin()) {
+        action();
+        return;
+    }
+    _pendingAction = action;
+    document.getElementById('loginOverlay').classList.add('active');
+    document.getElementById('loginUsername').focus();
+}
+
+function showLoginOverlay() {
+    localStorage.removeItem('Admin-Token');
+    document.getElementById('loginOverlay').classList.add('active');
+    document.getElementById('loginUsername').focus();
+}
+
+function doLogin() {
+    const username = document.getElementById('loginUsername').value.trim();
+    const password = document.getElementById('loginPassword').value;
+    const btn = document.getElementById('loginBtn');
+    const err = document.getElementById('loginError');
+    if (!username || !password) { err.textContent = '请输入用户名和密码'; err.style.display = 'block'; return; }
+    btn.disabled = true; btn.textContent = '登录中...'; err.style.display = 'none';
+    fetch('/api/sys-api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: username, password: password })
+    }).then(r => r.json()).then(data => {
+        if (data.code === 200 || data.token) {
+            const token = data.token || data.data;
+            localStorage.setItem('Admin-Token', token);
+            document.getElementById('loginOverlay').classList.remove('active');
+            btn.disabled = false; btn.textContent = '登 录';
+            const action = _pendingAction;
+            _pendingAction = null;
+            if (action) action();
+        } else {
+            err.textContent = data.msg || '登录失败';
+            err.style.display = 'block';
+            btn.disabled = false; btn.textContent = '登 录';
+        }
+    }).catch(() => {
+        err.textContent = '请求失败，请检查网络';
+        err.style.display = 'block';
+        btn.disabled = false; btn.textContent = '登 录';
+    });
+}
+
 async function init() {
     await loadModules();
     // 自动选中上次浏览的数据集，否则选第一个
@@ -904,5 +978,23 @@ async function init() {
 }
 init();
 </script>
+
+    <div id="loginOverlay" class="login-overlay">
+        <div class="login-modal">
+            <div class="login-modal-header">🔐 登录</div>
+            <div class="login-modal-body">
+                <div class="form-group">
+                    <label>用户名</label>
+                    <input type="text" id="loginUsername" value="admin" placeholder="请输入用户名">
+                </div>
+                <div class="form-group">
+                    <label>密码</label>
+                    <input type="password" id="loginPassword" value="admin123" placeholder="请输入密码">
+                </div>
+                <div id="loginError" class="text-muted" style="color:#dc2626;font-size:13px;margin-bottom:8px;display:none;"></div>
+                <button class="btn btn-primary" style="width:100%;justify-content:center;" onclick="doLogin()" id="loginBtn">登 录</button>
+            </div>
+        </div>
+    </div>
 </body>
 </html>
