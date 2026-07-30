@@ -22,14 +22,12 @@ public class ToolRegistry {
 
     public ToolRegistry(NoteTools noteTools, DataTools dataTools,
                         TaskTools taskTools, ReminderTools reminderTools,
-                        KbTools kbTools, MemoryTools memoryTools,
-                        WebTools webTools) {
+                        KbTools kbTools, WebTools webTools) {
         register(noteTools);
         register(dataTools);
         register(taskTools);
         register(reminderTools);
         register(kbTools);
-        register(memoryTools);
         register(webTools);
         log.info("[ToolRegistry] 初始化完成，已注册 {} 个工具集: {}", tools.size(), toolIndex.keySet());
     }
