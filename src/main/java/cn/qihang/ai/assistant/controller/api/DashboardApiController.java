@@ -4,10 +4,10 @@ import cn.qihang.ai.assistant.controller.BaseController;
 import cn.qihang.ai.assistant.datacenter.DataSetService;
 import cn.qihang.ai.assistant.entity.AiAnalysisEntity;
 import cn.qihang.ai.assistant.entity.DataSetEntity;
-import cn.qihang.ai.assistant.entity.KnowledgeBaseEntity;
+import cn.qihang.ai.assistant.entity.KbBaseEntity;
 import cn.qihang.ai.assistant.entity.NotificationEntity;
 import cn.qihang.ai.assistant.model.TaskData.TaskItem;
-import cn.qihang.ai.assistant.service.KnowledgeBaseService;
+import cn.qihang.ai.assistant.service.KbBaseService;
 import cn.qihang.ai.assistant.service.TaskService;
 import cn.qihang.ai.assistant.service.ReminderService;
 import cn.qihang.ai.assistant.service.db.ActivityLogDbService;
@@ -16,7 +16,7 @@ import cn.qihang.ai.assistant.service.db.ApprovalRequestDbService;
 import cn.qihang.ai.assistant.service.db.DataSetDbService;
 import cn.qihang.ai.assistant.service.db.MessageDbService;
 import cn.qihang.ai.assistant.service.db.NotificationDbService;
-import cn.qihang.ai.assistant.service.db.NoteEmbeddingDbService;
+import cn.qihang.ai.assistant.service.db.KbEmbeddingDbService;
 import cn.qihang.ai.assistant.service.db.SessionDbService;
 import cn.qihang.ai.assistant.service.db.DataSetRecordDbService;
 import cn.qihang.ai.assistant.service.ISysUserService;
@@ -32,7 +32,7 @@ import java.util.stream.Collectors;
 @RequestMapping("/api/dashboard")
 public class DashboardApiController extends BaseController {
 
-    private final KnowledgeBaseService kbService;
+    private final KbBaseService kbService;
     private final TaskService taskService;
     private final ReminderService reminderService;
     private final DataSetService dataSetService;
@@ -42,12 +42,12 @@ public class DashboardApiController extends BaseController {
     private final ApprovalRequestDbService approvalRequestDbService;
     private final SessionDbService sessionDbService;
     private final MessageDbService messageDbService;
-    private final NoteEmbeddingDbService noteEmbeddingDbService;
+    private final KbEmbeddingDbService noteEmbeddingDbService;
     private final DataSetDbService dataSetDbService;
     private final DataSetRecordDbService dataSetRecordDbService;
     private final ISysUserService sysUserService;
 
-    public DashboardApiController(KnowledgeBaseService kbService,
+    public DashboardApiController(KbBaseService kbService,
                                   TaskService taskService,
                                   ReminderService reminderService,
                                   DataSetService dataSetService,
@@ -57,7 +57,7 @@ public class DashboardApiController extends BaseController {
                                   ApprovalRequestDbService approvalRequestDbService,
                                   SessionDbService sessionDbService,
                                   MessageDbService messageDbService,
-                                  NoteEmbeddingDbService noteEmbeddingDbService,
+                                  KbEmbeddingDbService noteEmbeddingDbService,
                                   DataSetDbService dataSetDbService,
                                   DataSetRecordDbService dataSetRecordDbService,
                                   ISysUserService sysUserService) {
@@ -116,12 +116,12 @@ public class DashboardApiController extends BaseController {
         Map<String, Object> stats = new LinkedHashMap<>();
 
         try {
-            List<KnowledgeBaseEntity> kbs = kbService.getAll();
+            List<KbBaseEntity> kbs = kbService.getAll();
             stats.put("knowledgeBases", Map.of("count", kbs.size(), "label", "知识库"));
 
             long fileCount = 0;
             long chunkCount = 0;
-            for (KnowledgeBaseEntity kb : kbs) {
+            for (KbBaseEntity kb : kbs) {
                 try {
                     fileCount += noteEmbeddingDbService.countFilesByKb(kb.getId());
                     chunkCount += noteEmbeddingDbService.countByKb(kb.getId());
@@ -301,9 +301,9 @@ public class DashboardApiController extends BaseController {
 
     private List<Map<String, Object>> getRecentReports() {
         try {
-            List<KnowledgeBaseEntity> kbs = kbService.getAll();
+            List<KbBaseEntity> kbs = kbService.getAll();
             List<Map<String, Object>> reports = new ArrayList<>();
-            for (KnowledgeBaseEntity kb : kbs) {
+            for (KbBaseEntity kb : kbs) {
                 try {
                     AiAnalysisEntity report = aiAnalysisDbService.getLatestReport(kb.getId());
                     if (report != null) {

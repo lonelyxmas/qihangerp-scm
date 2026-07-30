@@ -1,9 +1,9 @@
 package cn.qihang.ai.assistant.controller;
 
 import cn.qihang.ai.assistant.config.AppConfig;
-import cn.qihang.ai.assistant.entity.KnowledgeBaseEntity;
+import cn.qihang.ai.assistant.entity.KbBaseEntity;
 import cn.qihang.ai.assistant.entity.LlmProfileEntity;
-import cn.qihang.ai.assistant.service.KnowledgeBaseService;
+import cn.qihang.ai.assistant.service.KbBaseService;
 import cn.qihang.ai.assistant.service.LlmConfigResolver;
 import cn.qihang.ai.assistant.service.LlmService;
 import cn.qihang.ai.assistant.service.LogService;
@@ -31,14 +31,14 @@ public class ImageRecognitionController {
             ".png", ".jpg", ".jpeg", ".gif", ".bmp", ".webp");
 
     private final AppConfig appConfig;
-    private final KnowledgeBaseService kbService;
+    private final KbBaseService kbService;
     private final LlmService llmService;
     private final LogService logService;
     private final LlmConfigResolver llmConfigResolver;
     private final DataSource dataSource;
 
     public ImageRecognitionController(AppConfig appConfig,
-                                       KnowledgeBaseService kbService,
+                                       KbBaseService kbService,
                                        LlmService llmService, LogService logService,
                                        LlmConfigResolver llmConfigResolver,
                                        DataSource dataSource) {
@@ -57,7 +57,7 @@ public class ImageRecognitionController {
 
     @GetMapping("/general")
     public String page(@RequestParam(required = false) Long kbId, Model model) {
-        KnowledgeBaseEntity kb = null;
+        KbBaseEntity kb = null;
         if (kbId != null) {
             kb = kbService.getById(kbId);
         }
@@ -436,9 +436,9 @@ public class ImageRecognitionController {
     @GetMapping("/api/kb-list")
     @ResponseBody
     public Map<String, Object> kbList() {
-        List<KnowledgeBaseEntity> all = kbService.getAll();
+        List<KbBaseEntity> all = kbService.getAll();
         List<Map<String, Object>> result = new ArrayList<>();
-        for (KnowledgeBaseEntity kb : all) {
+        for (KbBaseEntity kb : all) {
             Map<String, Object> item = new LinkedHashMap<>();
             item.put("id", kb.getId());
             item.put("name", kb.getName());
@@ -454,7 +454,7 @@ public class ImageRecognitionController {
         if (kbId == null || kbId <= 0) {
             throw new IllegalStateException("缺少 kbId 参数");
         }
-        KnowledgeBaseEntity kb = kbService.getById(kbId);
+        KbBaseEntity kb = kbService.getById(kbId);
         if (kb == null) {
             throw new IllegalStateException("知识库不存在: kbId=" + kbId);
         }

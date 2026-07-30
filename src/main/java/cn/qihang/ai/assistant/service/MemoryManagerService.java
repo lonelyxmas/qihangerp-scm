@@ -1,7 +1,6 @@
 package cn.qihang.ai.assistant.service;
 
 import cn.qihang.ai.assistant.util.TimeUtil;
-import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -24,33 +23,6 @@ public class MemoryManagerService {
 
     public MemoryManagerService(DataSource dataSource) {
         this.dataSource = dataSource;
-    }
-
-    @PostConstruct
-    public void init() {
-        createTable();
-    }
-
-    private void createTable() {
-        try (Connection conn = dataSource.getConnection(); Statement stmt = conn.createStatement()) {
-            stmt.execute("""
-                CREATE TABLE IF NOT EXISTS agent_memories (
-                    id          BIGINT AUTO_INCREMENT PRIMARY KEY,
-                    kb_id       BIGINT NOT NULL DEFAULT 0,
-                    category    VARCHAR(64) NOT NULL DEFAULT 'general',
-                    key_name    VARCHAR(255) NOT NULL,
-                    "value"     TEXT NOT NULL,
-                    importance  INTEGER NOT NULL DEFAULT 1,
-                    created_at  VARCHAR(32) NOT NULL,
-                    updated_at  VARCHAR(32) NOT NULL
-                )
-                """);
-            stmt.execute("CREATE INDEX IF NOT EXISTS idx_memories_kb ON agent_memories(kb_id, category)");
-            stmt.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_memories_key ON agent_memories(kb_id, key_name)");
-            log.info("Table agent_memories initialized");
-        } catch (SQLException e) {
-            log.warn("Failed to create agent_memories table: {}", e.getMessage());
-        }
     }
 
     /** 存储一条记忆（不存在则插入，存在则更新） */

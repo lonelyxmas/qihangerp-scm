@@ -1,14 +1,12 @@
 package cn.qihang.ai.assistant.controller.api;
 
 import cn.qihang.ai.assistant.datacenter.AiAnalysisCache;
-import cn.qihang.ai.assistant.entity.KnowledgeBaseEntity;
-import cn.qihang.ai.assistant.entity.NoteEmbeddingEntity;
-import cn.qihang.ai.assistant.entity.FileIndexMetaEntity;
-import cn.qihang.ai.assistant.service.KnowledgeBaseService;
+import cn.qihang.ai.assistant.entity.KbBaseEntity;
+import cn.qihang.ai.assistant.entity.KbEmbeddingEntity;
+import cn.qihang.ai.assistant.service.KbBaseService;
 import cn.qihang.ai.assistant.service.LlmService;
 import cn.qihang.ai.assistant.service.NoteIndexService;
-import cn.qihang.ai.assistant.service.db.FileIndexMetaDbService;
-import cn.qihang.ai.assistant.service.db.NoteEmbeddingDbService;
+import cn.qihang.ai.assistant.service.db.KbEmbeddingDbService;
 import cn.qihang.ai.assistant.util.FileUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,24 +23,21 @@ public class AiOverviewApiController {
 
     private static final Logger log = LoggerFactory.getLogger(AiOverviewApiController.class);
 
-    private final KnowledgeBaseService kbService;
+    private final KbBaseService kbService;
     private final NoteIndexService noteIndexService;
     private final LlmService llmService;
     private final AiAnalysisCache analysisCache;
-    private final FileIndexMetaDbService fileIndexMetaDbService;
-    private final NoteEmbeddingDbService noteEmbeddingDbService;
+    private final KbEmbeddingDbService noteEmbeddingDbService;
 
-    public AiOverviewApiController(KnowledgeBaseService kbService,
+    public AiOverviewApiController(KbBaseService kbService,
                                    NoteIndexService noteIndexService,
                                    LlmService llmService,
                                    AiAnalysisCache analysisCache,
-                                   FileIndexMetaDbService fileIndexMetaDbService,
-                                   NoteEmbeddingDbService noteEmbeddingDbService) {
+                                   KbEmbeddingDbService noteEmbeddingDbService) {
         this.kbService = kbService;
         this.noteIndexService = noteIndexService;
         this.llmService = llmService;
         this.analysisCache = analysisCache;
-        this.fileIndexMetaDbService = fileIndexMetaDbService;
         this.noteEmbeddingDbService = noteEmbeddingDbService;
     }
 
@@ -50,7 +45,7 @@ public class AiOverviewApiController {
     public ResponseEntity<Map<String, Object>> getKbStats(@RequestParam Long kbId) {
         Map<String, Object> result = new HashMap<>();
         try {
-            KnowledgeBaseEntity kb = kbService.getById(kbId);
+            KbBaseEntity kb = kbService.getById(kbId);
             if (kb == null) {
                 return ResponseEntity.ok(Map.of("ok", false, "error", "笔记库不存在"));
             }
@@ -63,40 +58,7 @@ public class AiOverviewApiController {
             result.put("fileCount", stats.fileCount());
             result.put("chunkCount", stats.chunkCount());
 
-            List<FileIndexMetaEntity> metaList = fileIndexMetaDbService.lambdaQuery()
-                    .eq(FileIndexMetaEntity::getKbId, kbId)
-                    .list();
-
-            long totalSize = metaList.stream().mapToLong(FileIndexMetaEntity::getFileSize).sum();
-            result.put("totalSize", totalSize);
-
-            Map<String, Integer> extStats = new HashMap<>();
-            for (FileIndexMetaEntity meta : metaList) {
-                String path = meta.getFilePath();
-                String ext = path.contains(".") ? path.substring(path.lastIndexOf(".")) : ".txt";
-                extStats.merge(ext, 1, Integer::sum);
-            }
-            result.put("extensionStats", extStats);
-
-            List<Map<String, Object>> recentFiles = metaList.stream()
-                    .sorted((a, b) -> Long.compare(b.getLastModified(), a.getLastModified()))
-                    .limit(10)
-                    .map(m -> {
-                        Map<String, Object> fm = new HashMap<>();
-                        fm.put("path", m.getFilePath());
-                        fm.put("lastModified", m.getLastModified());
-                        fm.put("fileSize", m.getFileSize());
-                        return fm;
-                    })
-                    .collect(Collectors.toList());
-            result.put("recentFiles", recentFiles);
-
-            long today = System.currentTimeMillis() - 86400000;
-            int todayModified = (int) metaList.stream()
-                    .filter(m -> m.getLastModified() >= today)
-                    .count();
-            result.put("todayModified", todayModified);
-
+            
             result.put("ok", true);
         } catch (Exception e) {
             log.error("获取笔记库统计失败", e);
@@ -110,7 +72,7 @@ public class AiOverviewApiController {
     public ResponseEntity<Map<String, Object>> getProjects(@RequestParam Long kbId) {
         Map<String, Object> result = new HashMap<>();
         try {
-            KnowledgeBaseEntity kb = kbService.getById(kbId);
+            KbBaseEntity kb = kbService.getById(kbId);
             if (kb == null) {
                 return ResponseEntity.ok(Map.of("ok", false, "error", "笔记库不存在"));
             }
@@ -226,7 +188,7 @@ public class AiOverviewApiController {
                                                                @RequestParam String projectName) {
         Map<String, Object> result = new HashMap<>();
         try {
-            KnowledgeBaseEntity kb = kbService.getById(kbId);
+            KbBaseEntity kb = kbService.getById(kbId);
             if (kb == null) {
                 return ResponseEntity.ok(Map.of("ok", false, "error", "笔记库不存在"));
             }
@@ -300,7 +262,7 @@ public class AiOverviewApiController {
                                                            @RequestParam String action) {
         Map<String, Object> result = new HashMap<>();
         try {
-            KnowledgeBaseEntity kb = kbService.getById(kbId);
+            KbBaseEntity kb = kbService.getById(kbId);
             if (kb == null) {
                 return ResponseEntity.ok(Map.of("ok", false, "error", "笔记库不存在"));
             }
@@ -381,42 +343,18 @@ public class AiOverviewApiController {
         return ResponseEntity.ok(result);
     }
 
-    @GetMapping("/heatmap")
-    public ResponseEntity<Map<String, Object>> getHeatmap(@RequestParam Long kbId) {
-        Map<String, Object> result = new HashMap<>();
-        try {
-            List<FileIndexMetaEntity> metaList = fileIndexMetaDbService.lambdaQuery()
-                    .eq(FileIndexMetaEntity::getKbId, kbId)
-                    .list();
-
-            Map<String, Integer> heatmap = new HashMap<>();
-            for (FileIndexMetaEntity meta : metaList) {
-                long lm = meta.getLastModified();
-                String date = new java.text.SimpleDateFormat("yyyy-MM-dd").format(new java.util.Date(lm));
-                heatmap.merge(date, 1, Integer::sum);
-            }
-
-            result.put("ok", true);
-            result.put("heatmap", heatmap);
-
-        } catch (Exception e) {
-            log.error("获取热力图数据失败", e);
-            result.put("ok", false);
-            result.put("error", e.getMessage());
-        }
-        return ResponseEntity.ok(result);
-    }
+    
 
     @GetMapping("/tags")
     public ResponseEntity<Map<String, Object>> getTags(@RequestParam Long kbId) {
         Map<String, Object> result = new HashMap<>();
         try {
-            List<NoteEmbeddingEntity> embeddings = noteEmbeddingDbService.lambdaQuery()
-                    .eq(NoteEmbeddingEntity::getKbId, kbId)
+            List<KbEmbeddingEntity> embeddings = noteEmbeddingDbService.lambdaQuery()
+                    .eq(KbEmbeddingEntity::getKbId, kbId)
                     .list();
 
             Map<String, Integer> tagCounts = new HashMap<>();
-            for (NoteEmbeddingEntity e : embeddings) {
+            for (KbEmbeddingEntity e : embeddings) {
                 String content = e.getContent();
                 if (content != null) {
                     String[] words = content.split("[\\s\\p{Punct}]+");
@@ -452,19 +390,17 @@ public class AiOverviewApiController {
     }
 
     private String collectRecentNotes(Long kbId, int days) {
-        long cutoff = System.currentTimeMillis() - (days * 86400000L);
-        List<FileIndexMetaEntity> metaList = fileIndexMetaDbService.lambdaQuery()
-                .eq(FileIndexMetaEntity::getKbId, kbId)
-                .gt(FileIndexMetaEntity::getLastModified, cutoff)
-                .list();
-
         StringBuilder content = new StringBuilder();
         content.append("最近").append(days).append("天的笔记内容：\n\n");
 
-        KnowledgeBaseEntity kb = kbService.getById(kbId);
+        KbBaseEntity kb = kbService.getById(kbId);
         String notesDir = kb != null ? kb.getNotesDir() : "";
 
-        for (FileIndexMetaEntity meta : metaList) {
+        List<KbEmbeddingEntity> metaList = noteEmbeddingDbService.lambdaQuery()
+                .eq(KbEmbeddingEntity::getKbId, kbId)
+                .list();
+
+        for (KbEmbeddingEntity meta : metaList) {
             try {
                 Path filePath = Paths.get(notesDir).resolve(meta.getFilePath());
                 String text = FileUtil.readText(filePath);
@@ -483,17 +419,17 @@ public class AiOverviewApiController {
     }
 
     private String collectAllNotes(Long kbId) {
-        List<FileIndexMetaEntity> metaList = fileIndexMetaDbService.lambdaQuery()
-                .eq(FileIndexMetaEntity::getKbId, kbId)
-                .list();
-
         StringBuilder content = new StringBuilder();
         content.append("笔记库所有内容：\n\n");
 
-        KnowledgeBaseEntity kb = kbService.getById(kbId);
+        KbBaseEntity kb = kbService.getById(kbId);
         String notesDir = kb != null ? kb.getNotesDir() : "";
 
-        for (FileIndexMetaEntity meta : metaList) {
+        List<KbEmbeddingEntity> metaList = noteEmbeddingDbService.lambdaQuery()
+                .eq(KbEmbeddingEntity::getKbId, kbId)
+                .list();
+
+        for (KbEmbeddingEntity meta : metaList) {
             try {
                 Path filePath = Paths.get(notesDir).resolve(meta.getFilePath());
                 String text = FileUtil.readText(filePath);

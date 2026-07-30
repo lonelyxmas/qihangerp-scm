@@ -10,10 +10,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
-import jakarta.annotation.PostConstruct;
-import javax.sql.DataSource;
-import java.sql.Connection;
-import java.sql.Statement;
 import java.util.*;
 
 @Service
@@ -23,37 +19,10 @@ public class DataModuleService {
 
     private final DataModuleMapper moduleMapper;
     private final DataSetDbService dataSetDbService;
-    private final DataSource dataSource;
 
-    public DataModuleService(DataModuleMapper moduleMapper, DataSetDbService dataSetDbService, DataSource dataSource) {
+    public DataModuleService(DataModuleMapper moduleMapper, DataSetDbService dataSetDbService) {
         this.moduleMapper = moduleMapper;
         this.dataSetDbService = dataSetDbService;
-        this.dataSource = dataSource;
-    }
-
-    @PostConstruct
-    public void init() {
-        createTable();
-    }
-
-    private void createTable() {
-        try (Connection conn = dataSource.getConnection(); Statement stmt = conn.createStatement()) {
-            stmt.execute("""
-                CREATE TABLE IF NOT EXISTS data_center_modules (
-                    id              BIGINT AUTO_INCREMENT PRIMARY KEY,
-                    module_id       VARCHAR(128) NOT NULL UNIQUE,
-                    name            VARCHAR(255) NOT NULL,
-                    description     TEXT,
-                    icon            VARCHAR(64),
-                    sort_order      INTEGER DEFAULT 0,
-                    created_at      VARCHAR(32) NOT NULL,
-                    updated_at      VARCHAR(32) NOT NULL
-                )
-                """);
-            log.info("Data center modules table initialized");
-        } catch (Exception e) {
-            log.error("Failed to create modules table", e);
-        }
     }
 
     public List<Map<String, Object>> getAllModules() {

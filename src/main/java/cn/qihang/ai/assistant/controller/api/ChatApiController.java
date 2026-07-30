@@ -1,7 +1,7 @@
 package cn.qihang.ai.assistant.controller.api;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import cn.qihang.ai.assistant.entity.KnowledgeBaseEntity;
+import cn.qihang.ai.assistant.entity.KbBaseEntity;
 import cn.qihang.ai.assistant.entity.MessageEntity;
 import cn.qihang.ai.assistant.entity.SessionEntity;
 import cn.qihang.ai.assistant.service.*;
@@ -32,7 +32,7 @@ public class ChatApiController {
         return t;
     });
 
-    private final KnowledgeBaseService kbService;
+    private final KbBaseService kbService;
     private final SessionDbService sessionDbService;
     private final MessageDbService messageDbService;
     private final SessionService sessionService;
@@ -41,7 +41,7 @@ public class ChatApiController {
     private final LlmConfigResolver llmConfigResolver;
     private final LogService logService;
 
-    public ChatApiController(KnowledgeBaseService kbService,
+    public ChatApiController(KbBaseService kbService,
                             SessionDbService sessionDbService,
                             MessageDbService messageDbService,
                             SessionService sessionService,
@@ -61,9 +61,9 @@ public class ChatApiController {
 
     @GetMapping("/kbs")
     public ResponseEntity<Map<String, Object>> listKbs() {
-        List<KnowledgeBaseEntity> kbs = kbService.getAll();
+        List<KbBaseEntity> kbs = kbService.getAll();
         List<Map<String, Object>> result = new ArrayList<>();
-        for (KnowledgeBaseEntity kb : kbs) {
+        for (KbBaseEntity kb : kbs) {
             Map<String, Object> item = new LinkedHashMap<>();
             item.put("id", kb.getId());
             item.put("name", kb.getName());
@@ -344,7 +344,7 @@ public class ChatApiController {
             messages.add(m);
         }
 
-        KnowledgeBaseEntity kb = kbService.getById(kbId);
+        KbBaseEntity kb = kbService.getById(kbId);
         String title = (kb != null ? kb.getName() : "知识库") + "对话导出";
         String date = TimeUtil.todayStr();
         StringBuilder sb = new StringBuilder();
@@ -363,8 +363,8 @@ public class ChatApiController {
         Matcher matcher = pattern.matcher(message);
         while (matcher.find()) {
             String kbName = matcher.group(1);
-            List<KnowledgeBaseEntity> kbs = kbService.getAll();
-            for (KnowledgeBaseEntity kb : kbs) {
+            List<KbBaseEntity> kbs = kbService.getAll();
+            for (KbBaseEntity kb : kbs) {
                 if (kb.getName().equals(kbName) || kb.getName().contains(kbName)) {
                     return kb.getId();
                 }

@@ -4,7 +4,7 @@ import cn.qihang.ai.assistant.config.AppConfig;
 import cn.qihang.ai.assistant.entity.AiAnalysisEntity;
 import cn.qihang.ai.assistant.datacenter.DataSetService;
 import cn.qihang.ai.assistant.datacenter.model.DataSet;
-import cn.qihang.ai.assistant.entity.KnowledgeBaseEntity;
+import cn.qihang.ai.assistant.entity.KbBaseEntity;
 import cn.qihang.ai.assistant.service.db.AiAnalysisDbService;
 import cn.qihang.ai.assistant.util.MarkdownUtil;
 import cn.qihang.ai.assistant.util.TimeUtil;
@@ -28,7 +28,7 @@ public class ReportService {
     private final LogService logService;
     private final AgentAnalysisService agentAnalysisService;
     private final ConfigService configService;
-    private final KnowledgeBaseService kbService;
+    private final KbBaseService kbService;
     private final AiAnalysisDbService aiAnalysisDbService;
     private final DataSetService dataSetService;
 
@@ -41,7 +41,7 @@ public class ReportService {
                           LogService logService,
                           AgentAnalysisService agentAnalysisService,
                           ConfigService configService,
-                          KnowledgeBaseService kbService,
+                          KbBaseService kbService,
                           AiAnalysisDbService aiAnalysisDbService,
                           DataSetService dataSetService) {
         this.appConfig = appConfig;
@@ -241,7 +241,7 @@ public class ReportService {
         if (r.report != null) {
             String today = TimeUtil.todayStr();
             String wd = TimeUtil.weekdayCn(TimeUtil.now());
-            KnowledgeBaseEntity kb = null;
+            KbBaseEntity kb = null;
             String kbLabel = "";
             if (kbId != null) {
                 kb = kbService.getById(kbId);

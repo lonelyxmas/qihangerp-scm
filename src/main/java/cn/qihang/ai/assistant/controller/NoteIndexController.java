@@ -1,6 +1,6 @@
 package cn.qihang.ai.assistant.controller;
 
-import cn.qihang.ai.assistant.entity.KnowledgeBaseEntity;
+import cn.qihang.ai.assistant.entity.KbBaseEntity;
 import cn.qihang.ai.assistant.service.IndexScannerService;
 import cn.qihang.ai.assistant.service.IndexScannerService.ScanResult;
 import cn.qihang.ai.assistant.service.IndexWatcherService;
@@ -9,7 +9,7 @@ import cn.qihang.ai.assistant.service.NoteIndexService;
 import cn.qihang.ai.assistant.service.NoteIndexService.IndexResult;
 import cn.qihang.ai.assistant.service.NoteIndexService.IndexStats;
 import cn.qihang.ai.assistant.service.NoteIndexService.NoteSearchResult;
-import cn.qihang.ai.assistant.service.KnowledgeBaseService;
+import cn.qihang.ai.assistant.service.KbBaseService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.annotation.*;
@@ -29,7 +29,7 @@ public class NoteIndexController {
 
     private final NoteIndexService noteIndexService;
     private final LogService logService;
-    private final KnowledgeBaseService kbService;
+    private final KbBaseService kbService;
     private final IndexScannerService indexScannerService;
     private final IndexWatcherService indexWatcherService;
 
@@ -45,7 +45,7 @@ public class NoteIndexController {
     private volatile String lastScanResult = "";
 
     public NoteIndexController(NoteIndexService noteIndexService, LogService logService,
-                               KnowledgeBaseService kbService,
+                               KbBaseService kbService,
                                IndexScannerService indexScannerService,
                                IndexWatcherService indexWatcherService) {
         this.noteIndexService = noteIndexService;

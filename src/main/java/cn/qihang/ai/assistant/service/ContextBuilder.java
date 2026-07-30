@@ -1,6 +1,6 @@
 package cn.qihang.ai.assistant.service;
 
-import cn.qihang.ai.assistant.entity.KnowledgeBaseEntity;
+import cn.qihang.ai.assistant.entity.KbBaseEntity;
 import cn.qihang.ai.assistant.entity.MessageEntity;
 import cn.qihang.ai.assistant.util.FileUtil;
 import cn.qihang.ai.assistant.util.TimeUtil;
@@ -18,10 +18,10 @@ public class ContextBuilder {
     private static final Logger log = LoggerFactory.getLogger(ContextBuilder.class);
 
     private final SessionService sessionService;
-    private final KnowledgeBaseService kbService;
+    private final KbBaseService kbService;
 
     public ContextBuilder(SessionService sessionService,
-                          KnowledgeBaseService kbService) {
+                          KbBaseService kbService) {
         this.sessionService = sessionService;
         this.kbService = kbService;
     }

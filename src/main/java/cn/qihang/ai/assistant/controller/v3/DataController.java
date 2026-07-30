@@ -1,9 +1,9 @@
 package cn.qihang.ai.assistant.controller.v3;
 
-import cn.qihang.ai.assistant.entity.KnowledgeBaseEntity;
+import cn.qihang.ai.assistant.entity.KbBaseEntity;
 import cn.qihang.ai.assistant.entity.SysUser;
 import cn.qihang.ai.assistant.security.common.SecurityUtils;
-import cn.qihang.ai.assistant.service.KnowledgeBaseService;
+import cn.qihang.ai.assistant.service.KbBaseService;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 
@@ -14,16 +14,16 @@ import java.util.Map;
 //@RequestMapping("/v3")
 public class DataController {
 
-    private final KnowledgeBaseService kbService;
+    private final KbBaseService kbService;
 
-    public DataController(KnowledgeBaseService kbService) {
+    public DataController(KbBaseService kbService) {
         this.kbService = kbService;
     }
 
     @GetMapping("/data")
     public String dataPage(@RequestParam(required = false) Long kbId, Map<String, Object> model) {
         model.put("currentNav", "data");
-        List<KnowledgeBaseEntity> kbList = kbService.getAll();
+        List<KbBaseEntity> kbList = kbService.getAll();
         model.put("kbList", kbList);
         
         if (!kbList.isEmpty()) {
@@ -35,7 +35,7 @@ public class DataController {
         }
 
         if (kbId != null) {
-            KnowledgeBaseEntity kb = kbService.getById(kbId);
+            KbBaseEntity kb = kbService.getById(kbId);
             if (kb != null) {
                 model.put("selectedKb", kb);
             }

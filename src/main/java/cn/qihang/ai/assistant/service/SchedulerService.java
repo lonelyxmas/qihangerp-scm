@@ -7,7 +7,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
-import cn.qihang.ai.assistant.entity.KnowledgeBaseEntity;
+import cn.qihang.ai.assistant.entity.KbBaseEntity;
 import cn.qihang.ai.assistant.model.ReminderData.Reminder;
 import cn.qihang.ai.assistant.util.TimeUtil;
 
@@ -19,13 +19,13 @@ public class SchedulerService {
     private final ReportService reportService;
     private final LogService logService;
     private final ReminderService reminderService;
-    private final KnowledgeBaseService kbService;
+    private final KbBaseService kbService;
     private final IndexScannerService indexScannerService;
 
     public SchedulerService(ReportService reportService,
                             LogService logService,
                             ReminderService reminderService,
-                            KnowledgeBaseService kbService,
+                            KbBaseService kbService,
                             IndexScannerService indexScannerService) {
         this.reportService = reportService;
         this.logService = logService;
@@ -37,8 +37,8 @@ public class SchedulerService {
     @Scheduled(cron = "0 0 9 * * ?", zone = "Asia/Shanghai")
     public void morningReport() {
         log.info("[{}] ⏰ 定时任务：生成综合日报", TimeUtil.nowStr());
-        List<KnowledgeBaseEntity> kbs = kbService.getAll();
-        for (KnowledgeBaseEntity kb : kbs) {
+        List<KbBaseEntity> kbs = kbService.getAll();
+        for (KbBaseEntity kb : kbs) {
             try {
                 // 检查是否启用了自动日报（默认开启）
                 boolean autoReport = kb.getAutoReport() == null || kb.getAutoReport() == 1;

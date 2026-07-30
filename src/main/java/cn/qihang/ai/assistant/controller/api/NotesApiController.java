@@ -1,7 +1,7 @@
 package cn.qihang.ai.assistant.controller.api;
 
-import cn.qihang.ai.assistant.entity.KnowledgeBaseEntity;
-import cn.qihang.ai.assistant.service.KnowledgeBaseService;
+import cn.qihang.ai.assistant.entity.KbBaseEntity;
+import cn.qihang.ai.assistant.service.KbBaseService;
 import cn.qihang.ai.assistant.util.FileUtil;
 import cn.qihang.ai.assistant.util.MarkdownUtil;
 import org.slf4j.Logger;
@@ -28,9 +28,9 @@ public class NotesApiController {
 
     private static final Logger log = LoggerFactory.getLogger(NotesApiController.class);
 
-    private final KnowledgeBaseService kbService;
+    private final KbBaseService kbService;
 
-    public NotesApiController(KnowledgeBaseService kbService) {
+    public NotesApiController(KbBaseService kbService) {
         this.kbService = kbService;
     }
 
@@ -39,7 +39,7 @@ public class NotesApiController {
     @ResponseBody
     @GetMapping("/api/notes/tree")
     public Map<String, Object> getNotesTree(@RequestParam Long kbId) {
-        KnowledgeBaseEntity kb = kbService.getById(kbId);
+        KbBaseEntity kb = kbService.getById(kbId);
         if (kb == null) return Map.of("ok", false, "error", "笔记库不存在");
 
         Path base = Paths.get(kb.getNotesDir());
@@ -102,7 +102,7 @@ public class NotesApiController {
     @ResponseBody
     @GetMapping("/api/notes/read")
     public Map<String, Object> readNote(@RequestParam Long kbId, @RequestParam String path) {
-        KnowledgeBaseEntity kb = kbService.getById(kbId);
+        KbBaseEntity kb = kbService.getById(kbId);
         if (kb == null) return Map.of("ok", false, "error", "笔记库不存在");
 
         Path base = Paths.get(kb.getNotesDir());

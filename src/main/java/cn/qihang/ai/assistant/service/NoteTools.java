@@ -37,11 +37,11 @@ public class NoteTools {
     private static final ObjectMapper mapper = new ObjectMapper();
 
     private final ConfigService configService;
-    private final KnowledgeBaseService kbService;
+    private final KbBaseService kbService;
     private final DataSetService dataSetService;
     private final ActivityLogDbService activityLogDbService;
 
-    public NoteTools(ConfigService configService, KnowledgeBaseService kbService,
+    public NoteTools(ConfigService configService, KbBaseService kbService,
                     DataSetService dataSetService, ActivityLogDbService activityLogDbService) {
         this.configService = configService;
         this.kbService = kbService;

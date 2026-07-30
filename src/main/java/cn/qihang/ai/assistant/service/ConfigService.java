@@ -20,9 +20,9 @@ public class ConfigService {
     private static final Logger log = LoggerFactory.getLogger(ConfigService.class);
     private static final TypeReference<Map<String, Object>> MAP_TYPE = new TypeReference<>() {};
     private final AppConfig appConfig;
-    private final KnowledgeBaseService kbService;
+    private final KbBaseService kbService;
 
-    public ConfigService(AppConfig appConfig, KnowledgeBaseService kbService) {
+    public ConfigService(AppConfig appConfig, KbBaseService kbService) {
         this.appConfig = appConfig;
         this.kbService = kbService;
     }

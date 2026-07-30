@@ -1,7 +1,7 @@
 package cn.qihang.ai.assistant.controller.v3;
 
-import cn.qihang.ai.assistant.entity.KnowledgeBaseEntity;
-import cn.qihang.ai.assistant.service.KnowledgeBaseService;
+import cn.qihang.ai.assistant.entity.KbBaseEntity;
+import cn.qihang.ai.assistant.service.KbBaseService;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 
@@ -12,16 +12,16 @@ import java.util.Map;
 //@RequestMapping("/v3")
 public class PlannerController {
 
-    private final KnowledgeBaseService kbService;
+    private final KbBaseService kbService;
 
-    public PlannerController(KnowledgeBaseService kbService) {
+    public PlannerController(KbBaseService kbService) {
         this.kbService = kbService;
     }
 
     @GetMapping("/planner")
     public String plannerPage(@RequestParam(required = false) Long kbId, Map<String, Object> model) {
         model.put("currentNav", "planner");
-        List<KnowledgeBaseEntity> kbList = kbService.getAll();
+        List<KbBaseEntity> kbList = kbService.getAll();
         model.put("kbList", kbList);
         
         if (!kbList.isEmpty()) {
@@ -29,7 +29,7 @@ public class PlannerController {
         }
 
         if (kbId != null) {
-            KnowledgeBaseEntity kb = kbService.getById(kbId);
+            KbBaseEntity kb = kbService.getById(kbId);
             if (kb != null) {
                 model.put("selectedKb", kb);
             }

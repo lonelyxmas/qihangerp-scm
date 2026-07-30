@@ -1,8 +1,8 @@
 package cn.qihang.ai.assistant.service;
 
-import cn.qihang.ai.assistant.entity.KnowledgeBaseEntity;
-import cn.qihang.ai.assistant.entity.NoteEmbeddingEntity;
-import cn.qihang.ai.assistant.service.db.NoteEmbeddingDbService;
+import cn.qihang.ai.assistant.entity.KbBaseEntity;
+import cn.qihang.ai.assistant.entity.KbEmbeddingEntity;
+import cn.qihang.ai.assistant.service.db.KbEmbeddingDbService;
 import cn.qihang.ai.assistant.util.FileUtil;
 import cn.qihang.ai.assistant.util.TimeUtil;
 import org.slf4j.Logger;
@@ -30,19 +30,16 @@ public class NoteIndexService {
     // 默认排除列表（系统级）- 只排除以.开头的
     private static final Set<String> SYSTEM_IGNORED = Set.of();
 
-    private final NoteEmbeddingDbService noteEmbeddingDbService;
+    private final KbEmbeddingDbService noteEmbeddingDbService;
     private final OllamaEmbeddingService embeddingService;
-    private final KnowledgeBaseService kbService;
-    private final cn.qihang.ai.assistant.service.db.FileIndexMetaDbService fileIndexMetaDbService;
+    private final KbBaseService kbService;
 
-    public NoteIndexService(NoteEmbeddingDbService noteEmbeddingDbService,
+    public NoteIndexService(KbEmbeddingDbService noteEmbeddingDbService,
                            OllamaEmbeddingService embeddingService,
-                           KnowledgeBaseService kbService,
-                           cn.qihang.ai.assistant.service.db.FileIndexMetaDbService fileIndexMetaDbService) {
+                           KbBaseService kbService) {
         this.noteEmbeddingDbService = noteEmbeddingDbService;
         this.embeddingService = embeddingService;
         this.kbService = kbService;
-        this.fileIndexMetaDbService = fileIndexMetaDbService;
     }
 
     public boolean isAvailable() {
@@ -61,7 +58,7 @@ public class NoteIndexService {
         
         // 从数据库读取用户自定义排除列表
         if (kbId != null) {
-            KnowledgeBaseEntity kb = kbService.getById(kbId);
+            KbBaseEntity kb = kbService.getById(kbId);
             if (kb != null && kb.getIgnoreDirs() != null && !kb.getIgnoreDirs().isBlank()) {
                 try {
                     String[] dirs = kb.getIgnoreDirs().split(",");
@@ -95,7 +92,7 @@ public class NoteIndexService {
         Set<String> ignored = new HashSet<>();
         
         if (kbId != null) {
-            KnowledgeBaseEntity kb = kbService.getById(kbId);
+            KbBaseEntity kb = kbService.getById(kbId);
             if (kb != null && kb.getIgnoreFiles() != null && !kb.getIgnoreFiles().isBlank()) {
                 try {
                     String[] files = kb.getIgnoreFiles().split(",");
@@ -162,9 +159,6 @@ public class NoteIndexService {
         Set<String> ignoredFiles = getIgnoredFiles(kbId);
         log.info("[NoteIndex] 排除文件夹: {}, 排除文件: {}", ignoredDirs, ignoredFiles);
 
-        // 全量重建前清空旧元数据
-        fileIndexMetaDbService.deleteByKb(kbId);
-
         IndexResult result = new IndexResult();
         try (Stream<Path> walk = Files.walk(baseDir, 10)) {
             List<Path> files = walk
@@ -187,10 +181,6 @@ public class NoteIndexService {
                 try {
                     boolean indexed = indexFile(file, baseDir, kbId);
                     result.fileCount++;
-                    // 更新元数据表
-                    if (indexed) {
-                        updateFileMeta(file, baseDir, kbId);
-                    }
                 } catch (Exception e) {
                     log.warn("[NoteIndex] 索引文件失败: {}", file, e);
                     result.errors.add(file.getFileName().toString() + ": " + e.getMessage());
@@ -257,9 +247,9 @@ public class NoteIndexService {
 
         String contentHash = md5(content);
 
-        List<NoteEmbeddingEntity> existing = noteEmbeddingDbService.lambdaQuery()
-                .eq(NoteEmbeddingEntity::getKbId, kbId)
-                .eq(NoteEmbeddingEntity::getFilePath, relativePath)
+        List<KbEmbeddingEntity> existing = noteEmbeddingDbService.lambdaQuery()
+                .eq(KbEmbeddingEntity::getKbId, kbId)
+                .eq(KbEmbeddingEntity::getFilePath, relativePath)
                 .list();
 
         // 提取路径特征信息：上级文件夹名称
@@ -290,7 +280,7 @@ public class NoteIndexService {
                 continue;
             }
 
-            NoteEmbeddingEntity entity = new NoteEmbeddingEntity();
+            KbEmbeddingEntity entity = new KbEmbeddingEntity();
             entity.setKbId(kbId);
             entity.setFilePath(relativePath);
             entity.setChunkIndex(i);
@@ -332,8 +322,8 @@ public class NoteIndexService {
             throw new RuntimeException("生成查询向量失败");
         }
 
-        List<NoteEmbeddingEntity> allEntities = noteEmbeddingDbService.lambdaQuery()
-                .eq(NoteEmbeddingEntity::getKbId, kbId)
+        List<KbEmbeddingEntity> allEntities = noteEmbeddingDbService.lambdaQuery()
+                .eq(KbEmbeddingEntity::getKbId, kbId)
                 .list();
 
         if (allEntities.isEmpty()) {
@@ -343,7 +333,7 @@ public class NoteIndexService {
         List<ScoredChunk> scored = new ArrayList<>();
         int checkedCount = 0;
         int matchedCount = 0;
-        for (NoteEmbeddingEntity entity : allEntities) {
+        for (KbEmbeddingEntity entity : allEntities) {
             float[] vec = bytesToFloat(Base64.getDecoder().decode(entity.getEmbedding()));
             float score = cosineSimilarity(queryVector, vec);
             checkedCount++;
@@ -540,11 +530,11 @@ public class NoteIndexService {
         Set<String> ignoredFiles = getIgnoredFiles(kbId);
 
         // 从数据库读取所有索引记录，用于检查路径上下文
-        List<NoteEmbeddingEntity> allEntities = noteEmbeddingDbService.lambdaQuery()
-                .eq(NoteEmbeddingEntity::getKbId, kbId)
+        List<KbEmbeddingEntity> allEntities = noteEmbeddingDbService.lambdaQuery()
+                .eq(KbEmbeddingEntity::getKbId, kbId)
                 .list();
         Set<String> pathContextMatchedFiles = new HashSet<>();
-        for (NoteEmbeddingEntity entity : allEntities) {
+        for (KbEmbeddingEntity entity : allEntities) {
             if (entity.getPathContext() != null && entity.getPathContext().toLowerCase().contains(queryLower)) {
                 pathContextMatchedFiles.add(entity.getFilePath());
             }
@@ -619,43 +609,10 @@ public class NoteIndexService {
     }
 
     /**
-     * 更新文件索引元数据（file_index_meta 表）
-     */
-    private void updateFileMeta(Path file, Path baseDir, Long kbId) throws Exception {
-        String relPath = baseDir.relativize(file).toString().replace("\\", "/");
-        long lastModified = java.nio.file.Files.getLastModifiedTime(file).toMillis();
-        long fileSize = java.nio.file.Files.size(file);
-
-        String content = FileUtil.readText(file);
-        String contentHash = content != null && !content.isBlank() ? md5(content) : null;
-        String now = cn.qihang.ai.assistant.util.TimeUtil.nowStr();
-
-        cn.qihang.ai.assistant.entity.FileIndexMetaEntity existing = fileIndexMetaDbService.findByKbAndPath(kbId, relPath);
-        if (existing != null) {
-            existing.setLastModified(lastModified);
-            existing.setFileSize(fileSize);
-            existing.setContentHash(contentHash);
-            existing.setLastIndexedAt(now);
-            fileIndexMetaDbService.updateById(existing);
-        } else {
-            cn.qihang.ai.assistant.entity.FileIndexMetaEntity meta = new cn.qihang.ai.assistant.entity.FileIndexMetaEntity();
-            meta.setKbId(kbId);
-            meta.setFilePath(relPath);
-            meta.setLastModified(lastModified);
-            meta.setFileSize(fileSize);
-            meta.setContentHash(contentHash);
-            meta.setLastIndexedAt(now);
-            meta.setCreatedAt(now);
-            fileIndexMetaDbService.save(meta);
-        }
-    }
-
-    /**
      * 从索引中移除指定文件（文件已删除时调用）
      */
     public void removeFileFromIndex(Long kbId, String filePath) {
         noteEmbeddingDbService.deleteByKbAndPath(kbId, filePath);
-        fileIndexMetaDbService.deleteByKbAndPath(kbId, filePath);
         log.debug("[NoteIndex] 已移除索引: kbId={}, path={}", kbId, filePath);
     }
 
@@ -771,7 +728,7 @@ public class NoteIndexService {
             int totalChunks
     ) {}
 
-    private record ScoredChunk(NoteEmbeddingEntity entity, float score) {}
+    private record ScoredChunk(KbEmbeddingEntity entity, float score) {}
 
     public static class IndexResult {
         public int fileCount;

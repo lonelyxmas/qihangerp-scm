@@ -1,7 +1,6 @@
 package cn.qihang.ai.assistant.service;
 
 import cn.qihang.ai.assistant.util.TimeUtil;
-import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -25,32 +24,6 @@ public class AgentTraceService {
 
     public AgentTraceService(DataSource dataSource) {
         this.dataSource = dataSource;
-    }
-
-    @PostConstruct
-    public void init() {
-        createTable();
-    }
-
-    private void createTable() {
-        try (Connection conn = dataSource.getConnection(); Statement stmt = conn.createStatement()) {
-            stmt.execute("""
-                CREATE TABLE IF NOT EXISTS agent_traces (
-                    id          BIGINT AUTO_INCREMENT PRIMARY KEY,
-                    session_id  VARCHAR(255) NOT NULL,
-                    step_index  INTEGER NOT NULL,
-                    step_type   VARCHAR(64) NOT NULL,
-                    content     TEXT NOT NULL,
-                    details     TEXT,
-                    duration_ms BIGINT DEFAULT 0,
-                    created_at  VARCHAR(32) NOT NULL
-                )
-                """);
-            stmt.execute("CREATE INDEX IF NOT EXISTS idx_traces_session ON agent_traces(session_id)");
-            log.info("Table agent_traces initialized");
-        } catch (SQLException e) {
-            log.warn("Failed to create agent_traces table: {}", e.getMessage());
-        }
     }
 
     /** 记录一个追踪步骤 */

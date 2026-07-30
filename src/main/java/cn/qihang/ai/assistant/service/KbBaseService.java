@@ -2,8 +2,8 @@ package cn.qihang.ai.assistant.service;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import cn.qihang.ai.assistant.config.AppConfig;
-import cn.qihang.ai.assistant.entity.KnowledgeBaseEntity;
-import cn.qihang.ai.assistant.service.db.KnowledgeBaseDbService;
+import cn.qihang.ai.assistant.entity.KbBaseEntity;
+import cn.qihang.ai.assistant.service.db.KbBaseDbService;
 import cn.qihang.ai.assistant.util.FileUtil;
 import cn.qihang.ai.assistant.util.TimeUtil;
 import jakarta.annotation.PostConstruct;
@@ -15,23 +15,23 @@ import java.util.List;
 import java.util.Map;
 
 @Service
-public class KnowledgeBaseService {
+public class KbBaseService {
 
-    private static final Logger log = LoggerFactory.getLogger(KnowledgeBaseService.class);
+    private static final Logger log = LoggerFactory.getLogger(KbBaseService.class);
     private static final TypeReference<Map<String, Object>> MAP_TYPE = new TypeReference<>() {};
 
-    private final KnowledgeBaseDbService kbDbService;
+    private final KbBaseDbService kbBaseDbService;
     private final AppConfig appConfig;
 
-    public KnowledgeBaseService(KnowledgeBaseDbService kbDbService, AppConfig appConfig) {
-        this.kbDbService = kbDbService;
+    public KbBaseService(KbBaseDbService kbBaseDbService, AppConfig appConfig) {
+        this.kbBaseDbService = kbBaseDbService;
         this.appConfig = appConfig;
     }
 
     @PostConstruct
     public void migrateFromConfig() {
         try {
-            long count = kbDbService.count();
+            long count = kbBaseDbService.count();
             if (count > 0) return;
 
             Map<String, Object> raw = FileUtil.readJson(appConfig.getConfigFile(), MAP_TYPE, Map.of());
@@ -41,32 +41,32 @@ public class KnowledgeBaseService {
             }
             if (notesDir == null || notesDir.isBlank()) return;
 
-            KnowledgeBaseEntity kb = new KnowledgeBaseEntity();
-            kb.setName("工作");
+            KbBaseEntity kb = new KbBaseEntity();
+            kb.setName("宸ヤ綔");
             kb.setNotesDir(notesDir);
-            kb.setLabels("{\"tasks\":\"任务\",\"reminders\":\"提醒\",\"notes\":\"笔记\",\"config\":\"配置\"}");
+            kb.setLabels("{\"tasks\":\"浠诲姟\",\"reminders\":\"鎻愰啋\",\"notes\":\"绗旇\",\"config\":\"閰嶇疆\"}");
             kb.setSortOrder(0);
             kb.setCreatedAt(TimeUtil.nowStr());
-            kbDbService.save(kb);
-            log.info("已从 config.json 迁移知识库: name={}, notesDir={}", kb.getName(), kb.getNotesDir());
+            kbBaseDbService.save(kb);
+            log.info("宸蹭粠 config.json 杩佺Щ鐭ヨ瘑搴? name={}, notesDir={}", kb.getName(), kb.getNotesDir());
         } catch (Exception e) {
-            log.warn("知识库迁移失败（可能是首次启动，表尚未创建）: {}", e.getMessage());
+            log.warn("鐭ヨ瘑搴撹縼绉诲け璐ワ紙鍙兘鏄娆″惎鍔紝琛ㄥ皻鏈垱寤猴級: {}", e.getMessage());
         }
     }
 
-    public List<KnowledgeBaseEntity> getAll() {
-        return kbDbService.lambdaQuery()
-                .orderByAsc(KnowledgeBaseEntity::getSortOrder)
+    public List<KbBaseEntity> getAll() {
+        return kbBaseDbService.lambdaQuery()
+                .orderByAsc(KbBaseEntity::getSortOrder)
                 .list();
     }
 
-    public KnowledgeBaseEntity getById(Long id) {
-        return kbDbService.getById(id);
+    public KbBaseEntity getById(Long id) {
+        return kbBaseDbService.getById(id);
     }
 
-    public KnowledgeBaseEntity getFirst() {
-        return kbDbService.lambdaQuery()
-                .orderByAsc(KnowledgeBaseEntity::getSortOrder)
+    public KbBaseEntity getFirst() {
+        return kbBaseDbService.lambdaQuery()
+                .orderByAsc(KbBaseEntity::getSortOrder)
                 .last("LIMIT 1")
                 .one();
     }
@@ -75,16 +75,16 @@ public class KnowledgeBaseService {
         Object idRaw = body.get("id");
         Long id = idRaw != null ? Long.valueOf(idRaw.toString()) : null;
 
-        KnowledgeBaseEntity e;
+        KbBaseEntity e;
         boolean isNew = false;
         if (id != null && id > 0) {
-            e = kbDbService.getById(id);
+            e = kbBaseDbService.getById(id);
             if (e == null) {
-                e = new KnowledgeBaseEntity();
+                e = new KbBaseEntity();
                 e.setId(id);
             }
         } else {
-            e = new KnowledgeBaseEntity();
+            e = new KbBaseEntity();
             isNew = true;
         }
 
@@ -107,8 +107,8 @@ public class KnowledgeBaseService {
         }
 
         if (isNew) {
-            int maxOrder = kbDbService.lambdaQuery()
-                    .orderByDesc(KnowledgeBaseEntity::getSortOrder)
+            int maxOrder = kbBaseDbService.lambdaQuery()
+                    .orderByDesc(KbBaseEntity::getSortOrder)
                     .list().stream()
                     .findFirst()
                     .map(k -> k.getSortOrder() + 1)
@@ -116,17 +116,17 @@ public class KnowledgeBaseService {
             e.setSortOrder(maxOrder);
             e.setLabels("{}");
             e.setCreatedAt(TimeUtil.nowStr());
-            kbDbService.save(e);
+            kbBaseDbService.save(e);
         } else {
-            kbDbService.updateById(e);
+            kbBaseDbService.updateById(e);
         }
     }
 
     public void delete(Long id) {
-        KnowledgeBaseEntity e = kbDbService.getById(id);
+        KbBaseEntity e = kbBaseDbService.getById(id);
         if (e == null) return;
 
-        kbDbService.removeById(id);
+        kbBaseDbService.removeById(id);
     }
 
     public void setActive(Long id) {
@@ -135,15 +135,15 @@ public class KnowledgeBaseService {
     public void reorder(List<Long> ids) {
         int order = 0;
         for (Long id : ids) {
-            kbDbService.lambdaUpdate()
-                    .eq(KnowledgeBaseEntity::getId, id)
-                    .set(KnowledgeBaseEntity::getSortOrder, order++)
+            kbBaseDbService.lambdaUpdate()
+                    .eq(KbBaseEntity::getId, id)
+                    .set(KbBaseEntity::getSortOrder, order++)
                     .update();
         }
     }
 
     public String getNotesDir() {
-        KnowledgeBaseEntity first = getFirst();
+        KbBaseEntity first = getFirst();
         if (first != null) {
             return first.getNotesDir();
         }
@@ -152,19 +152,18 @@ public class KnowledgeBaseService {
 
     public String getNotesDirById(Long kbId) {
         if (kbId == null) return getNotesDir();
-        KnowledgeBaseEntity kb = getById(kbId);
+        KbBaseEntity kb = getById(kbId);
         if (kb != null) return kb.getNotesDir();
         return getNotesDir();
     }
 
-    /** 根据笔记库路径查找 kbId（用于兼容旧版 notesDir 调用方） */
     public Long getKbIdByNotesDir(String notesDir) {
         if (notesDir == null || notesDir.isBlank()) return null;
-        return kbDbService.lambdaQuery()
-                .eq(KnowledgeBaseEntity::getNotesDir, notesDir)
+        return kbBaseDbService.lambdaQuery()
+                .eq(KbBaseEntity::getNotesDir, notesDir)
                 .last("LIMIT 1")
                 .oneOpt()
-                .map(KnowledgeBaseEntity::getId)
+                .map(KbBaseEntity::getId)
                 .orElse(null);
     }
 

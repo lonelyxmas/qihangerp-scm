@@ -1,6 +1,5 @@
 package cn.qihang.ai.assistant.service;
 
-import cn.qihang.ai.assistant.service.db.FileIndexMetaDbService;
 import cn.qihang.ai.assistant.util.TimeUtil;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
@@ -21,8 +20,7 @@ public class IndexWatcherService {
 
     private final NoteIndexService noteIndexService;
     private final IndexScannerService scannerService;
-    private final KnowledgeBaseService kbService;
-    private final FileIndexMetaDbService metaDbService;
+    private final KbBaseService kbService;
 
     private final Map<Long, WatcherEntry> watchers = new ConcurrentHashMap<>();
     private final ScheduledExecutorService debouncer = Executors.newSingleThreadScheduledExecutor(r -> {
@@ -30,8 +28,8 @@ public class IndexWatcherService {
     });
     private volatile boolean running = true;
 
-    public IndexWatcherService(NoteIndexService ns, IndexScannerService ss, KnowledgeBaseService kb, FileIndexMetaDbService md) {
-        this.noteIndexService = ns; this.scannerService = ss; this.kbService = kb; this.metaDbService = md;
+    public IndexWatcherService(NoteIndexService ns, IndexScannerService ss, KbBaseService kb) {
+        this.noteIndexService = ns; this.scannerService = ss; this.kbService = kb;
     }
 
     @PostConstruct
@@ -147,17 +145,8 @@ public class IndexWatcherService {
             try {
                 if (Files.isRegularFile(fullPath)) {
                     noteIndexService.indexSingleFile(fullPath, baseDir, kbId);
-                    var meta = metaDbService.findByKbAndPath(kbId, relPath);
-                    String now = TimeUtil.nowStr();
-                    if (meta != null) {
-                        meta.setLastModified(Files.getLastModifiedTime(fullPath).toMillis());
-                        meta.setFileSize(Files.size(fullPath));
-                        meta.setLastIndexedAt(now);
-                        metaDbService.updateById(meta);
-                    }
                 } else {
                     noteIndexService.removeFileFromIndex(kbId, relPath);
-                    metaDbService.deleteByKbAndPath(kbId, relPath);
                 }
             } catch (Exception e) {
                 log.warn("[IndexWatcher] 处理失败: {}", relPath, e);

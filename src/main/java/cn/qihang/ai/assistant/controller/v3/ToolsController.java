@@ -1,7 +1,7 @@
 package cn.qihang.ai.assistant.controller.v3;
 
-import cn.qihang.ai.assistant.entity.KnowledgeBaseEntity;
-import cn.qihang.ai.assistant.service.KnowledgeBaseService;
+import cn.qihang.ai.assistant.entity.KbBaseEntity;
+import cn.qihang.ai.assistant.service.KbBaseService;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 
@@ -12,16 +12,16 @@ import java.util.Map;
 //@RequestMapping("/v3")
 public class ToolsController {
 
-    private final KnowledgeBaseService kbService;
+    private final KbBaseService kbService;
 
-    public ToolsController(KnowledgeBaseService kbService) {
+    public ToolsController(KbBaseService kbService) {
         this.kbService = kbService;
     }
 
     @GetMapping("/tools")
     public String toolsPage(Map<String, Object> model) {
         model.put("currentNav", "tools");
-        List<KnowledgeBaseEntity> kbList = kbService.getAll();
+        List<KbBaseEntity> kbList = kbService.getAll();
         model.put("kbList", kbList);
         
         if (!kbList.isEmpty()) {

@@ -3,7 +3,7 @@ package cn.qihang.ai.assistant.controller;
 import com.fasterxml.jackson.core.type.TypeReference;
 import cn.qihang.ai.assistant.config.AppConfig;
 import cn.qihang.ai.assistant.entity.AiAnalysisEntity;
-import cn.qihang.ai.assistant.entity.KnowledgeBaseEntity;
+import cn.qihang.ai.assistant.entity.KbBaseEntity;
 import cn.qihang.ai.assistant.entity.LlmProfileEntity;
 import cn.qihang.ai.assistant.model.ReminderData.Reminder;
 import cn.qihang.ai.assistant.model.TaskData.TaskItem;
@@ -14,7 +14,7 @@ import cn.qihang.ai.assistant.service.DirectoryDataService;
 import cn.qihang.ai.assistant.service.NoteIndexService;
 import cn.qihang.ai.assistant.service.NoteIndexService.IndexStats;
 import cn.qihang.ai.assistant.service.db.MessageDbService;
-import cn.qihang.ai.assistant.service.KnowledgeBaseService;
+import cn.qihang.ai.assistant.service.KbBaseService;
 import cn.qihang.ai.assistant.service.LogService;
 import cn.qihang.ai.assistant.service.ReportService;
 import cn.qihang.ai.assistant.service.TaskService;
@@ -38,9 +38,9 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 @Controller
-public class KnowledgeBaseController {
+public class KbBaseController {
 
-    private static final Logger log = LoggerFactory.getLogger(KnowledgeBaseController.class);
+    private static final Logger log = LoggerFactory.getLogger(KbBaseController.class);
     private static final TypeReference<Map<String, String>> LABELS_TYPE = new TypeReference<>() {};
     private static final Set<String> IGNORED_DIRS = Set.of(
             ".git", ".obsidian", "__pycache__", ".DS_Store",
@@ -50,7 +50,7 @@ public class KnowledgeBaseController {
     private final java.util.concurrent.ExecutorService analysisExecutor =
             java.util.concurrent.Executors.newSingleThreadExecutor();
 
-    private final KnowledgeBaseService kbService;
+    private final KbBaseService kbService;
     private final LogService logService;
     private final TaskService taskService;
     private final ReminderService reminderService;
@@ -64,7 +64,7 @@ public class KnowledgeBaseController {
     private final NoteIndexService noteIndexService;
     private final MessageDbService messageDbService;
 
-    public KnowledgeBaseController(KnowledgeBaseService kbService,
+    public KbBaseController(KbBaseService kbService,
                                    LogService logService, TaskService taskService,
                                    ReminderService reminderService, ReportService reportService,
                                    ConfigService configService,
@@ -90,7 +90,7 @@ public class KnowledgeBaseController {
         this.messageDbService = messageDbService;
     }
 
-    private Path kbDir(KnowledgeBaseEntity kb) {
+    private Path kbDir(KbBaseEntity kb) {
         return Paths.get(kb.getNotesDir());
     }
 
@@ -110,7 +110,7 @@ public class KnowledgeBaseController {
 
     @GetMapping("/kb/{id}/ai")
     public String aiHub(@PathVariable Long id, Map<String, Object> model) {
-        KnowledgeBaseEntity kb = kbService.getById(id);
+        KbBaseEntity kb = kbService.getById(id);
         if (kb == null) return "redirect:/config";
 
         model.put("kb", kb);
@@ -140,7 +140,7 @@ public class KnowledgeBaseController {
 
     @GetMapping("/kb/{id}/index")
     public String kbIndex(@PathVariable Long id, Map<String, Object> model) {
-        KnowledgeBaseEntity kb = kbService.getById(id);
+        KbBaseEntity kb = kbService.getById(id);
         if (kb == null) return "redirect:/config";
 
         model.put("kb", kb);
@@ -154,7 +154,7 @@ public class KnowledgeBaseController {
 
     @GetMapping("/kb/{id}/search")
     public String kbSearch(@PathVariable Long id, Map<String, Object> model) {
-        KnowledgeBaseEntity kb = kbService.getById(id);
+        KbBaseEntity kb = kbService.getById(id);
         if (kb == null) return "redirect:/config";
 
         model.put("kb", kb);
@@ -167,7 +167,7 @@ public class KnowledgeBaseController {
 
     @GetMapping("/kb/{id}/data")
     public String kbData(@PathVariable Long id, Map<String, Object> model) {
-        KnowledgeBaseEntity kb = kbService.getById(id);
+        KbBaseEntity kb = kbService.getById(id);
         if (kb == null) return "redirect:/config";
 
         model.put("kb", kb);
@@ -184,7 +184,7 @@ public class KnowledgeBaseController {
                                 @RequestParam(defaultValue = "") String dir,
                                 @RequestParam(defaultValue = "") String file,
                                 Map<String, Object> model) {
-        KnowledgeBaseEntity kb = kbService.getById(id);
+        KbBaseEntity kb = kbService.getById(id);
         if (kb == null) return "redirect:/config";
 
         model.put("kb", kb);
@@ -209,7 +209,7 @@ public class KnowledgeBaseController {
                                  @RequestParam String dir,
                                  @RequestParam(required = false, defaultValue = "") String prompt) {
         SseEmitter emitter = new SseEmitter(300_000L);
-        KnowledgeBaseEntity kb = kbService.getById(id);
+        KbBaseEntity kb = kbService.getById(id);
         if (kb == null) {
             try {
                 emitter.send(SseEmitter.event().data(mapper.writeValueAsString(
@@ -260,7 +260,7 @@ public class KnowledgeBaseController {
     @PostMapping("/kb/{id}/api/dir-settings")
     public Map<String, Object> saveDirSettings(@PathVariable Long id,
                                                @RequestBody Map<String, Object> body) {
-        KnowledgeBaseEntity kb = kbService.getById(id);
+        KbBaseEntity kb = kbService.getById(id);
         if (kb == null) return Map.of("ok", false, "error", "知识库不存在");
         try {
             kb.setDirSettings(mapper.writeValueAsString(body));
@@ -274,7 +274,7 @@ public class KnowledgeBaseController {
     @ResponseBody
     @GetMapping("/kb/{id}/api/dirs")
     public Map<String, Object> listDirs(@PathVariable Long id) {
-        KnowledgeBaseEntity kb = kbService.getById(id);
+        KbBaseEntity kb = kbService.getById(id);
         if (kb == null) return Map.of("ok", false, "error", "知识库不存在");
         if (kb.getNotesDir() == null || kb.getNotesDir().isBlank()) {
             return Map.of("ok", true, "dirs", List.of());
@@ -287,7 +287,7 @@ public class KnowledgeBaseController {
     @ResponseBody
     @GetMapping("/kb/{id}/api/dir-settings")
     public Map<String, Object> getDirSettings(@PathVariable Long id) {
-        KnowledgeBaseEntity kb = kbService.getById(id);
+        KbBaseEntity kb = kbService.getById(id);
         if (kb == null) return Map.of("ok", false);
         Map<String, Object> settings = parseDirSettings(kb.getDirSettings());
         return Map.of("ok", true, "settings", settings);
@@ -296,7 +296,7 @@ public class KnowledgeBaseController {
     @ResponseBody
     @PostMapping("/kb/{id}/api/dir-rename")
     public Map<String, Object> renameDir(@PathVariable Long id, @RequestBody Map<String, String> body) {
-        KnowledgeBaseEntity kb = kbService.getById(id);
+        KbBaseEntity kb = kbService.getById(id);
         if (kb == null) return Map.of("ok", false, "error", "知识库不存在");
 
         String oldName = body.getOrDefault("oldName", "").trim();
@@ -349,7 +349,7 @@ public class KnowledgeBaseController {
     @ResponseBody
     @PostMapping("/kb/{id}/api/dir-delete")
     public Map<String, Object> deleteDir(@PathVariable Long id, @RequestBody Map<String, String> body) {
-        KnowledgeBaseEntity kb = kbService.getById(id);
+        KbBaseEntity kb = kbService.getById(id);
         if (kb == null) return Map.of("ok", false, "error", "知识库不存在");
 
         String dirName = body.getOrDefault("name", "").trim();
@@ -406,7 +406,7 @@ public class KnowledgeBaseController {
     @ResponseBody
     @GetMapping("/kb/{id}/api/notes/list")
     public Map<String, Object> listNotes(@PathVariable Long id) {
-        KnowledgeBaseEntity kb = kbService.getById(id);
+        KbBaseEntity kb = kbService.getById(id);
         if (kb == null) return Map.of("ok", false, "error", "知识库不存在");
 
         Path base = kbDir(kb);
@@ -444,7 +444,7 @@ public class KnowledgeBaseController {
     @ResponseBody
     @GetMapping("/kb/{id}/api/notes/tree")
     public Map<String, Object> getNotesTree(@PathVariable Long id) {
-        KnowledgeBaseEntity kb = kbService.getById(id);
+        KbBaseEntity kb = kbService.getById(id);
         if (kb == null) return Map.of("ok", false, "error", "知识库不存在");
 
         Path base = kbDir(kb);
@@ -510,7 +510,7 @@ public class KnowledgeBaseController {
     @ResponseBody
     @GetMapping("/kb/{id}/api/notes/read")
     public Map<String, Object> readNote(@PathVariable Long id, @RequestParam String path) {
-        KnowledgeBaseEntity kb = kbService.getById(id);
+        KbBaseEntity kb = kbService.getById(id);
         if (kb == null) return Map.of("ok", false, "error", "知识库不存在");
 
         Path base = kbDir(kb);
@@ -532,7 +532,7 @@ public class KnowledgeBaseController {
     @ResponseBody
     @GetMapping("/kb/{id}/api/notes/stats")
     public Map<String, Object> getNotesStats(@PathVariable Long id) {
-        KnowledgeBaseEntity kb = kbService.getById(id);
+        KbBaseEntity kb = kbService.getById(id);
         if (kb == null) return Map.of("ok", false, "error", "知识库不存在");
 
         Path base = kbDir(kb);
@@ -563,7 +563,7 @@ public class KnowledgeBaseController {
     @ResponseBody
     @PostMapping("/kb/{id}/api/notes/ai-report")
     public Map<String, Object> generateAiReport(@PathVariable Long id, @RequestBody Map<String, String> body) {
-        KnowledgeBaseEntity kb = kbService.getById(id);
+        KbBaseEntity kb = kbService.getById(id);
         if (kb == null) return Map.of("ok", false, "error", "知识库不存在");
 
         try {
@@ -612,7 +612,7 @@ public class KnowledgeBaseController {
                                           @RequestParam(required = false, defaultValue = "") String dir,
                                           @RequestParam String filename,
                                           @RequestParam(required = false, defaultValue = "") String content) {
-        KnowledgeBaseEntity kb = kbService.getById(id);
+        KbBaseEntity kb = kbService.getById(id);
         if (kb == null) return Map.of("ok", false, "error", "知识库不存在");
         Path targetDir = safeResolve(kbDir(kb), dir);
         if (!Files.isDirectory(targetDir)) return Map.of("ok", false, "error", "目录不存在");
@@ -634,7 +634,7 @@ public class KnowledgeBaseController {
     @ResponseBody
     @PostMapping("/kb/{id}/notes/delete")
     public Map<String, Object> deleteFile(@PathVariable Long id, @RequestParam String path) {
-        KnowledgeBaseEntity kb = kbService.getById(id);
+        KbBaseEntity kb = kbService.getById(id);
         if (kb == null) return Map.of("ok", false, "error", "知识库不存在");
         Path target = safeResolve(kbDir(kb), path);
         if (!Files.isRegularFile(target) || !target.toString().endsWith(".md"))
@@ -651,7 +651,7 @@ public class KnowledgeBaseController {
     @ResponseBody
     @GetMapping("/kb/{id}/notes/raw")
     public Map<String, Object> readRawFile(@PathVariable Long id, @RequestParam String path) {
-        KnowledgeBaseEntity kb = kbService.getById(id);
+        KbBaseEntity kb = kbService.getById(id);
         if (kb == null) return Map.of("ok", false, "error", "知识库不存在");
         Path target = safeResolve(kbDir(kb), path);
         if (!Files.isRegularFile(target))
@@ -667,7 +667,7 @@ public class KnowledgeBaseController {
     @ResponseBody
     @PostMapping("/kb/{id}/notes/save")
     public Map<String, Object> saveFile(@PathVariable Long id, @RequestBody Map<String, String> body) {
-        KnowledgeBaseEntity kb = kbService.getById(id);
+        KbBaseEntity kb = kbService.getById(id);
         if (kb == null) return Map.of("ok", false, "error", "知识库不存在");
 
         String path = body.getOrDefault("path", "").trim();
@@ -688,7 +688,7 @@ public class KnowledgeBaseController {
     @ResponseBody
     @PostMapping("/kb/{id}/notes/rename")
     public Map<String, Object> renameFile(@PathVariable Long id, @RequestBody Map<String, String> body) {
-        KnowledgeBaseEntity kb = kbService.getById(id);
+        KbBaseEntity kb = kbService.getById(id);
         if (kb == null) return Map.of("ok", false, "error", "知识库不存在");
 
         String oldPath = body.getOrDefault("oldPath", "").trim();
@@ -723,7 +723,7 @@ public class KnowledgeBaseController {
     @ResponseBody
     @GetMapping("/kb/{id}/api/data/list")
     public Map<String, Object> listJsonData(@PathVariable Long id, @RequestParam(defaultValue = "") String dir) {
-        KnowledgeBaseEntity kb = kbService.getById(id);
+        KbBaseEntity kb = kbService.getById(id);
         if (kb == null) return Map.of("ok", false, "error", "知识库不存在");
         
         Path baseDir = kbDir(kb);
@@ -763,7 +763,7 @@ public class KnowledgeBaseController {
     @GetMapping("/kb/{id}/api/data/read")
     public Map<String, Object> readJsonData(@PathVariable Long id, @RequestParam String dir,
                                             @RequestParam String file) {
-        KnowledgeBaseEntity kb = kbService.getById(id);
+        KbBaseEntity kb = kbService.getById(id);
         if (kb == null) return Map.of("ok", false, "error", "知识库不存在");
         
         // 自动补全 .json 后缀
@@ -815,7 +815,7 @@ public class KnowledgeBaseController {
     @GetMapping("/kb/{id}/api/data/group")
     public Map<String, Object> readGroupData(@PathVariable Long id, @RequestParam String dir,
                                              @RequestParam String file, @RequestParam String group) {
-        KnowledgeBaseEntity kb = kbService.getById(id);
+        KbBaseEntity kb = kbService.getById(id);
         if (kb == null) return Map.of("ok", false, "error", "知识库不存在");
         Map<String, Object> result = directoryDataService.getGroupData(kbDir(kb), dir, file, group);
         if (result == null) return Map.of("ok", false, "error", "分组不存在");
@@ -827,7 +827,7 @@ public class KnowledgeBaseController {
     public Map<String, Object> addRecord(@PathVariable Long id, @RequestParam String dir,
                                          @RequestParam String file, @RequestParam String group,
                                          @RequestBody Map<String, Object> record) {
-        KnowledgeBaseEntity kb = kbService.getById(id);
+        KbBaseEntity kb = kbService.getById(id);
         if (kb == null) return Map.of("ok", false, "error", "知识库不存在");
         return directoryDataService.addRecord(kbDir(kb), dir, file, group, record, null);
     }
@@ -838,7 +838,7 @@ public class KnowledgeBaseController {
                                             @RequestParam String file, @RequestParam String group,
                                             @RequestParam String idField, @RequestParam String idValue,
                                             @RequestBody Map<String, Object> updates) {
-        KnowledgeBaseEntity kb = kbService.getById(id);
+        KbBaseEntity kb = kbService.getById(id);
         if (kb == null) return Map.of("ok", false, "error", "知识库不存在");
         return directoryDataService.updateRecord(kbDir(kb), dir, file, group, idField, idValue, updates);
     }
@@ -848,7 +848,7 @@ public class KnowledgeBaseController {
     public Map<String, Object> deleteRecord(@PathVariable Long id, @RequestParam String dir,
                                             @RequestParam String file, @RequestParam String group,
                                             @RequestParam String idField, @RequestParam String idValue) {
-        KnowledgeBaseEntity kb = kbService.getById(id);
+        KbBaseEntity kb = kbService.getById(id);
         if (kb == null) return Map.of("ok", false, "error", "知识库不存在");
         return directoryDataService.deleteRecord(kbDir(kb), dir, file, group, idField, idValue);
     }
@@ -866,7 +866,7 @@ public class KnowledgeBaseController {
                                           @RequestParam(required = false, defaultValue = "") String description,
                                           @RequestParam(required = false, defaultValue = "mid") String priority,
                                           @RequestParam(required = false, defaultValue = "") String dueDate) {
-        KnowledgeBaseEntity kb = kbService.getById(id);
+        KbBaseEntity kb = kbService.getById(id);
         if (kb == null) return Map.of("ok", false, "error", "知识库不存在");
         try {
             TaskItem task = taskService.addTask(kb.getNotesDir(), title, description, priority, dueDate);
@@ -885,7 +885,7 @@ public class KnowledgeBaseController {
                                               @RequestParam(required = false) String status,
                                               @RequestParam(required = false) String priority,
                                               @RequestParam(required = false) String dueDate) {
-        KnowledgeBaseEntity kb = kbService.getById(id);
+        KbBaseEntity kb = kbService.getById(id);
         if (kb == null) return Map.of("ok", false, "error", "知识库不存在");
         try {
             TaskItem task = taskService.updateTask(kb.getNotesDir(), taskId, title, description, status, priority, dueDate);
@@ -900,7 +900,7 @@ public class KnowledgeBaseController {
     @ResponseBody
     @PostMapping("/kb/{id}/api/tasks/delete")
     public Map<String, Object> kbDeleteTask(@PathVariable Long id, @RequestParam String taskId) {
-        KnowledgeBaseEntity kb = kbService.getById(id);
+        KbBaseEntity kb = kbService.getById(id);
         if (kb == null) return Map.of("ok", false, "error", "知识库不存在");
         try {
             boolean ok = taskService.deleteTask(kb.getNotesDir(), taskId);
@@ -924,7 +924,7 @@ public class KnowledgeBaseController {
                                               @RequestParam(required = false, defaultValue = "") String dayOfWeek,
                                               @RequestParam(required = false, defaultValue = "") String dayOfMonth,
                                               @RequestParam(required = false, defaultValue = "") String monthDay) {
-        KnowledgeBaseEntity kb = kbService.getById(id);
+        KbBaseEntity kb = kbService.getById(id);
         if (kb == null) return Map.of("ok", false, "error", "知识库不存在");
         try {
             Reminder r = reminderService.addReminder(kb.getNotesDir(), name, message, type, time, date, dayOfWeek, dayOfMonth, monthDay);
@@ -948,7 +948,7 @@ public class KnowledgeBaseController {
                                                  @RequestParam(required = false) String dayOfMonth,
                                                  @RequestParam(required = false) String monthDay,
                                                  @RequestParam(required = false) Boolean enabled) {
-        KnowledgeBaseEntity kb = kbService.getById(id);
+        KbBaseEntity kb = kbService.getById(id);
         if (kb == null) return Map.of("ok", false, "error", "知识库不存在");
         try {
             boolean ok = reminderService.updateReminder(kb.getNotesDir(), reminderId, name, message, type, time, date, dayOfWeek, dayOfMonth, monthDay, enabled);
@@ -963,7 +963,7 @@ public class KnowledgeBaseController {
     @ResponseBody
     @PostMapping("/kb/{id}/api/reminders/delete")
     public Map<String, Object> kbDeleteReminder(@PathVariable Long id, @RequestParam String reminderId) {
-        KnowledgeBaseEntity kb = kbService.getById(id);
+        KbBaseEntity kb = kbService.getById(id);
         if (kb == null) return Map.of("ok", false, "error", "知识库不存在");
         try {
             boolean ok = reminderService.deleteReminder(kb.getNotesDir(), reminderId);
@@ -977,7 +977,7 @@ public class KnowledgeBaseController {
     @ResponseBody
     @PostMapping("/kb/{id}/api/reminders/toggle")
     public Map<String, Object> kbToggleReminder(@PathVariable Long id, @RequestParam String reminderId) {
-        KnowledgeBaseEntity kb = kbService.getById(id);
+        KbBaseEntity kb = kbService.getById(id);
         if (kb == null) return Map.of("ok", false, "error", "知识库不存在");
         try {
             boolean ok = reminderService.toggleReminder(kb.getNotesDir(), reminderId);
@@ -990,7 +990,7 @@ public class KnowledgeBaseController {
     @ResponseBody
     @PostMapping("/kb/{id}/api/reminders/trigger")
     public Map<String, Object> kbTriggerReminder(@PathVariable Long id, @RequestParam String reminderId) {
-        KnowledgeBaseEntity kb = kbService.getById(id);
+        KbBaseEntity kb = kbService.getById(id);
         if (kb == null) return Map.of("ok", false, "error", "知识库不存在");
         try {
             Reminder r = reminderService.getAllReminders(kb.getNotesDir()).stream()
@@ -1009,7 +1009,7 @@ public class KnowledgeBaseController {
     @ResponseBody
     @GetMapping("/kb/{id}/api/ai-guide/agents")
     public Map<String, Object> kbGetAgents(@PathVariable Long id) {
-        KnowledgeBaseEntity kb = kbService.getById(id);
+        KbBaseEntity kb = kbService.getById(id);
         if (kb == null) return Map.of("ok", false, "error", "知识库不存在");
         Path file = Paths.get(kb.getNotesDir(), "AGENTS.md");
         if (!Files.exists(file)) return Map.of("ok", true, "content", "", "path", file.toString());
@@ -1019,7 +1019,7 @@ public class KnowledgeBaseController {
     @ResponseBody
     @PostMapping("/kb/{id}/api/ai-guide/agents")
     public Map<String, Object> kbSaveAgents(@PathVariable Long id, @RequestBody Map<String, String> body) {
-        KnowledgeBaseEntity kb = kbService.getById(id);
+        KbBaseEntity kb = kbService.getById(id);
         if (kb == null) return Map.of("ok", false, "error", "知识库不存在");
         Path file = Paths.get(kb.getNotesDir(), "AGENTS.md");
         try {
@@ -1034,7 +1034,7 @@ public class KnowledgeBaseController {
     @ResponseBody
     @GetMapping("/kb/{id}/api/ai-guide/memory")
     public Map<String, Object> kbListMemory(@PathVariable Long id) {
-        KnowledgeBaseEntity kb = kbService.getById(id);
+        KbBaseEntity kb = kbService.getById(id);
         if (kb == null) return Map.of("ok", false, "error", "知识库不存在");
         Path dir = Paths.get(kb.getNotesDir(), "AI", "记忆");
         if (!Files.exists(dir)) return Map.of("ok", true, "files", List.of(), "path", dir.toString());
@@ -1053,7 +1053,7 @@ public class KnowledgeBaseController {
     @ResponseBody
     @GetMapping("/kb/{id}/api/ai-guide/memory/{name}")
     public Map<String, Object> kbGetMemory(@PathVariable Long id, @PathVariable String name) {
-        KnowledgeBaseEntity kb = kbService.getById(id);
+        KbBaseEntity kb = kbService.getById(id);
         if (kb == null) return Map.of("ok", false, "error", "知识库不存在");
         Path dir = Paths.get(kb.getNotesDir(), "AI", "记忆");
         Path file = dir.resolve(name).normalize();
@@ -1065,7 +1065,7 @@ public class KnowledgeBaseController {
     @ResponseBody
     @PostMapping("/kb/{id}/api/ai-guide/memory")
     public Map<String, Object> kbSaveMemory(@PathVariable Long id, @RequestBody Map<String, String> body) {
-        KnowledgeBaseEntity kb = kbService.getById(id);
+        KbBaseEntity kb = kbService.getById(id);
         if (kb == null) return Map.of("ok", false, "error", "知识库不存在");
         String name = body.getOrDefault("name", "");
         String content = body.getOrDefault("content", "");
@@ -1087,7 +1087,7 @@ public class KnowledgeBaseController {
     @ResponseBody
     @DeleteMapping("/kb/{id}/api/ai-guide/memory/{name}")
     public Map<String, Object> kbDeleteMemory(@PathVariable Long id, @PathVariable String name) {
-        KnowledgeBaseEntity kb = kbService.getById(id);
+        KbBaseEntity kb = kbService.getById(id);
         if (kb == null) return Map.of("ok", false, "error", "知识库不存在");
         Path dir = Paths.get(kb.getNotesDir(), "AI", "记忆");
         Path file = dir.resolve(name).normalize();
@@ -1106,7 +1106,7 @@ public class KnowledgeBaseController {
     @GetMapping("/kb/{id}/api/report/config")
     @ResponseBody
     public Map<String, Object> getReportConfig(@PathVariable Long id) {
-        KnowledgeBaseEntity kb = kbService.getById(id);
+        KbBaseEntity kb = kbService.getById(id);
         if (kb == null) return Map.of("ok", false, "error", "知识库不存在");
         boolean autoReport = kb.getAutoReport() == null || kb.getAutoReport() == 1;
         boolean feishuPush = kb.getFeishuPush() == null || kb.getFeishuPush() == 1;
@@ -1121,7 +1121,7 @@ public class KnowledgeBaseController {
     @ResponseBody
     public Map<String, Object> saveReportConfig(@PathVariable Long id,
                                                 @RequestBody Map<String, Object> body) {
-        KnowledgeBaseEntity kb = kbService.getById(id);
+        KbBaseEntity kb = kbService.getById(id);
         if (kb == null) return Map.of("ok", false, "error", "知识库不存在");
         try {
             Map<String, Object> update = new HashMap<>();
@@ -1146,7 +1146,7 @@ public class KnowledgeBaseController {
     @ResponseBody
     public Map<String, Object> generate(@PathVariable Long id) {
         try {
-            KnowledgeBaseEntity kb = kbService.getById(id);
+            KbBaseEntity kb = kbService.getById(id);
             if (kb == null) return Map.of("ok", false, "error", "知识库不存在");
             var r = reportService.generate(kb.getId());
             if (r.report != null) {
@@ -1245,7 +1245,7 @@ public class KnowledgeBaseController {
     @ResponseBody
     @GetMapping("/api/kb/list")
     public Map<String, Object> list() {
-        List<KnowledgeBaseEntity> list = kbService.getAll();
+        List<KbBaseEntity> list = kbService.getAll();
         List<Map<String, Object>> result = list.stream().map(this::toMap).collect(Collectors.toList());
         return Map.of("ok", true, "list", result);
     }
@@ -1253,7 +1253,7 @@ public class KnowledgeBaseController {
     @ResponseBody
     @GetMapping("/api/kb/current")
     public Map<String, Object> current() {
-        KnowledgeBaseEntity kb = kbService.getFirst();
+        KbBaseEntity kb = kbService.getFirst();
         if (kb == null) {
             return Map.of("ok", false, "error", "未配置任何知识库");
         }
@@ -1291,7 +1291,7 @@ public class KnowledgeBaseController {
         return Map.of("ok", true);
     }
 
-    private Map<String, Object> toMap(KnowledgeBaseEntity e) {
+    private Map<String, Object> toMap(KbBaseEntity e) {
         Map<String, Object> m = new HashMap<>();
         m.put("id", e.getId());
         m.put("name", e.getName());

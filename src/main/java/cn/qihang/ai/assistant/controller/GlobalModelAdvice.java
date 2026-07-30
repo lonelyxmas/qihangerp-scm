@@ -3,9 +3,9 @@ package cn.qihang.ai.assistant.controller;
 import com.fasterxml.jackson.core.type.TypeReference;
 import cn.qihang.ai.assistant.config.AppConfig;
 import cn.qihang.ai.assistant.datacenter.DataModuleService;
-import cn.qihang.ai.assistant.entity.KnowledgeBaseEntity;
+import cn.qihang.ai.assistant.entity.KbBaseEntity;
 import cn.qihang.ai.assistant.service.ConfigService;
-import cn.qihang.ai.assistant.service.KnowledgeBaseService;
+import cn.qihang.ai.assistant.service.KbBaseService;
 import cn.qihang.ai.assistant.service.OllamaEmbeddingService;
 import cn.qihang.ai.assistant.util.FileUtil;
 import jakarta.servlet.http.HttpServletRequest;
@@ -24,12 +24,12 @@ public class GlobalModelAdvice {
 
     private final AppConfig appConfig;
     private final ConfigService configService;
-    private final KnowledgeBaseService kbService;
+    private final KbBaseService kbService;
     private final OllamaEmbeddingService ollamaEmbeddingService;
     private final DataModuleService moduleService;
 
     public GlobalModelAdvice(AppConfig appConfig, ConfigService configService,
-                             KnowledgeBaseService kbService,
+                             KbBaseService kbService,
                              OllamaEmbeddingService ollamaEmbeddingService,
                              DataModuleService moduleService) {
         this.appConfig = appConfig;
@@ -51,9 +51,9 @@ public class GlobalModelAdvice {
 
     @ModelAttribute("kbList")
     public List<KbNavItem> kbList() {
-        List<KnowledgeBaseEntity> all = kbService.getAll();
+        List<KbBaseEntity> all = kbService.getAll();
         List<KbNavItem> result = new ArrayList<>();
-        for (KnowledgeBaseEntity kb : all) {
+        for (KbBaseEntity kb : all) {
             KbNavItem item = new KbNavItem();
             item.id = kb.getId();
             item.name = kb.getName();
