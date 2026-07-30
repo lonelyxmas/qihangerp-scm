@@ -268,7 +268,7 @@ public class FeishuLongConnectionService {
         // 新模式：Java 直连 LLM（纯问答）
         feishuChatSessionService.saveMessage(userKey, "user", text, "knowledge");
         try {
-            String context = feishuChatSessionService.buildHistoryContext(userKey, "knowledge", text);
+            String context = feishuChatSessionService.buildHistoryContext(userKey, "knowledge");
             StringBuilder fullText = new StringBuilder();
             if (context != null) {
                 log.info("[飞书长连接] 恢复知识库历史上下文");

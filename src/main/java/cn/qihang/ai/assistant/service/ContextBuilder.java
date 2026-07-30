@@ -25,7 +25,7 @@ public class ContextBuilder {
 
     public ChatContext build(String sessionId, String userMessage, Long kbId, Consumer<String> statusCallback) {
         if (statusCallback != null) statusCallback.accept("正在加载历史对话...");
-        String historyContext = sessionService.buildHistoryContext(sessionId, "knowledge", userMessage);
+        String historyContext = sessionService.buildHistoryContext(sessionId, "knowledge");
 
         if (kbId == null) {
             if (statusCallback != null) statusCallback.accept("未指定知识库，请使用 @笔记库名 指定");

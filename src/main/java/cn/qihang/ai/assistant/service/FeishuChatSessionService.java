@@ -108,11 +108,7 @@ public class FeishuChatSessionService {
     }
 
     public String buildHistoryContext(String userKey, String mode) {
-        return sessionService.buildHistoryContext(userKey, mode, null);
-    }
-
-    public String buildHistoryContext(String userKey, String mode, String currentQuery) {
-        return sessionService.buildHistoryContext(userKey, mode, currentQuery);
+        return sessionService.buildHistoryContext(userKey, mode);
     }
 
     public void deleteSession(String userKey) {

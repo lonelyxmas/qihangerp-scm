@@ -130,10 +130,6 @@ public class ChatSessionService {
         return sessionService.buildHistoryContext(sessionId, mode);
     }
 
-    public String buildHistoryContext(String sessionId, String mode, String currentQuery) {
-        return sessionService.buildHistoryContext(sessionId, mode, currentQuery);
-    }
-
     // ========== 转换方法 ==========
 
     private ChatSession toModel(SessionEntity se) {

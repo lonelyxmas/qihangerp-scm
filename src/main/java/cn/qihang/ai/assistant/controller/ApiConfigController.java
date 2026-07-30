@@ -316,11 +316,6 @@ public class ApiConfigController {
 
         ollamaEmbeddingService.reloadConfig();
 
-        // 向量模型变更后清空旧向量，避免新旧向量混用
-        if (modelChanged) {
-            sessionService.clearAllEmbeddings();
-        }
-
         logService.add("配置更新", "成功", "语义向量模型已配置: " + model);
         return Map.of("ok", true);
     }
