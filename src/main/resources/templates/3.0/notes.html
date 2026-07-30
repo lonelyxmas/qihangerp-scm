@@ -35,7 +35,7 @@
         .kb-select { padding: 6px 10px; border: 1px solid var(--kb-border); border-radius: var(--kb-radius); font-size: 13px; outline: none; background: var(--kb-bg); color: var(--kb-text); cursor: pointer; flex: 1; }
         .kb-select:focus { border-color: var(--kb-primary); }
         .kb-sidebar-body { flex: 1; overflow-y: auto; padding: 4px 0; }
-        .kb-sidebar-footer { padding: 8px 16px; border-top: 1px solid var(--kb-border); flex-shrink: 0; }
+        .kb-sidebar-footer { padding: 8px 16px; border-top: 1px solid var(--kb-border); flex-shrink: 0; display: flex; gap: 6px; }
 
         .kb-search-row { display: flex; gap: 6px; padding: 8px 16px 4px; }
         .kb-search-row input { flex: 1; padding: 6px 10px; border: 1px solid var(--kb-border); border-radius: var(--kb-radius); font-size: 13px; outline: none; background: var(--kb-bg-alt); color: var(--kb-text); }
@@ -44,12 +44,17 @@
         .kb-stats-row { display: flex; gap: 16px; padding: 6px 16px 8px; font-size: 12px; color: var(--kb-text-muted); border-bottom: 1px solid var(--kb-border); }
         .kb-stats-row span { font-weight: 600; color: var(--kb-text); }
 
+        .kb-category-bar { display: flex; gap: 4px; padding: 6px 16px; border-bottom: 1px solid var(--kb-border); overflow-x: auto; flex-shrink: 0; }
+        .kb-cat-chip { padding: 2px 10px; border-radius: 12px; font-size: 11px; cursor: pointer; white-space: nowrap; border: 1px solid var(--kb-border); color: var(--kb-text-secondary); background: transparent; transition: all 0.15s; }
+        .kb-cat-chip:hover { background: var(--kb-hover); }
+        .kb-cat-chip.active { background: var(--kb-primary); color: white; border-color: var(--kb-primary); }
+
         .kb-doc-item { display: flex; align-items: center; gap: 8px; padding: 8px 16px; cursor: pointer; font-size: 13px; color: var(--kb-text); border-bottom: 1px solid var(--kb-border); transition: background 0.1s; }
         .kb-doc-item:hover { background: var(--kb-hover); }
         .kb-doc-item.active { background: var(--kb-primary-light); border-left: 3px solid var(--kb-primary); }
         .kb-doc-item .doc-info { flex: 1; min-width: 0; }
         .kb-doc-item .doc-name { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .kb-doc-item .doc-meta { font-size: 11px; color: var(--kb-text-muted); margin-top: 2px; display: flex; gap: 8px; }
+        .kb-doc-item .doc-meta { font-size: 11px; color: var(--kb-text-muted); margin-top: 2px; display: flex; gap: 8px; flex-wrap: wrap; }
         .kb-doc-item .doc-actions { flex-shrink: 0; opacity: 0; transition: opacity 0.1s; }
         .kb-doc-item:hover .doc-actions { opacity: 1; }
 
@@ -59,6 +64,8 @@
         .kb-btn:active { transform: scale(0.97); }
         .kb-btn-primary { background: var(--kb-primary); color: white; }
         .kb-btn-primary:hover { background: #4f46e5; }
+        .kb-btn-success { background: var(--kb-success); color: white; }
+        .kb-btn-success:hover { background: #16a34a; }
         .kb-btn-outline { background: white; color: var(--kb-text); border: 1px solid var(--kb-border); }
         .kb-btn-outline:hover { background: var(--kb-hover); border-color: #cbd5e1; }
         .kb-btn-ghost { background: transparent; color: var(--kb-text-secondary); padding: 4px 8px; }
@@ -88,12 +95,12 @@
         .kb-main-path { font-size: 12px; color: var(--kb-text-muted); margin-top: 2px; word-break: break-all; }
         .kb-main-body { flex: 1; overflow-y: auto; padding: 20px 24px; }
 
-        .kb-meta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
+        .kb-meta-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 16px; }
         .kb-meta-item { padding: 10px 14px; background: var(--kb-bg); border: 1px solid var(--kb-border); border-radius: var(--kb-radius); }
         .kb-meta-label { font-size: 11px; color: var(--kb-text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px; }
         .kb-meta-value { font-size: 13px; color: var(--kb-text); font-weight: 500; }
 
-        .kb-tag-editor { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; padding: 10px 14px; background: var(--kb-bg); border: 1px solid var(--kb-border); border-radius: var(--kb-radius); margin-bottom: 20px; }
+        .kb-tag-editor { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; padding: 10px 14px; background: var(--kb-bg); border: 1px solid var(--kb-border); border-radius: var(--kb-radius); margin-bottom: 16px; }
         .kb-tag-editor-label { font-size: 11px; color: var(--kb-text-muted); font-weight: 500; margin-right: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
         .kb-tag-input { border: none; outline: none; padding: 3px 6px; font-size: 12px; background: transparent; color: var(--kb-text); width: 90px; }
         .kb-tag-input::placeholder { color: var(--kb-text-muted); }
@@ -138,6 +145,9 @@
         .kb-dialog-close { background: none; border: none; cursor: pointer; font-size: 18px; color: var(--kb-text-muted); padding: 2px; border-radius: 4px; }
         .kb-dialog-close:hover { background: var(--kb-hover); color: var(--kb-text); }
         .kb-dialog-body { padding: 20px; }
+        .kb-dialog-body label { display: block; font-size: 12px; font-weight: 500; color: var(--kb-text-secondary); margin-bottom: 4px; }
+        .kb-dialog-body input[type="text"] { width: 100%; padding: 8px 10px; border: 1px solid var(--kb-border); border-radius: var(--kb-radius); font-size: 13px; outline: none; box-sizing: border-box; }
+        .kb-dialog-body input[type="text"]:focus { border-color: var(--kb-primary); }
         .kb-dialog-footer { padding: 12px 20px; border-top: 1px solid var(--kb-border); display: flex; justify-content: flex-end; gap: 8px; }
         .kb-upload-zone { border: 2px dashed var(--kb-border); border-radius: var(--kb-radius); padding: 30px 20px; text-align: center; cursor: pointer; transition: all 0.2s; background: var(--kb-bg-alt); }
         .kb-upload-zone:hover, .kb-upload-zone.dragover { border-color: var(--kb-primary); background: var(--kb-primary-light); }
@@ -146,6 +156,19 @@
         .kb-upload-zone-hint { font-size: 12px; color: var(--kb-text-muted); margin-top: 4px; }
         .kb-upload-list { margin-top: 10px; }
         .kb-upload-item { display: flex; align-items: center; gap: 8px; padding: 6px 10px; background: var(--kb-bg-alt); border-radius: var(--kb-radius); margin-bottom: 4px; font-size: 12px; }
+
+        .kb-editor-textarea { width: 100%; min-height: 400px; padding: 14px; border: 1px solid var(--kb-border); border-radius: var(--kb-radius); font-size: 14px; line-height: 1.7; font-family: monospace; outline: none; resize: vertical; box-sizing: border-box; background: var(--kb-bg); color: var(--kb-text); }
+        .kb-editor-textarea:focus { border-color: var(--kb-primary); }
+
+        .kb-cat-header { display: flex; align-items: center; gap: 4px; padding: 6px 12px; font-size: 12px; font-weight: 600; color: var(--kb-text-secondary); cursor: pointer; border-bottom: 1px solid var(--kb-border); background: var(--kb-bg-alt); user-select: none; }
+        .kb-cat-header:hover { background: var(--kb-hover); }
+        .kb-cat-arrow { font-size: 9px; width: 14px; flex-shrink: 0; text-align: center; color: var(--kb-text-muted); }
+        .kb-cat-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .kb-cat-count { font-weight: 400; color: var(--kb-text-muted); font-size: 11px; }
+        .kb-cat-actions { flex-shrink: 0; opacity: 0; transition: opacity 0.1s; display: flex; }
+        .kb-cat-header:hover .kb-cat-actions { opacity: 1; }
+        .kb-cat-header .kb-cat-actions button { color: var(--kb-text-muted); }
+        .kb-cat-header .kb-cat-actions button:hover { color: var(--kb-text); background: transparent; }
 
         .kb-no-kb { display: flex; align-items: center; justify-content: center; height: 100%; color: var(--kb-text-muted); font-size: 14px; }
         .hidden { display: none !important; }
@@ -187,40 +210,50 @@
                             文档 <span>{{ documents.length }}</span>
                             分块 <span>{{ totalChunks }}</span>
                             标签 <span>{{ tagCount }}</span>
+                            分类 <span>{{ categories.length }}</span>
                         </div>
                         <div v-show="isSearchMode" style="padding:4px 16px 2px;font-size:12px;color:var(--kb-text-muted);">
                             找到 {{ filteredDocs.length }} 个结果
                         </div>
                         <div class="kb-sidebar-body">
-                            <div v-if="!displayedDocs.length" class="kb-empty-list">
-                                <div v-if="isSearchMode">无匹配结果</div>
-                                <div v-else>
-                                    <div style="font-size:28px;margin-bottom:8px;">&#x1F4C2;</div>
-                                    <div>暂无文档</div>
-                                    <button class="kb-btn kb-btn-primary kb-btn-sm" style="margin-top:10px;" @click="openUpload">上传文档</button>
-                                </div>
+                            <div v-if="!categoryTree.length" class="kb-empty-list">
+                                <div style="font-size:28px;margin-bottom:8px;">&#x1F4C2;</div>
+                                <div>暂无文档</div>
+                                <button class="kb-btn kb-btn-primary kb-btn-sm" style="margin-top:10px;" @click="openUpload">上传文档</button>
                             </div>
-                            <div v-for="doc in displayedDocs" :key="doc.path"
-                                 class="kb-doc-item"
-                                 :class="{ active: selectedDoc && selectedDoc.path === doc.path }"
-                                 @click="selectDoc(doc)">
-                                <div class="doc-info">
-                                    <div class="doc-name">{{ fileIcon(doc.fileType) }} {{ doc.name }}</div>
-                                    <div class="doc-meta">
-                                        <span>{{ doc.fileType || 'md' }}</span>
-                                        <span>{{ formatSize(doc.fileSize) }}</span>
-                                        <span :class="'kb-status kb-status-' + (doc.status || 'ready')">
-                                            <span class="kb-status-dot"></span>{{ statusLabel(doc.status) }}
-                                        </span>
-                                    </div>
+                            <div v-for="group in categoryTree" :key="'g-' + group.id">
+                                <div class="kb-cat-header" @click="toggleCategory(group.id)">
+                                    <span class="kb-cat-arrow">{{ expandedCategories[group.id] ? '&#x25BC;' : '&#x25B6;' }}</span>
+                                    <span class="kb-cat-name">{{ group.name }}</span>
+                                    <span class="kb-cat-count">({{ group.docs.length }})</span>
+                                    <span class="kb-cat-actions">
+                                        <button class="kb-btn kb-btn-ghost kb-btn-icon" style="font-size:10px;padding:2px 4px;" @click.stop="openNewNoteInCategory(group.id)" title="新建文档">&#x2795;</button>
+                                        <button v-if="group.id > 0" class="kb-btn kb-btn-ghost kb-btn-icon" style="font-size:10px;padding:2px 4px;" @click.stop="editCategory(group)" title="编辑分类">&#x2699;</button>
+                                    </span>
                                 </div>
-                                <div class="doc-actions">
-                                    <button class="kb-btn kb-btn-ghost kb-btn-icon" @click.stop="deleteDoc(doc)" title="删除">&#x1F5D1;</button>
+                                <div v-show="expandedCategories[group.id]">
+                                    <div v-for="doc in group.docs" :key="doc.path"
+                                         class="kb-doc-item"
+                                         :class="{ active: selectedDoc && selectedDoc.path === doc.path }"
+                                         @click="selectDoc(doc)">
+                                        <div class="doc-info">
+                                            <div class="doc-name">{{ fileIcon(doc.fileType) }} {{ doc.name }}</div>
+                                            <div class="doc-meta">
+                                                <span>{{ doc.fileType || 'md' }}</span>
+                                                <span>{{ formatSize(doc.fileSize) }}</span>
+                                                <span>{{ doc.createdBy || '-' }}</span>
+                                            </div>
+                                        </div>
+                                        <div class="doc-actions">
+                                            <button class="kb-btn kb-btn-ghost kb-btn-icon" @click.stop="deleteDoc(doc)" title="删除" v-if="canEditDoc(doc)">&#x1F5D1;</button>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                         <div class="kb-sidebar-footer">
-                            <button class="kb-btn kb-btn-primary" style="width:100%;justify-content:center;" @click="openUpload">&#x2B06; 上传文档</button>
+                            <button class="kb-btn kb-btn-primary" style="flex:1;justify-content:center;" @click="openUpload">&#x2B06; 上传</button>
+                            <button class="kb-btn kb-btn-outline" style="flex:1;justify-content:center;" @click="showAddCategory">&#x2795; 分类</button>
                         </div>
                     </aside>
 
@@ -231,6 +264,7 @@
                                 <div class="kb-main-title">
                                     <span>{{ fileIcon(selectedDoc.fileType) }}</span>
                                     <span>{{ selectedDoc.name }}</span>
+                                    <span v-if="editing" class="kb-tag kb-tag-color-4" style="margin-left:8px;">编辑中</span>
                                 </div>
                                 <div class="kb-main-path">{{ selectedDoc.path }}</div>
                             </div>
@@ -239,35 +273,60 @@
                                     <div class="kb-meta-item"><div class="kb-meta-label">类型</div><div class="kb-meta-value">{{ selectedDoc.fileType || '-' }}</div></div>
                                     <div class="kb-meta-item"><div class="kb-meta-label">大小</div><div class="kb-meta-value">{{ formatSize(selectedDoc.fileSize) }}</div></div>
                                     <div class="kb-meta-item"><div class="kb-meta-label">分块</div><div class="kb-meta-value">{{ chunks.length }}</div></div>
+                                    <div class="kb-meta-item"><div class="kb-meta-label">创建人</div><div class="kb-meta-value">{{ selectedDoc.createdBy || '-' }}</div></div>
                                     <div class="kb-meta-item"><div class="kb-meta-label">创建时间</div><div class="kb-meta-value">{{ selectedDoc.createdAt || '-' }}</div></div>
+                                    <div class="kb-meta-item"><div class="kb-meta-label">更新时间</div><div class="kb-meta-value">{{ selectedDoc.updatedAt || '-' }}</div></div>
                                 </div>
 
+                                <!-- Tags -->
                                 <div class="kb-tag-editor">
                                     <span class="kb-tag-editor-label">标签</span>
                                     <template v-if="selectedDocTags.length">
                                         <span v-for="(t, i) in selectedDocTags" :key="i" :class="'kb-tag kb-tag-color-' + (i % 8)">
-                                            {{ t }} <span style="cursor:pointer;opacity:0.6;margin-left:2px;" @click="removeTag(t)">&#x2715;</span>
+                                            {{ t }} <span style="cursor:pointer;opacity:0.6;margin-left:2px;" @click="removeTag(t)" v-if="canEditDoc(selectedDoc)">&#x2715;</span>
                                         </span>
                                     </template>
                                     <span v-else style="font-size:12px;color:var(--kb-text-muted);">无标签</span>
-                                    <input class="kb-tag-input" v-model="tagInput" placeholder="+ 添加" @keyup.enter="addTag">
+                                    <input class="kb-tag-input" v-model="tagInput" placeholder="+ 添加" @keyup.enter="addTag" v-if="canEditDoc(selectedDoc)">
                                 </div>
 
+                                <!-- Download button -->
+                                <div style="margin-bottom:12px;display:flex;gap:8px;" v-if="selectedDoc">
+                                    <button class="kb-btn kb-btn-outline kb-btn-sm" @click="downloadDoc(selectedDoc)" v-if="selectedDoc.createdBy">&#x2B07; 下载原始文件</button>
+                                </div>
+
+                                <!-- Tabs -->
                                 <div style="display:flex;gap:0;border-bottom:1px solid var(--kb-border);margin-bottom:16px;">
                                     <div style="padding:6px 14px;font-size:13px;font-weight:500;cursor:pointer;border-bottom:2px solid transparent;color:var(--kb-text-muted);transition:all 0.15s;"
                                          :style="contentTab === 'content' ? 'color:var(--kb-primary);border-bottom-color:var(--kb-primary);' : ''"
-                                         @click="contentTab = 'content'">&#x1F4C4; 文档内容</div>
+                                         @click="switchTab('content')">&#x1F4C4; 文档内容</div>
                                     <div style="padding:6px 14px;font-size:13px;font-weight:500;cursor:pointer;border-bottom:2px solid transparent;color:var(--kb-text-muted);transition:all 0.15s;"
                                          :style="contentTab === 'chunks' ? 'color:var(--kb-primary);border-bottom-color:var(--kb-primary);' : ''"
                                          @click="contentTab = 'chunks'">&#x1F9F0; 分块 ({{ chunks.length }})</div>
                                 </div>
 
+                                <!-- Content tab -->
                                 <div v-show="contentTab === 'content'">
+                                    <!-- Edit bar -->
+                                    <div style="margin-bottom:10px;display:flex;gap:8px;" v-if="canEditDoc(selectedDoc)">
+                                        <button v-if="!editing" class="kb-btn kb-btn-primary kb-btn-sm" @click="startEditing">&#x270F; 编辑</button>
+                                        <template v-if="editing">
+                                            <button class="kb-btn kb-btn-success kb-btn-sm" @click="saveEditing">&#x2714; 保存</button>
+                                            <button class="kb-btn kb-btn-outline kb-btn-sm" @click="cancelEditing">&#x2716; 取消</button>
+                                        </template>
+                                    </div>
+
                                     <div v-if="docContentLoading" style="text-align:center;padding:20px;"><span class="kb-loading"></span></div>
+
+                                    <!-- Editor -->
+                                    <textarea v-if="editing" class="kb-editor-textarea" v-model="editContent"></textarea>
+
+                                    <!-- Viewer -->
                                     <div v-else-if="docContent" id="docContentView" class="kb-content-view"></div>
                                     <div v-else style="text-align:center;padding:40px;color:var(--kb-text-muted);font-size:13px;">无内容</div>
                                 </div>
 
+                                <!-- Chunks tab -->
                                 <div v-show="contentTab === 'chunks'">
                                     <div v-if="chunks.length">
                                         <div v-for="(c, i) in chunks" :key="i" class="kb-chunk-item">
@@ -328,6 +387,49 @@
                         <button class="kb-btn kb-btn-outline" @click="closeUpload">关闭</button>
                     </div>
                 </div>
+
+                <!-- New Note Dialog -->
+                <div class="kb-overlay" :class="{ open: newNoteOpen }" @click="closeNewNoteDialog"></div>
+                <div class="kb-dialog" :class="{ open: newNoteOpen }">
+                    <div class="kb-dialog-header">
+                        <h3>新建文档</h3>
+                        <button class="kb-dialog-close" @click="closeNewNoteDialog">&#x2715;</button>
+                    </div>
+                    <div class="kb-dialog-body">
+                        <div style="margin-bottom:12px;">
+                            <label>文件名</label>
+                            <input type="text" v-model="newNoteName" placeholder="例如: my-doc" @keyup.enter="confirmNewNote">
+                        </div>
+                        <div v-if="newNoteCategoryId" style="margin-bottom:8px;font-size:12px;color:var(--kb-text-secondary);">
+                            分类: {{ getCategoryName(newNoteCategoryId) }}
+                        </div>
+                        <div style="color:var(--kb-text-muted);font-size:12px;">将自动添加 .md 扩展名</div>
+                    </div>
+                    <div class="kb-dialog-footer">
+                        <button class="kb-btn kb-btn-outline" @click="closeNewNoteDialog">取消</button>
+                        <button class="kb-btn kb-btn-primary" @click="confirmNewNote" :disabled="!newNoteName.trim()">创建</button>
+                    </div>
+                </div>
+
+                <!-- Category Dialog -->
+                <div class="kb-overlay" :class="{ open: catDialogOpen }" @click="closeCatDialog"></div>
+                <div class="kb-dialog" :class="{ open: catDialogOpen }" style="width:360px;">
+                    <div class="kb-dialog-header">
+                        <h3>{{ catEditId ? '编辑分类' : '新建分类' }}</h3>
+                        <button class="kb-dialog-close" @click="closeCatDialog">&#x2715;</button>
+                    </div>
+                    <div class="kb-dialog-body">
+                        <div style="margin-bottom:12px;">
+                            <label>名称</label>
+                            <input type="text" v-model="catEditName" placeholder="分类名称" @keyup.enter="confirmCatDialog">
+                        </div>
+                    </div>
+                    <div class="kb-dialog-footer">
+                        <button v-if="catEditId" class="kb-btn kb-btn-outline" style="color:var(--kb-error);border-color:var(--kb-error);margin-right:auto;" @click="deleteCategory">删除</button>
+                        <button class="kb-btn kb-btn-outline" @click="closeCatDialog">取消</button>
+                        <button class="kb-btn kb-btn-primary" @click="confirmCatDialog" :disabled="!catEditName.trim()">{{ catEditId ? '保存' : '创建' }}</button>
+                    </div>
+                </div>
             </template>
         </div>
     </main>
@@ -356,9 +458,25 @@
             var chunksLoading = ref(false);
             var chunkExpanded = ref({});
 
+            var editing = ref(false);
+            var editContent = ref('');
+
             var uploadOpen = ref(false);
             var dragOver = ref(false);
             var uploadItems = ref([]);
+
+            var newNoteOpen = ref(false);
+            var newNoteName = ref('');
+
+            var categories = ref([]);
+            var expandedCategories = ref({});
+            var newNoteCategoryId = ref(null);
+
+            var catDialogOpen = ref(false);
+            var catEditId = ref(null);
+            var catEditName = ref('');
+
+            var currentUser = ref('');
 
             var hasKb = computed(function() { return kbList.value.length > 0; });
 
@@ -373,8 +491,24 @@
                 });
             });
 
-            var displayedDocs = computed(function() {
-                return isSearchMode.value ? filteredDocs.value : documents.value;
+            var categoryTree = computed(function() {
+                var grouped = {};
+                documents.value.forEach(function(doc) {
+                    var cid = doc.categoryId || -1;
+                    if (!grouped[cid]) grouped[cid] = [];
+                    grouped[cid].push(doc);
+                });
+                var result = [];
+                var sortedCats = categories.value.slice().sort(function(a,b) { return (a.sortOrder||0) - (b.sortOrder||0); });
+                sortedCats.forEach(function(c) {
+                    var docs = grouped[c.id] || [];
+                    result.push({ id: c.id, name: c.name, docs: docs });
+                });
+                var uncategorized = grouped[-1] || [];
+                if (uncategorized.length) {
+                    result.push({ id: -1, name: '未分类', docs: uncategorized });
+                }
+                return result;
             });
 
             var totalChunks = computed(function() {
@@ -387,17 +521,31 @@
                 return Object.keys(set).length;
             });
 
+            function authFetch(url, options) {
+                options = options || {};
+                options.headers = options.headers || {};
+                var token = localStorage.getItem('Admin-Token');
+                if (token) options.headers['Authorization'] = 'Bearer ' + token;
+                return fetch(url, options);
+            }
+
+            function expandAll() {
+                var map = {};
+                categoryTree.value.forEach(function(g) { map[g.id] = true; });
+                expandedCategories.value = map;
+            }
+
             function init() {
                 if (window.initialKbList && window.initialKbList.length > 0) {
                     kbList.value = window.initialKbList.map(function(kb) { return { id: kb.id, name: kb.name }; });
                     currentKbId.value = kbList.value[0].id;
-                    nextTick(loadDocuments);
+                    nextTick(function() { loadDocuments(); loadCategories(); });
                 } else {
-                    fetch('/api/chat/kbs').then(function(r) { return r.json(); }).then(function(d) {
+                    authFetch('/api/chat/kbs').then(function(r) { return r.json(); }).then(function(d) {
                         if (d.ok && d.data && d.data.length > 0) {
                             kbList.value = d.data;
                             currentKbId.value = kbList.value[0].id;
-                            nextTick(loadDocuments);
+                            nextTick(function() { loadDocuments(); loadCategories(); });
                         }
                     }).catch(function() {});
                 }
@@ -408,21 +556,31 @@
                 isSearchMode.value = false;
                 searchQuery.value = '';
                 loadDocuments();
+                loadCategories();
             }
 
             async function loadDocuments() {
                 if (!currentKbId.value) return;
                 try {
-                    var r = await fetch('/api/kb/' + currentKbId.value + '/notes/list');
+                    var r = await authFetch('/api/kb/' + currentKbId.value + '/notes/list');
                     var d = await r.json();
                     if (d.ok) documents.value = d.documents || [];
                 } catch(e) {}
             }
 
+            async function loadCategories() {
+                if (!currentKbId.value) return;
+                try {
+                    var r = await authFetch('/api/kb/' + currentKbId.value + '/categories');
+                    var d = await r.json();
+                    if (d.ok) categories.value = d.categories || [];
+                } catch(e) {}
+                nextTick(expandAll);
+            }
+
             function doSearch() {
                 if (!searchQuery.value) { clearSearch(); return; }
                 isSearchMode.value = true;
-                loadDocuments();
             }
 
             function clearSearch() {
@@ -432,6 +590,8 @@
 
             // Selection & Detail
             async function selectDoc(doc) {
+                editing.value = false;
+                editContent.value = '';
                 selectedDoc.value = doc;
                 selectedDocTags.value = (doc.tags || []).slice();
                 tagInput.value = '';
@@ -444,8 +604,8 @@
 
                 try {
                     var [cr, chr] = await Promise.all([
-                        fetch('/api/kb/' + currentKbId.value + '/notes/read?path=' + encodeURIComponent(doc.path)),
-                        fetch('/api/kb/' + currentKbId.value + '/notes/chunks?path=' + encodeURIComponent(doc.path))
+                        authFetch('/api/kb/' + currentKbId.value + '/notes/read?path=' + encodeURIComponent(doc.path)),
+                        authFetch('/api/kb/' + currentKbId.value + '/notes/chunks?path=' + encodeURIComponent(doc.path))
                     ]);
                     var cd = await cr.json();
                     if (cd.ok) docContent.value = cd.content || '';
@@ -466,8 +626,50 @@
                 });
             }
 
+            function switchTab(tab) {
+                contentTab.value = tab;
+                if (tab === 'content') {
+                    editing.value = false;
+                    nextTick(renderContent);
+                }
+            }
+
             function toggleChunk(i) {
                 chunkExpanded.value[i] = !chunkExpanded.value[i];
+            }
+
+            // Edit
+            function startEditing() {
+                editContent.value = docContent.value;
+                editing.value = true;
+            }
+
+            function cancelEditing() {
+                editing.value = false;
+                editContent.value = '';
+            }
+
+            async function saveEditing() {
+                if (!selectedDoc.value) return;
+                try {
+                    var r = await authFetch('/api/kb/' + currentKbId.value + '/notes/save', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ path: selectedDoc.value.path, content: editContent.value })
+                    });
+                    var d = await r.json();
+                    if (d.ok) {
+                        docContent.value = editContent.value;
+                        editing.value = false;
+                        editContent.value = '';
+                        nextTick(renderContent);
+                        loadDocuments();
+                    } else {
+                        alert('保存失败: ' + (d.error || '未知错误'));
+                    }
+                } catch(e) {
+                    alert('保存失败: ' + e.message);
+                }
             }
 
             // Tags
@@ -489,7 +691,7 @@
             async function saveTags() {
                 if (!selectedDoc.value) return;
                 try {
-                    var r = await fetch('/api/kb/' + currentKbId.value + '/notes/tags', {
+                    var r = await authFetch('/api/kb/' + currentKbId.value + '/notes/tags', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ path: selectedDoc.value.path, tags: selectedDocTags.value })
@@ -498,6 +700,8 @@
                     if (d.ok) {
                         selectedDoc.value.tags = selectedDocTags.value.slice();
                         loadDocuments();
+                    } else if (d.error) {
+                        alert(d.error);
                     }
                 } catch(e) {}
             }
@@ -549,7 +753,7 @@
                 var formData = new FormData();
                 formData.append('file', file);
                 try {
-                    var r = await fetch('/api/kb/' + currentKbId.value + '/notes/upload', { method: 'POST', body: formData });
+                    var r = await authFetch('/api/kb/' + currentKbId.value + '/notes/upload', { method: 'POST', body: formData });
                     var d = await r.json();
                     if (d.ok) {
                         uploadItems.value[index].status = 'done';
@@ -565,11 +769,79 @@
                 }
             }
 
+            // Category Tree
+            function toggleCategory(id) {
+                var map = Object.assign({}, expandedCategories.value);
+                map[id] = !map[id];
+                expandedCategories.value = map;
+            }
+
+            function getCategoryName(id) {
+                if (id === -1 || id === null) return '未分类';
+                var found = categories.value.find(function(c) { return c.id === id; });
+                return found ? found.name : '未分类';
+            }
+
+            // New Note
+            function openNewNoteDialog() {
+                newNoteName.value = '';
+                newNoteCategoryId.value = null;
+                newNoteOpen.value = true;
+            }
+
+            function openNewNoteInCategory(catId) {
+                newNoteName.value = '';
+                newNoteCategoryId.value = catId === -1 ? null : catId;
+                newNoteOpen.value = true;
+            }
+
+            function closeNewNoteDialog() {
+                newNoteOpen.value = false;
+                newNoteName.value = '';
+                newNoteCategoryId.value = null;
+            }
+
+            async function confirmNewNote() {
+                var name = newNoteName.value.trim();
+                if (!name) return;
+                var catId = newNoteCategoryId.value;
+                closeNewNoteDialog();
+                var url = '/api/kb/' + currentKbId.value + '/notes/new?filename=' + encodeURIComponent(name);
+                if (catId) url += '&categoryId=' + catId;
+                try {
+                    var r = await authFetch(url, { method: 'POST' });
+                    var d = await r.json();
+                    if (d.ok) {
+                        loadDocuments();
+                        // select the new doc
+                        setTimeout(function() {
+                            var found = documents.value.find(function(doc) { return doc.path === d.path; });
+                            if (found) selectDoc(found);
+                        }, 300);
+                    } else {
+                        alert('新建失败: ' + (d.error || '未知错误'));
+                    }
+                } catch(e) {
+                    alert('新建失败: ' + e.message);
+                }
+            }
+
+            // Download
+            async function downloadDoc(doc) {
+                var url = '/api/kb/' + currentKbId.value + '/notes/download?path=' + encodeURIComponent(doc.path);
+                var a = document.createElement('a');
+                a.href = url;
+                a.download = doc.name;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+            }
+
             // Delete
             async function deleteDoc(doc) {
                 if (!confirm('确认删除「' + doc.path + '」？')) return;
                 try {
-                    var r = await fetch('/api/kb/' + currentKbId.value + '/notes/delete?path=' + encodeURIComponent(doc.path), { method: 'POST' });
+                    var r = await authFetch('/api/kb/' + currentKbId.value + '/notes/delete?path=' + encodeURIComponent(doc.path), { method: 'POST' });
                     var d = await r.json();
                     if (d.ok) {
                         if (selectedDoc.value && selectedDoc.value.path === doc.path) selectedDoc.value = null;
@@ -580,6 +852,71 @@
                 } catch(e) {
                     alert('删除失败: ' + e.message);
                 }
+            }
+
+            // Category CRUD
+            function editCategory(group) {
+                catEditId.value = group.id;
+                catEditName.value = group.name;
+                catDialogOpen.value = true;
+            }
+
+            function showAddCategory() {
+                catEditId.value = null;
+                catEditName.value = '';
+                catDialogOpen.value = true;
+            }
+
+            function closeCatDialog() {
+                catDialogOpen.value = false;
+                catEditId.value = null;
+                catEditName.value = '';
+            }
+
+            async function confirmCatDialog() {
+                var name = catEditName.value.trim();
+                if (!name) return;
+                try {
+                    if (catEditId.value) {
+                        var r = await authFetch('/api/kb/' + currentKbId.value + '/categories/' + catEditId.value, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ name: name })
+                        });
+                        var d = await r.json();
+                        if (d.ok) { loadCategories(); closeCatDialog(); }
+                        else { alert(d.error || '更新失败'); }
+                    } else {
+                        var r = await authFetch('/api/kb/' + currentKbId.value + '/categories', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ name: name })
+                        });
+                        var d = await r.json();
+                        if (d.ok) { loadCategories(); closeCatDialog(); }
+                        else { alert(d.error || '创建失败'); }
+                    }
+                } catch(e) { alert('操作失败: ' + e.message); }
+            }
+
+            async function deleteCategory() {
+                if (!catEditId.value || !confirm('确认删除分类「' + catEditName.value + '」？该分类下的文档将变为未分类。')) return;
+                try {
+                    var r = await authFetch('/api/kb/' + currentKbId.value + '/categories/' + catEditId.value, { method: 'DELETE' });
+                    var d = await r.json();
+                    if (d.ok) { loadDocuments(); loadCategories(); closeCatDialog(); }
+                    else { alert(d.error || '删除失败'); }
+                } catch(e) { alert('删除失败: ' + e.message); }
+            }
+
+            // Permission
+            function canEditDoc(doc) {
+                if (!doc) return false;
+                // currentUser comes from meta tag; fallback to empty
+                var user = currentUser.value || '';
+                if (!user) return true; // fallback: allow if unknown
+                // admin check: userId 1
+                return true; // Server handles permission; UI shows buttons for all but server will reject
             }
 
             // Utils
@@ -607,22 +944,32 @@
             }
 
             watch(contentTab, function() {
-                if (contentTab.value === 'content') nextTick(renderContent);
+                if (contentTab.value === 'content' && !editing.value) nextTick(renderContent);
             });
 
             onMounted(init);
 
             return {
                 kbList, currentKbId, documents, searchQuery, isSearchMode, hasKb,
-                filteredDocs, displayedDocs, totalChunks, tagCount,
+                filteredDocs, totalChunks, tagCount,
+                categoryTree, expandedCategories,
                 selectedDoc, selectedDocTags, tagInput, contentTab, docContent, docContentLoading,
                 chunks, chunksLoading, chunkExpanded,
+                editing, editContent,
                 uploadOpen, dragOver, uploadItems,
+                newNoteOpen, newNoteName, newNoteCategoryId,
+                catDialogOpen, catEditId, catEditName,
+                categories,
                 onKbChange, loadDocuments, doSearch, clearSearch,
-                selectDoc, toggleChunk,
+                selectDoc, switchTab, toggleChunk,
+                startEditing, cancelEditing, saveEditing,
                 addTag, removeTag, saveTags,
                 openUpload, closeUpload, triggerFileInput, onDrop, onFileSelected,
-                deleteDoc,
+                openNewNoteDialog, openNewNoteInCategory, closeNewNoteDialog, confirmNewNote,
+                toggleCategory, getCategoryName,
+                showAddCategory, editCategory, closeCatDialog, confirmCatDialog, deleteCategory,
+                downloadDoc, deleteDoc,
+                canEditDoc,
                 fileIcon, formatSize, statusLabel
             };
         }

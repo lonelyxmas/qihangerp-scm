@@ -1,42 +1,56 @@
 package cn.qihang.ai.assistant.controller.api;
 
+import cn.qihang.ai.assistant.controller.BaseController;
 import cn.qihang.ai.assistant.entity.KbNoteEntity;
 import cn.qihang.ai.assistant.entity.KbBaseEntity;
 import cn.qihang.ai.assistant.entity.KbEmbeddingEntity;
+import cn.qihang.ai.assistant.entity.KbCategoryEntity;
 import cn.qihang.ai.assistant.service.DocumentParserService;
 import cn.qihang.ai.assistant.service.KbBaseService;
 import cn.qihang.ai.assistant.service.LogService;
+import cn.qihang.ai.assistant.service.storage.QiniuStorageService;
 import cn.qihang.ai.assistant.service.db.KbNoteDbService;
 import cn.qihang.ai.assistant.service.db.KbEmbeddingDbService;
+import cn.qihang.ai.assistant.service.db.KbCategoryDbService;
 import cn.qihang.ai.assistant.util.TimeUtil;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/kb")
-public class KbNoteApiController {
+public class KbNoteApiController extends BaseController {
 
     private final KbBaseService kbService;
     private final KbNoteDbService kbNoteDbService;
     private final KbEmbeddingDbService kbEmbeddingDbService;
+    private final KbCategoryDbService kbCategoryDbService;
     private final LogService logService;
     private final DocumentParserService documentParserService;
+    private final QiniuStorageService qiniuStorageService;
 
     public KbNoteApiController(KbBaseService kbService,
                                KbNoteDbService kbNoteDbService,
                                KbEmbeddingDbService kbEmbeddingDbService,
+                               KbCategoryDbService kbCategoryDbService,
                                LogService logService,
-                               DocumentParserService documentParserService) {
+                               DocumentParserService documentParserService,
+                               QiniuStorageService qiniuStorageService) {
         this.kbService = kbService;
         this.kbNoteDbService = kbNoteDbService;
         this.kbEmbeddingDbService = kbEmbeddingDbService;
+        this.kbCategoryDbService = kbCategoryDbService;
         this.logService = logService;
         this.documentParserService = documentParserService;
+        this.qiniuStorageService = qiniuStorageService;
     }
+
+    // ── Tree ──
 
     @GetMapping("/{id}/notes/tree")
     public Map<String, Object> getTree(@PathVariable Long id) {
@@ -50,6 +64,8 @@ public class KbNoteApiController {
             return Map.of("ok", false, "error", e.getMessage());
         }
     }
+
+    // ── List ──
 
     @GetMapping("/{id}/notes/list")
     public Map<String, Object> listNotes(@PathVariable Long id) {
@@ -70,6 +86,8 @@ public class KbNoteApiController {
                 doc.put("tags", parseTags(note.getTags()));
                 doc.put("status", note.getStatus() != null ? note.getStatus() : "ready");
                 doc.put("chunkCount", chunkCount);
+                doc.put("createdBy", note.getCreatedBy() != null ? note.getCreatedBy() : "");
+                doc.put("categoryId", note.getCategoryId());
                 doc.put("createdAt", note.getCreatedAt());
                 doc.put("updatedAt", note.getUpdatedAt());
                 docs.add(doc);
@@ -80,6 +98,8 @@ public class KbNoteApiController {
             return Map.of("ok", false, "error", e.getMessage());
         }
     }
+
+    // ── Chunks ──
 
     @GetMapping("/{id}/notes/chunks")
     public Map<String, Object> getChunks(@PathVariable Long id, @RequestParam String path) {
@@ -102,6 +122,8 @@ public class KbNoteApiController {
         }
     }
 
+    // ── Tags ──
+
     @PostMapping("/{id}/notes/tags")
     public Map<String, Object> updateTags(@PathVariable Long id, @RequestBody Map<String, Object> body) {
         KbBaseEntity kb = kbService.getById(id);
@@ -110,6 +132,7 @@ public class KbNoteApiController {
         if (path.isEmpty()) return Map.of("ok", false, "error", "路径不能为空");
         KbNoteEntity note = kbNoteDbService.getByKbIdAndPath(id, path);
         if (note == null) return Map.of("ok", false, "error", "文件不存在");
+        if (!canEdit(note)) return Map.of("ok", false, "error", "无权限: 只有创建者和管理员可编辑");
         @SuppressWarnings("unchecked")
         List<String> tags = (List<String>) body.getOrDefault("tags", new ArrayList<>());
         note.setTags(toJsonArray(tags));
@@ -137,6 +160,8 @@ public class KbNoteApiController {
         }
     }
 
+    // ── Read ──
+
     @GetMapping("/{id}/notes/read")
     public Map<String, Object> readNote(@PathVariable Long id, @RequestParam String path) {
         KbBaseEntity kb = kbService.getById(id);
@@ -146,6 +171,8 @@ public class KbNoteApiController {
         if (note.getIsDir() == 1) return Map.of("ok", false, "error", "不能读取目录");
         return Map.of("ok", true, "content", note.getContent() != null ? note.getContent() : "");
     }
+
+    // ── Save (edit) ──
 
     @PostMapping("/{id}/notes/save")
     public Map<String, Object> saveNote(@PathVariable Long id, @RequestBody Map<String, String> body) {
@@ -158,7 +185,9 @@ public class KbNoteApiController {
 
         KbNoteEntity note = kbNoteDbService.getByKbIdAndPath(id, path);
         String now = TimeUtil.nowStr();
+        String username = getUsername();
         if (note != null) {
+            if (!canEdit(note)) return Map.of("ok", false, "error", "无权限: 只有创建者和管理员可编辑");
             note.setContent(content);
             note.setUpdatedAt(now);
             kbNoteDbService.updateById(note);
@@ -170,6 +199,7 @@ public class KbNoteApiController {
             note.setName(name);
             note.setIsDir(0);
             note.setContent(content);
+            note.setCreatedBy(username);
             note.setCreatedAt(now);
             note.setUpdatedAt(now);
             kbNoteDbService.save(note);
@@ -179,11 +209,14 @@ public class KbNoteApiController {
         return Map.of("ok", true);
     }
 
+    // ── New ──
+
     @PostMapping("/{id}/notes/new")
     public Map<String, Object> createNote(@PathVariable Long id,
                                           @RequestParam(defaultValue = "") String dir,
                                           @RequestParam String filename,
-                                          @RequestParam(defaultValue = "") String content) {
+                                          @RequestParam(defaultValue = "") String content,
+                                          @RequestParam(required = false) Long categoryId) {
         KbBaseEntity kb = kbService.getById(id);
         if (kb == null) return Map.of("ok", false, "error", "知识库不存在");
 
@@ -194,12 +227,15 @@ public class KbNoteApiController {
         if (existing != null) return Map.of("ok", false, "error", "文件已存在");
 
         String now = TimeUtil.nowStr();
+        String username = getUsername();
         KbNoteEntity note = new KbNoteEntity();
         note.setKbId(id);
         note.setPath(path);
         note.setName(filename);
         note.setIsDir(0);
         note.setContent(content);
+        note.setCreatedBy(username);
+        note.setCategoryId(categoryId);
         note.setCreatedAt(now);
         note.setUpdatedAt(now);
         kbNoteDbService.save(note);
@@ -209,6 +245,8 @@ public class KbNoteApiController {
         return Map.of("ok", true, "path", path);
     }
 
+    // ── Delete ──
+
     @PostMapping("/{id}/notes/delete")
     public Map<String, Object> deleteNote(@PathVariable Long id, @RequestParam String path) {
         KbBaseEntity kb = kbService.getById(id);
@@ -216,6 +254,7 @@ public class KbNoteApiController {
 
         KbNoteEntity note = kbNoteDbService.getByKbIdAndPath(id, path);
         if (note == null) return Map.of("ok", false, "error", "文件不存在");
+        if (!canEdit(note)) return Map.of("ok", false, "error", "无权限: 只有创建者和管理员可删除");
 
         if (note.getIsDir() == 1) {
             String prefix = path + "/";
@@ -231,6 +270,8 @@ public class KbNoteApiController {
         return Map.of("ok", true);
     }
 
+    // ── Rename ──
+
     @PostMapping("/{id}/notes/rename")
     public Map<String, Object> renameNote(@PathVariable Long id, @RequestBody Map<String, String> body) {
         KbBaseEntity kb = kbService.getById(id);
@@ -244,6 +285,7 @@ public class KbNoteApiController {
 
         KbNoteEntity note = kbNoteDbService.getByKbIdAndPath(id, oldPath);
         if (note == null) return Map.of("ok", false, "error", "原文件不存在");
+        if (!canEdit(note)) return Map.of("ok", false, "error", "无权限: 只有创建者和管理员可重命名");
         if (kbNoteDbService.getByKbIdAndPath(id, newPath) != null) {
             return Map.of("ok", false, "error", "目标路径已存在");
         }
@@ -274,6 +316,8 @@ public class KbNoteApiController {
         return Map.of("ok", true);
     }
 
+    // ── Upload ──
+
     @PostMapping("/{id}/notes/upload")
     public Map<String, Object> uploadFile(@PathVariable Long id,
                                           @RequestParam("file") MultipartFile file,
@@ -301,7 +345,7 @@ public class KbNoteApiController {
             byte[] data = file.getBytes();
             String content;
             if (originalName.endsWith(".md")) {
-                content = new String(data, java.nio.charset.StandardCharsets.UTF_8);
+                content = new String(data, StandardCharsets.UTF_8);
             } else if (documentParserService.isSupported(originalName)) {
                 content = documentParserService.parseToMarkdown(data, originalName);
             } else {
@@ -309,19 +353,35 @@ public class KbNoteApiController {
             }
 
             String now = TimeUtil.nowStr();
+            String username = getUsername();
             KbNoteEntity note = new KbNoteEntity();
             note.setKbId(id);
             note.setPath(path);
             note.setName(originalName);
             note.setIsDir(0);
             note.setContent(content);
-            note.setFileType(documentParserService.getExtension(originalName));
+            note.setFileType(ext);
             note.setFileSize((long) data.length);
             note.setTags("[]");
             note.setStatus("ready");
+            note.setCreatedBy(username);
             note.setCreatedAt(now);
             note.setUpdatedAt(now);
+
             kbNoteDbService.save(note);
+
+            // Upload original file to Qiniu
+            String qiniuKey = getQiniuKey(id, note, originalName);
+            if (qiniuStorageService.isConfigured()) {
+                String uploadedKey = qiniuStorageService.upload(data, qiniuKey);
+                if (!uploadedKey.isEmpty()) {
+                    note.setOriginalFile(qiniuKey);
+                    kbNoteDbService.updateById(note);
+                }
+            } else {
+                log.warn("Qiniu not configured, original file not saved");
+            }
+
             ensureParentDirs(id, path);
             logService.add("上传文件", "成功", path);
             return Map.of("ok", true, "path", path);
@@ -329,6 +389,102 @@ public class KbNoteApiController {
             return Map.of("ok", false, "error", "上传失败: " + e.getMessage());
         }
     }
+
+    // ── Download ──
+
+    @GetMapping("/{id}/notes/download")
+    public void downloadFile(@PathVariable Long id, @RequestParam String path, HttpServletResponse response) {
+        KbBaseEntity kb = kbService.getById(id);
+        if (kb == null) {
+            response.setStatus(404);
+            return;
+        }
+        KbNoteEntity note = kbNoteDbService.getByKbIdAndPath(id, path);
+        if (note == null || note.getOriginalFile() == null || note.getOriginalFile().isBlank()) {
+            response.setStatus(404);
+            return;
+        }
+        String url = qiniuStorageService.downloadUrl(note.getOriginalFile());
+        if (url.isEmpty()) {
+            response.setStatus(404);
+            return;
+        }
+        try {
+            response.sendRedirect(url);
+        } catch (IOException e) {
+            log.error("下载重定向失败", e);
+            response.setStatus(500);
+        }
+    }
+
+    // ── Categories ──
+
+    @GetMapping("/{id}/categories")
+    public Map<String, Object> listCategories(@PathVariable Long id) {
+        try {
+            List<KbCategoryEntity> list = kbCategoryDbService.listByKbId(id);
+            return Map.of("ok", true, "categories", list);
+        } catch (Exception e) {
+            return Map.of("ok", false, "error", e.getMessage());
+        }
+    }
+
+    @PostMapping("/{id}/categories")
+    public Map<String, Object> createCategory(@PathVariable Long id, @RequestBody Map<String, String> body) {
+        String name = body.getOrDefault("name", "").trim();
+        if (name.isEmpty()) return Map.of("ok", false, "error", "名称不能为空");
+        KbCategoryEntity c = new KbCategoryEntity();
+        c.setKbId(id);
+        c.setName(name);
+        c.setSortOrder(0);
+        String now = TimeUtil.nowStr();
+        c.setCreatedAt(now);
+        c.setUpdatedAt(now);
+        kbCategoryDbService.save(c);
+        return Map.of("ok", true, "category", c);
+    }
+
+    @PutMapping("/{id}/categories/{catId}")
+    public Map<String, Object> updateCategory(@PathVariable Long id, @PathVariable Long catId,
+                                              @RequestBody Map<String, String> body) {
+        KbCategoryEntity c = kbCategoryDbService.getById(catId);
+        if (c == null) return Map.of("ok", false, "error", "分类不存在");
+        String name = body.getOrDefault("name", "").trim();
+        if (name.isEmpty()) return Map.of("ok", false, "error", "名称不能为空");
+        c.setName(name);
+        c.setUpdatedAt(TimeUtil.nowStr());
+        kbCategoryDbService.updateById(c);
+        return Map.of("ok", true);
+    }
+
+    @DeleteMapping("/{id}/categories/{catId}")
+    public Map<String, Object> deleteCategory(@PathVariable Long id, @PathVariable Long catId) {
+        KbCategoryEntity c = kbCategoryDbService.getById(catId);
+        if (c == null) return Map.of("ok", false, "error", "分类不存在");
+        // unlink notes
+        kbNoteDbService.lambdaUpdate()
+                .eq(KbNoteEntity::getCategoryId, catId)
+                .set(KbNoteEntity::getCategoryId, null)
+                .update();
+        kbCategoryDbService.removeById(catId);
+        return Map.of("ok", true);
+    }
+
+    @PutMapping("/{id}/notes/category")
+    public Map<String, Object> setNoteCategory(@PathVariable Long id, @RequestBody Map<String, Object> body) {
+        String path = (String) body.getOrDefault("path", "");
+        if (path.isEmpty()) return Map.of("ok", false, "error", "路径不能为空");
+        KbNoteEntity note = kbNoteDbService.getByKbIdAndPath(id, path);
+        if (note == null) return Map.of("ok", false, "error", "文件不存在");
+        Object catIdRaw = body.get("categoryId");
+        Long catId = catIdRaw != null ? Long.valueOf(catIdRaw.toString()) : null;
+        note.setCategoryId(catId);
+        note.setUpdatedAt(TimeUtil.nowStr());
+        kbNoteDbService.updateById(note);
+        return Map.of("ok", true);
+    }
+
+    // ── Mkdir ──
 
     @PostMapping("/{id}/notes/mkdir")
     public Map<String, Object> createDir(@PathVariable Long id, @RequestParam String path) {
@@ -347,6 +503,7 @@ public class KbNoteApiController {
         dir.setName(name);
         dir.setIsDir(1);
         dir.setContent(null);
+        dir.setCreatedBy(getUsername());
         dir.setCreatedAt(now);
         dir.setUpdatedAt(now);
         kbNoteDbService.save(dir);
@@ -355,6 +512,37 @@ public class KbNoteApiController {
         logService.add("新建目录", "成功", path);
         return Map.of("ok", true);
     }
+
+    // ── Permission helpers ──
+
+    private boolean canEdit(KbNoteEntity note) {
+        String currentUser;
+        try {
+            currentUser = getUsername();
+        } catch (Exception e) {
+            return false;
+        }
+        if (currentUser == null) return false;
+        if (isAdmin()) return true;
+        return currentUser.equals(note.getCreatedBy());
+    }
+
+    private boolean isAdmin() {
+        try {
+            Long userId = getUserId();
+            return userId != null && 1L == userId;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    // ── Qiniu key ──
+
+    private String getQiniuKey(Long kbId, KbNoteEntity note, String originalName) {
+        return "kb-files/" + kbId + "/" + note.getId() + "_" + originalName;
+    }
+
+    // ── Internal helpers ──
 
     private void ensureParentDirs(Long kbId, String path) {
         String[] parts = path.split("/");
@@ -371,6 +559,7 @@ public class KbNoteApiController {
                 dir.setName(parts[i]);
                 dir.setIsDir(1);
                 dir.setContent(null);
+                dir.setCreatedBy(getUsername());
                 dir.setCreatedAt(now);
                 dir.setUpdatedAt(now);
                 kbNoteDbService.save(dir);

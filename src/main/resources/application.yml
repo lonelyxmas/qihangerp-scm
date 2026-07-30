@@ -37,6 +37,12 @@ spring:
       database: 0
       timeout: 10s
 
+qiniu:
+  access-key: ""
+  secret-key: ""
+  bucket: ""
+  domain: ""
+
 app:
   timezone: Asia/Shanghai
   max-history-chars: 6000

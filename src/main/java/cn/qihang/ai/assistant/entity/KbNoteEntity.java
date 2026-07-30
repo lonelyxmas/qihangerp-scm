@@ -18,6 +18,9 @@ public class KbNoteEntity {
     private Long fileSize;
     private String tags;
     private String status;
+    private String createdBy;
+    private String originalFile;
+    private Long categoryId;
     private String createdAt;
     private String updatedAt;
 
@@ -41,6 +44,12 @@ public class KbNoteEntity {
     public void setTags(String tags) { this.tags = tags; }
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
+    public String getCreatedBy() { return createdBy; }
+    public void setCreatedBy(String createdBy) { this.createdBy = createdBy; }
+    public String getOriginalFile() { return originalFile; }
+    public void setOriginalFile(String originalFile) { this.originalFile = originalFile; }
+    public Long getCategoryId() { return categoryId; }
+    public void setCategoryId(Long categoryId) { this.categoryId = categoryId; }
     public String getCreatedAt() { return createdAt; }
     public void setCreatedAt(String createdAt) { this.createdAt = createdAt; }
     public String getUpdatedAt() { return updatedAt; }
