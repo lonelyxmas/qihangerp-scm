@@ -1,6 +1,6 @@
 package cn.qihang.ai.assistant.controller;
 
-import cn.qihang.ai.assistant.service.OllamaEmbeddingService;
+import cn.qihang.ai.assistant.service.EmbeddingService;
 import cn.qihang.ai.assistant.util.TimeUtil;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -10,10 +10,10 @@ import java.util.Map;
 @RestController
 public class HealthController {
 
-    private final OllamaEmbeddingService ollamaEmbeddingService;
+    private final EmbeddingService embeddingService;
 
-    public HealthController(OllamaEmbeddingService ollamaEmbeddingService) {
-        this.ollamaEmbeddingService = ollamaEmbeddingService;
+    public HealthController(EmbeddingService embeddingService) {
+        this.embeddingService = embeddingService;
     }
 
     @GetMapping("/health")
@@ -22,7 +22,7 @@ public class HealthController {
                 "status", "ok",
                 "version", "2.0.0",
                 "time", TimeUtil.nowStr(),
-                "ollama", Map.of("available", ollamaEmbeddingService.isAvailable())
+                "ollama", Map.of("available", embeddingService.isAvailable())
         );
     }
 }

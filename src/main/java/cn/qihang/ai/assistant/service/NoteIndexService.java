@@ -16,10 +16,10 @@ public class NoteIndexService {
     private static final float SIMILARITY_THRESHOLD = 0.3f;
 
     private final KbEmbeddingDbService noteEmbeddingDbService;
-    private final OllamaEmbeddingService embeddingService;
+    private final EmbeddingService embeddingService;
 
     public NoteIndexService(KbEmbeddingDbService noteEmbeddingDbService,
-                           OllamaEmbeddingService embeddingService) {
+                           EmbeddingService embeddingService) {
         this.noteEmbeddingDbService = noteEmbeddingDbService;
         this.embeddingService = embeddingService;
     }

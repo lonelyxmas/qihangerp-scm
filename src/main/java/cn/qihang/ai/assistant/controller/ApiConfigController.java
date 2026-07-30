@@ -8,7 +8,7 @@ import cn.qihang.ai.assistant.service.FeishuService;
 import cn.qihang.ai.assistant.service.KbBaseService;
 import cn.qihang.ai.assistant.service.LogService;
 import cn.qihang.ai.assistant.service.LlmConfigResolver;
-import cn.qihang.ai.assistant.service.OllamaEmbeddingService;
+import cn.qihang.ai.assistant.service.EmbeddingService;
 import cn.qihang.ai.assistant.service.SessionService;
 import cn.qihang.ai.assistant.service.db.LlmProfileDbService;
 import org.springframework.web.bind.annotation.*;
@@ -22,7 +22,7 @@ public class ApiConfigController {
     private final ConfigService configService;
     private final FeishuService feishuService;
     private final LogService logService;
-    private final OllamaEmbeddingService ollamaEmbeddingService;
+    private final EmbeddingService embeddingService;
     private final LlmProfileDbService llmProfileDbService;
     private final LlmConfigResolver llmConfigResolver;
     private final SessionService sessionService;
@@ -30,7 +30,7 @@ public class ApiConfigController {
 
     public ApiConfigController(ConfigService configService, FeishuService feishuService,
                                 LogService logService,
-                                OllamaEmbeddingService ollamaEmbeddingService,
+                                EmbeddingService embeddingService,
                                 LlmProfileDbService llmProfileDbService,
                                 LlmConfigResolver llmConfigResolver,
                                 SessionService sessionService,
@@ -38,7 +38,7 @@ public class ApiConfigController {
         this.configService = configService;
         this.feishuService = feishuService;
         this.logService = logService;
-        this.ollamaEmbeddingService = ollamaEmbeddingService;
+        this.embeddingService = embeddingService;
         this.llmProfileDbService = llmProfileDbService;
         this.llmConfigResolver = llmConfigResolver;
         this.sessionService = sessionService;
@@ -181,7 +181,7 @@ public class ApiConfigController {
 
     @GetMapping("/api/ollama/status")
     public Map<String, Object> ollamaStatus() {
-        return Map.of("available", ollamaEmbeddingService.isAvailable());
+        return Map.of("available", embeddingService.isAvailable());
     }
 
     // ========== LLM Profile endpoints (SQLite) ==========
@@ -297,24 +297,26 @@ public class ApiConfigController {
         String baseUrl = body.getOrDefault("baseUrl", "");
         String apiKey = body.getOrDefault("apiKey", "");
         String provider = body.getOrDefault("provider", "");
-        Config config = configService.load();
-        String oldModel = config.getEmbeddingModel();
-        String oldApiKey = config.getEmbeddingApiKey();
-        String oldKey = oldModel + "|" + oldApiKey;
-        String newKey = model + "|" + apiKey;
-        boolean modelChanged = !oldKey.isEmpty() && !oldKey.equals(newKey);
 
-        config.setEmbeddingModel(model);
-        config.setEmbeddingBaseUrl(baseUrl);
-        config.setEmbeddingApiKey(apiKey);
-        config.setEmbeddingProvider(provider);
-        configService.save(config);
+        LlmProfileEntity profile = llmConfigResolver.getEmbeddingProfile();
+        boolean isNew = (profile == null);
+        if (isNew) {
+            profile = new LlmProfileEntity();
+            profile.setName("语义向量模型");
+            profile.setModelType(LlmProfileEntity.TYPE_EMBEDDING);
+        }
+        profile.setModel(model);
+        profile.setBaseUrl(baseUrl);
+        profile.setApiKey(apiKey);
+        profile.setTimeout(600);
 
-        if (modelChanged) {
-            logService.add("配置更新", "注意", "向量模型已变更，清空旧向量数据");
+        if (isNew) {
+            llmProfileDbService.save(profile);
+        } else {
+            llmProfileDbService.updateById(profile);
         }
 
-        ollamaEmbeddingService.reloadConfig();
+        embeddingService.reloadConfig();
 
         logService.add("配置更新", "成功", "语义向量模型已配置: " + model);
         return Map.of("ok", true);
@@ -322,14 +324,22 @@ public class ApiConfigController {
 
     @GetMapping("/api/config/embedding-model")
     public Map<String, Object> getEmbeddingModel() {
-        Config config = configService.load();
+        LlmProfileEntity profile = llmConfigResolver.getEmbeddingProfile();
         Map<String, Object> result = new HashMap<>();
         result.put("ok", true);
-        result.put("model", config.getEmbeddingModel());
-        result.put("baseUrl", config.getEmbeddingBaseUrl());
-        result.put("apiKey", config.getEmbeddingApiKey());
-        result.put("provider", config.getEmbeddingProvider());
-        result.put("providerLabel", ollamaEmbeddingService.getProviderLabel());
+        if (profile != null) {
+            result.put("model", profile.getModel() != null ? profile.getModel() : "");
+            result.put("baseUrl", profile.getBaseUrl() != null ? profile.getBaseUrl() : "");
+            result.put("apiKey", profile.getApiKey() != null ? profile.getApiKey() : "");
+            result.put("provider", "");
+            result.put("providerLabel", embeddingService.getProviderLabel());
+        } else {
+            result.put("model", "");
+            result.put("baseUrl", "http://127.0.0.1:11434");
+            result.put("apiKey", "");
+            result.put("provider", "");
+            result.put("providerLabel", "");
+        }
         return result;
     }
 

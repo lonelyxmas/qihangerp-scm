@@ -176,4 +176,14 @@ public class LlmConfigResolver {
     public LlmProfileEntity getProfileByName(String name) {
         return llmProfileDbService.findByName(name);
     }
+
+    public LlmProfileEntity getEmbeddingProfile() {
+        List<LlmProfileEntity> all = llmProfileDbService.listAllOrdered();
+        for (LlmProfileEntity p : all) {
+            if (LlmProfileEntity.TYPE_EMBEDDING.equals(p.getModelType())) {
+                return p;
+            }
+        }
+        return null;
+    }
 }

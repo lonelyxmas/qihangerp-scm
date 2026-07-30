@@ -7,7 +7,7 @@ import cn.qihang.ai.assistant.entity.KbBaseEntity;
 import cn.qihang.ai.assistant.security.common.SecurityUtils;
 import cn.qihang.ai.assistant.service.ConfigService;
 import cn.qihang.ai.assistant.service.KbBaseService;
-import cn.qihang.ai.assistant.service.OllamaEmbeddingService;
+import cn.qihang.ai.assistant.service.EmbeddingService;
 import cn.qihang.ai.assistant.util.FileUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.web.bind.annotation.ControllerAdvice;
@@ -26,17 +26,17 @@ public class GlobalModelAdvice {
     private final AppConfig appConfig;
     private final ConfigService configService;
     private final KbBaseService kbService;
-    private final OllamaEmbeddingService ollamaEmbeddingService;
+    private final EmbeddingService embeddingService;
     private final DataModuleService moduleService;
 
     public GlobalModelAdvice(AppConfig appConfig, ConfigService configService,
                              KbBaseService kbService,
-                             OllamaEmbeddingService ollamaEmbeddingService,
+                             EmbeddingService embeddingService,
                              DataModuleService moduleService) {
         this.appConfig = appConfig;
         this.configService = configService;
         this.kbService = kbService;
-        this.ollamaEmbeddingService = ollamaEmbeddingService;
+        this.embeddingService = embeddingService;
         this.moduleService = moduleService;
     }
 
@@ -76,12 +76,12 @@ public class GlobalModelAdvice {
 
     @ModelAttribute("ollamaAvailable")
     public boolean ollamaAvailable() {
-        return ollamaEmbeddingService.isAvailable();
+        return embeddingService.isAvailable();
     }
 
     @ModelAttribute("ollamaProvider")
     public String ollamaProvider() {
-        return ollamaEmbeddingService.getProviderLabel();
+        return embeddingService.getProviderLabel();
     }
 
     @ModelAttribute("ollamaModel")

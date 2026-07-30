@@ -1,7 +1,6 @@
 package cn.qihang.ai.assistant.service;
 
-import cn.qihang.ai.assistant.config.AppConfig;
-import cn.qihang.ai.assistant.model.Config;
+import cn.qihang.ai.assistant.entity.LlmProfileEntity;
 import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -16,33 +15,23 @@ import org.springframework.web.reactive.function.client.WebClient;
 import java.net.http.HttpClient;
 import java.time.Duration;
 
-/**
- * 向量化服务。支持两种模式：
- *   - Ollama 本地 (无 apiKey)
- *   - OpenAI 兼容 API (含 apiKey，如硅基流动)
- * 配置通过 config.json 的 embeddingModel / embeddingBaseUrl / embeddingApiKey 管理。
- */
 @Service
-public class OllamaEmbeddingService {
+public class EmbeddingService {
 
-    private static final Logger log = LoggerFactory.getLogger(OllamaEmbeddingService.class);
+    private static final Logger log = LoggerFactory.getLogger(EmbeddingService.class);
 
-    private final AppConfig appConfig;
-    private final LogService logService;
-    private final ConfigService configService;
+    private final LlmConfigResolver llmConfigResolver;
     private final RestClient.Builder restClientBuilder;
     private final WebClient.Builder webClientBuilder;
     private EmbeddingModel embeddingModel;
     private boolean available;
     private String providerLabel = "";
-    private String currentModelKey = "";  // 用于检测模型是否变更
-    public OllamaEmbeddingService(AppConfig appConfig, LogService logService,
-                                   ConfigService configService,
-                                   RestClient.Builder restClientBuilder,
-                                   WebClient.Builder webClientBuilder) {
-        this.appConfig = appConfig;
-        this.logService = logService;
-        this.configService = configService;
+    private String currentModelKey = "";
+
+    public EmbeddingService(LlmConfigResolver llmConfigResolver,
+                            RestClient.Builder restClientBuilder,
+                            WebClient.Builder webClientBuilder) {
+        this.llmConfigResolver = llmConfigResolver;
         this.restClientBuilder = restClientBuilder;
         this.webClientBuilder = webClientBuilder;
     }
@@ -53,22 +42,19 @@ public class OllamaEmbeddingService {
     }
 
     public void reloadConfig() {
-        Config cfg = configService.load();
-        String model = cfg.getEmbeddingModel();
-        String baseUrl = cfg.getEmbeddingBaseUrl();
-        String apiKey = cfg.getEmbeddingApiKey();
-        String providerConfig = cfg.getEmbeddingProvider();
+        LlmProfileEntity profile = llmConfigResolver.getEmbeddingProfile();
+        if (profile == null) {
+            log.warn("⚠️ 未配置向量模型，请在配置页添加");
+            this.available = false;
+            return;
+        }
 
-        if (model == null || model.isEmpty()) model = appConfig.getOllamaModel();
-        if (baseUrl == null || baseUrl.isEmpty()) baseUrl = appConfig.getOllamaBaseUrl();
-
-        // 仅记录当前模型 key，实际清空由 ApiConfigController 在保存前处理
-        String newKey = model + "|" + apiKey;
+        String model = profile.getModel();
+        String baseUrl = profile.getBaseUrl();
+        String apiKey = profile.getApiKey();
+        String newKey = model + "|" + (apiKey != null ? apiKey : "");
         this.currentModelKey = newKey;
-
-        this.providerLabel = providerConfig != null && !providerConfig.isEmpty()
-                ? providerConfig + " · " + model
-                : "";
+        this.providerLabel = extractProvider(baseUrl) + " · " + model;
 
         try {
             if (apiKey != null && !apiKey.isEmpty()) {
@@ -78,7 +64,6 @@ public class OllamaEmbeddingService {
             }
         } catch (Exception e) {
             log.warn("⚠️ Embedding 初始化失败: {}", e.getMessage());
-            logService.add("Embedding", "不可用", e.getMessage());
             this.available = false;
         }
     }
@@ -103,21 +88,15 @@ public class OllamaEmbeddingService {
                 .build();
 
         this.available = true;
-        if (this.providerLabel.isEmpty()) {
-            this.providerLabel = provider + " · " + model;
-        }
         log.info("✅ 语义检索已就绪 (API模式: {}, model={})", provider, model);
-        logService.add("Embedding", "就绪", provider + " / " + model);
     }
 
     private void initOllamaEmbedding(String model, String baseUrl) {
-        // 快速健康检查：Ollama 是否运行 & 模型是否安装
         try {
             java.net.http.HttpClient quickClient = java.net.http.HttpClient.newBuilder()
                     .connectTimeout(Duration.ofSeconds(3))
                     .build();
-            org.springframework.http.client.JdkClientHttpRequestFactory quickFactory =
-                    new org.springframework.http.client.JdkClientHttpRequestFactory(quickClient);
+            JdkClientHttpRequestFactory quickFactory = new JdkClientHttpRequestFactory(quickClient);
             quickFactory.setReadTimeout(Duration.ofSeconds(3));
             RestClient checkClient = this.restClientBuilder.clone().requestFactory(quickFactory).build();
 
@@ -128,23 +107,19 @@ public class OllamaEmbeddingService {
 
             if (!body.contains("\"name\":\"" + model + "\"") && !body.contains("\"name\":\"" + model + ":")) {
                 log.warn("⚠️ Embedding 模型 '{}' 未安装, 请执行: ollama pull {}", model, model);
-                logService.add("Ollama", "模型未安装", "请执行: ollama pull " + model);
                 this.available = false;
                 return;
             }
         } catch (Exception e) {
             log.warn("⚠️ Ollama 连接失败 ({}): {}, 语义检索不可用", baseUrl, e.getMessage());
-            logService.add("Ollama", "不可用", e.getMessage());
             this.available = false;
             return;
         }
 
-        // 基于 Spring Boot 已自动配置的 RestClient/WebClient Builder 增加超时
         HttpClient jdkHttpClient = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofMinutes(10))
                 .build();
-        JdkClientHttpRequestFactory requestFactory =
-                new JdkClientHttpRequestFactory(jdkHttpClient);
+        JdkClientHttpRequestFactory requestFactory = new JdkClientHttpRequestFactory(jdkHttpClient);
         requestFactory.setReadTimeout(Duration.ofMinutes(10));
 
         RestClient.Builder rcBuilder = this.restClientBuilder.clone()
@@ -171,11 +146,7 @@ public class OllamaEmbeddingService {
                 .build();
 
         this.available = true;
-        if (this.providerLabel.isEmpty()) {
-            this.providerLabel = "Ollama · " + model;
-        }
         log.info("✅ 语义检索已就绪 (Ollama模式: model={})", model);
-        logService.add("Ollama", "就绪", "model=" + model);
     }
 
     private String extractProvider(String baseUrl) {

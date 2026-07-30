@@ -16,19 +16,19 @@ public class ConfigController {
     private final ConfigService configService;
     private final LogService logService;
     private final FeishuService feishuService;
-    private final OllamaEmbeddingService ollamaEmbeddingService;
+    private final EmbeddingService embeddingService;
     private final LlmConfigResolver llmConfigResolver;
     private final KbBaseService kbBaseService;
 
     public ConfigController(ConfigService configService, LogService logService,
                              FeishuService feishuService,
-                             OllamaEmbeddingService ollamaEmbeddingService,
+                             EmbeddingService embeddingService,
                              LlmConfigResolver llmConfigResolver,
                              KbBaseService kbBaseService) {
         this.configService = configService;
         this.logService = logService;
         this.feishuService = feishuService;
-        this.ollamaEmbeddingService = ollamaEmbeddingService;
+        this.embeddingService = embeddingService;
         this.llmConfigResolver = llmConfigResolver;
         this.kbBaseService = kbBaseService;
     }
@@ -38,8 +38,8 @@ public class ConfigController {
         model.addAttribute("scheduler_jobs", List.of(
                 Map.of("id", "morning_report", "time", "每天 09:00", "desc", "生成综合日报")
         ));
-        model.addAttribute("ollama_available", ollamaEmbeddingService.isAvailable());
-        model.addAttribute("ollama_provider", ollamaEmbeddingService.getProviderLabel());
+        model.addAttribute("ollama_available", embeddingService.isAvailable());
+        model.addAttribute("ollama_provider", embeddingService.getProviderLabel());
         model.addAttribute("config", configService.load());
         List<LlmProfileEntity> allProfiles = llmConfigResolver.getAllProfiles();
         model.addAttribute("llm_models", allProfiles);
