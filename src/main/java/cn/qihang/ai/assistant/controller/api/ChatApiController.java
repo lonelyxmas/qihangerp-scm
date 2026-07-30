@@ -26,7 +26,7 @@ public class ChatApiController {
 
     private static final Logger log = LoggerFactory.getLogger(ChatApiController.class);
     private static final ObjectMapper mapper = new ObjectMapper();
-    private static final ExecutorService chatExecutor = Executors.newSingleThreadExecutor(r -> {
+    private static final ExecutorService chatExecutor = Executors.newCachedThreadPool(r -> {
         Thread t = new Thread(r, "chat-sse");
         t.setDaemon(true);
         return t;
@@ -37,24 +37,24 @@ public class ChatApiController {
     private final MessageDbService messageDbService;
     private final SessionService sessionService;
     private final LlmService llmService;
-    private final NoteAssistantService noteAssistantService;
+    private final ChatRagService chatRagService;
     private final LlmConfigResolver llmConfigResolver;
     private final LogService logService;
 
     public ChatApiController(KbBaseService kbService,
-                            SessionDbService sessionDbService,
-                            MessageDbService messageDbService,
-                            SessionService sessionService,
-                            LlmService llmService,
-                            NoteAssistantService noteAssistantService,
-                            LlmConfigResolver llmConfigResolver,
-                            LogService logService) {
+                             SessionDbService sessionDbService,
+                             MessageDbService messageDbService,
+                             SessionService sessionService,
+                             LlmService llmService,
+                             ChatRagService chatRagService,
+                             LlmConfigResolver llmConfigResolver,
+                             LogService logService) {
         this.kbService = kbService;
         this.sessionDbService = sessionDbService;
         this.messageDbService = messageDbService;
         this.sessionService = sessionService;
         this.llmService = llmService;
-        this.noteAssistantService = noteAssistantService;
+        this.chatRagService = chatRagService;
         this.llmConfigResolver = llmConfigResolver;
         this.logService = logService;
     }
@@ -141,10 +141,10 @@ public class ChatApiController {
 
     @PostMapping("/send")
     public SseEmitter sendChat(@RequestParam String message,
-                               @RequestParam(required = false) Long kbId,
-                               @RequestParam(required = false, defaultValue = "knowledge") String mode,
-                               @RequestParam(required = false, defaultValue = "") String modelName,
-                               @RequestParam(required = false) String sessionId) {
+                                @RequestParam(required = false) Long kbId,
+                                @RequestParam(required = false, defaultValue = "knowledge") String mode,
+                                @RequestParam(required = false, defaultValue = "") String modelName,
+                                @RequestParam(required = false) String sessionId) {
         SseEmitter emitter = new SseEmitter(300_000L);
 
         String cleanMessage = message;
@@ -176,75 +176,34 @@ public class ChatApiController {
                 emitter.send(SseEmitter.event().data(mapper.writeValueAsString(
                         Map.of("type", "session", "sessionId", actualSessionId))));
 
-                if (emitterDone[0]) return;
-                sendStatus(emitter, mode, "正在处理...");
-
                 sessionService.saveMessage(actualSessionId, "user", finalMessage, mode, "web", finalKbId);
 
                 if (!llmService.isAvailable()) {
                     throw new IllegalStateException("LLM API Key 未配置，请在配置页填写");
                 }
 
-                final boolean[] heartbeatDone = {false};
-                Thread heartbeat = new Thread(() -> {
-                    while (!heartbeatDone[0] && !emitterDone[0]) {
-                        try {
-                            Thread.sleep(5000);
-                            if (!heartbeatDone[0] && !emitterDone[0]) {
-                                emitter.send(SseEmitter.event()
-                                        .data(mapper.writeValueAsString(Map.of("type", "heartbeat"))));
-                            }
-                        } catch (Exception e) {
-                            break;
-                        }
-                    }
-                }, "chat-heartbeat");
-                heartbeat.setDaemon(true);
-                heartbeat.start();
-
-                final boolean[] firstChunkArrived = {false};
-                final long[] lastStatusTime = {System.currentTimeMillis()};
-                Thread thinkingStatus = new Thread(() -> {
-                    while (!firstChunkArrived[0] && !emitterDone[0]) {
-                        try { Thread.sleep(3000); } catch (InterruptedException e) { break; }
-                        if (!firstChunkArrived[0] && !emitterDone[0]) {
-                            long elapsed = System.currentTimeMillis() - lastStatusTime[0];
-                            if (elapsed >= 3000) {
-                                String msg;
-                                if (elapsed < 6000) msg = "⏳ 正在分析获取到的信息...";
-                                else if (elapsed < 10000) msg = "✍️ AI 正在组织回复...";
-                                else if (elapsed < 15000) msg = "📝 即将完成...";
-                                else msg = "⏳ 处理中，请稍候...";
-                                sendStatus(emitter, mode, msg);
-                            }
-                        }
-                    }
-                }, "chat-thinking-status");
-                thinkingStatus.setDaemon(true);
-                thinkingStatus.start();
-
                 StringBuilder replyBuffer = new StringBuilder();
-                noteAssistantService.streamChat(actualSessionId, finalMessage, mode, finalKbId, modelName, chunk -> {
-                    if (emitterDone[0]) return;
-                    firstChunkArrived[0] = true;
-                    replyBuffer.append(chunk);
-                    try {
-                        emitter.send(SseEmitter.event().data(mapper.writeValueAsString(
-                                Map.of("type", "text", "content", chunk, "mode", mode))));
-                    } catch (Exception e) {
-                        emitterDone[0] = true;
-                    }
-                }, status -> {
-                    if (!emitterDone[0]) {
-                        lastStatusTime[0] = System.currentTimeMillis();
-                        sendStatus(emitter, mode, status);
-                    }
-                });
 
-                heartbeatDone[0] = true;
+                String fullReply = chatRagService.streamChat(actualSessionId, finalMessage, finalKbId, modelName,
+                        chunk -> {
+                            if (emitterDone[0]) return;
+                            replyBuffer.append(chunk);
+                            try {
+                                emitter.send(SseEmitter.event().data(mapper.writeValueAsString(
+                                        Map.of("type", "text", "content", chunk, "mode", mode))));
+                            } catch (Exception e) {
+                                emitterDone[0] = true;
+                            }
+                        },
+                        status -> {
+                            if (!emitterDone[0]) {
+                                sendStatus(emitter, mode, status);
+                            }
+                        });
+
                 if (emitterDone[0]) return;
-                String replyText = replyBuffer.toString();
-                sessionService.saveMessage(actualSessionId, "assistant", replyText, mode, "web");
+                if (fullReply == null) fullReply = "（AI 未返回回复）";
+                sessionService.saveMessage(actualSessionId, "assistant", fullReply, mode, "web");
                 sendDone(emitter, mode);
 
             } catch (Exception e) {

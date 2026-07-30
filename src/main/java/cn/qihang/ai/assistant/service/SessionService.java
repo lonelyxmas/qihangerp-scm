@@ -162,5 +162,24 @@ public class SessionService {
         return sb.toString();
     }
 
+    /**
+     * 构建简化对话历史（最近 20 条），用于 RAG 上下文。
+     */
+    public String buildSimpleHistory(String sessionId) {
+        List<MessageEntity> msgs = messageDbService.listBySession(sessionId);
+        if (msgs == null || msgs.isEmpty()) return null;
+
+        // 取最近 20 条
+        int start = msgs.size() > 20 ? msgs.size() - 20 : 0;
+        List<MessageEntity> recent = msgs.subList(start, msgs.size());
+
+        StringBuilder sb = new StringBuilder();
+        for (MessageEntity msg : recent) {
+            String label = "user".equals(msg.getRole()) ? "用户" : "AI";
+            sb.append(label).append(": ").append(msg.getContent()).append("\n\n");
+        }
+        return sb.toString();
+    }
+
     // ========== Embedding utilities ==========
 }
