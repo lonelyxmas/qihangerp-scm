@@ -22,8 +22,8 @@
 
         .form-group { margin-bottom: 12px; }
         .form-group label { display: block; font-size: 13px; font-weight: 500; color: var(--text-secondary); margin-bottom: 4px; }
-        .form-group input[type="text"] { width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 14px; outline: none; font-family: inherit; }
-        .form-group input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(99,102,241,0.1); }
+        .form-group input[type="text"], .form-group select { width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 14px; outline: none; font-family: inherit; }
+        .form-group input:focus, .form-group select:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(99,102,241,0.1); }
 
         .btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border: none; border-radius: var(--radius-sm); font-size: 13px; font-weight: 500; cursor: pointer; transition: all .15s; text-decoration: none; }
         .btn-primary { background: var(--primary); color: #fff; }
@@ -98,6 +98,13 @@
                 <div class="form-group">
                     <label>名称 *</label>
                     <input id="kbName" type="text" placeholder="如：我的笔记库">
+                </div>
+                <div class="form-group">
+                    <label>可见性</label>
+                    <select id="kbVisibility" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:14px;outline:none;font-family:inherit;">
+                        <option value="private">私有</option>
+                        <option value="public">公开</option>
+                    </select>
                 </div>
                 <div style="display:flex;gap:20px;margin-top:12px;">
                     <label class="toggle-label"><input type="checkbox" id="kbAutoReport"><span class="toggle-slider"></span>自动日报</label>
@@ -215,6 +222,7 @@
         kbEditingId = null;
         document.getElementById('kbModalTitle').textContent = '新建知识库';
         document.getElementById('kbName').value = '';
+        document.getElementById('kbVisibility').value = 'private';
         document.getElementById('kbAutoReport').checked = false;
         document.getElementById('kbFeishuPush').checked = false;
         document.getElementById('kbModal').classList.add('active');
@@ -228,6 +236,7 @@
         kbEditingId = id;
         document.getElementById('kbModalTitle').textContent = '编辑知识库';
         document.getElementById('kbName').value = kb.name || '';
+        document.getElementById('kbVisibility').value = kb.visibility || 'private';
         document.getElementById('kbAutoReport').checked = kb.autoReport === 1;
         document.getElementById('kbFeishuPush').checked = kb.feishuPush === 1;
         document.getElementById('kbModal').classList.add('active');
@@ -236,7 +245,7 @@
     function saveKb() {
         var name = document.getElementById('kbName').value.trim();
         if (!name) { toast('请输入知识库名称', 'error'); return; }
-        var data = { name: name, autoReport: document.getElementById('kbAutoReport').checked, feishuPush: document.getElementById('kbFeishuPush').checked };
+        var data = { name: name, visibility: document.getElementById('kbVisibility').value, autoReport: document.getElementById('kbAutoReport').checked, feishuPush: document.getElementById('kbFeishuPush').checked };
         if (kbEditingId !== null) { data.id = kbEditingId; }
         apiFetch('/api/config/knowledge-bases', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) })
         .then(function(r){ return r.json(); }).then(function(d){
