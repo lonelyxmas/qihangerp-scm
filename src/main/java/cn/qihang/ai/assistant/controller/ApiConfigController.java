@@ -149,7 +149,7 @@ public class ApiConfigController {
     public Map<String, Object> updateLlmConfig(@RequestBody Map<String, Object> body) {
         logService.add("配置更新", "成功", "LLM 配置已更新");
 
-        // Sync to llm_profiles table
+        // Sync to ai_llm_profiles table
         List<LlmProfileEntity> profiles = llmProfileDbService.listAllOrdered();
         if (profiles.isEmpty()) {
             LlmProfileEntity p = new LlmProfileEntity();

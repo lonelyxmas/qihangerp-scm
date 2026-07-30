@@ -4,7 +4,7 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 
-@TableName("llm_profiles")
+@TableName("ai_llm_profiles")
 public class LlmProfileEntity {
 
     /** 模型类型：text（文本/聊天）, multimodal（多模态/识图）, embedding（向量/语义检索） */

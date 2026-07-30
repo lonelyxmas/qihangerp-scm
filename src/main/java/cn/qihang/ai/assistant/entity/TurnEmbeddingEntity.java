@@ -4,7 +4,7 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 
-@TableName("turn_embeddings")
+@TableName("ai_turn_embeddings")
 public class TurnEmbeddingEntity {
 
     @TableId(type = IdType.AUTO)

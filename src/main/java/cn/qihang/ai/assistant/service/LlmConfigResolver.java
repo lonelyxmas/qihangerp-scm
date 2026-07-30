@@ -64,7 +64,7 @@ public class LlmConfigResolver {
         profile.setTimeout(600);
         profile.setIsDefault(true);
         llmProfileDbService.save(profile);
-        log.info("Migrated legacy LLM config to llm_profiles table (model={})", model);
+        log.info("Migrated legacy LLM config to ai_llm_profiles table (model={})", model);
     }
 
     private LlmProfileEntity resolveDefaultProfile() {

@@ -9,15 +9,15 @@ import java.util.List;
 
 public interface SessionMapper extends BaseMapper<SessionEntity> {
 
-    @Select("SELECT * FROM sessions ORDER BY updated_at DESC")
+    @Select("SELECT * FROM ai_sessions ORDER BY updated_at DESC")
     List<SessionEntity> listAllOrderByUpdate();
 
-    @Select("SELECT * FROM sessions WHERE source = #{source} ORDER BY updated_at DESC")
+    @Select("SELECT * FROM ai_sessions WHERE source = #{source} ORDER BY updated_at DESC")
     List<SessionEntity> listBySourceOrderByUpdate(String source);
 
-    @Select("SELECT * FROM sessions WHERE source = 'web' AND kb_id = #{kbId} ORDER BY updated_at DESC LIMIT 1")
+    @Select("SELECT * FROM ai_sessions WHERE source = 'web' AND kb_id = #{kbId} ORDER BY updated_at DESC LIMIT 1")
     SessionEntity findLatestByKb(@Param("kbId") Long kbId);
 
-    @Select("SELECT * FROM sessions WHERE source = 'web' AND kb_id = #{kbId} ORDER BY updated_at ASC")
+    @Select("SELECT * FROM ai_sessions WHERE source = 'web' AND kb_id = #{kbId} ORDER BY updated_at ASC")
     List<SessionEntity> listByKb(@Param("kbId") Long kbId);
 }

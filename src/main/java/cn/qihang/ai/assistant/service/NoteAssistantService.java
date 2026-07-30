@@ -187,20 +187,31 @@ public class NoteAssistantService {
 
             StringBuilder fullReply = new StringBuilder();
 
-            client.prompt()
+            String reply = client.prompt()
                     .system(SYSTEM_PROMPT)
                     .user(fullMessage)
-                    .stream()
-                    .content()
-                    .doOnNext(chunk -> {
-                        fullReply.append(chunk);
-                        if (chunkCallback != null) {
-                            chunkCallback.accept(chunk);
-                        }
-                    })
-                    .blockLast();
+                    .call()
+                    .content();
 
-            String reply = fullReply.toString().trim().replaceAll("\\n{3,}", "\n\n");
+            if (reply != null && !reply.isEmpty()) {
+                reply = reply.trim().replaceAll("\\n{3,}", "\n\n");
+                fullReply.append(reply);
+                if (chunkCallback != null) {
+                    String[] sentences = reply.split("(?<=[。！？.!?\\n])");
+                    for (String s : sentences) {
+                        String trimmed = s.trim();
+                        if (!trimmed.isEmpty()) {
+                            chunkCallback.accept(trimmed);
+                        }
+                    }
+                }
+            } else {
+                reply = "（AI 未返回回复）";
+                fullReply.append(reply);
+                if (chunkCallback != null) {
+                    chunkCallback.accept(reply);
+                }
+            }
             
             log.info("[编排] 回复长度: {}", reply.length());
 

@@ -9,12 +9,12 @@ import java.util.List;
 
 public interface TurnEmbeddingMapper extends BaseMapper<TurnEmbeddingEntity> {
 
-    @Select("SELECT * FROM turn_embeddings WHERE session_id = #{sessionId} ORDER BY turn_order ASC")
+    @Select("SELECT * FROM ai_turn_embeddings WHERE session_id = #{sessionId} ORDER BY turn_order ASC")
     List<TurnEmbeddingEntity> listBySession(@Param("sessionId") String sessionId);
 
-    @Select("SELECT COALESCE(MAX(turn_order), -1) FROM turn_embeddings WHERE session_id = #{sessionId}")
+    @Select("SELECT COALESCE(MAX(turn_order), -1) FROM ai_turn_embeddings WHERE session_id = #{sessionId}")
     int maxTurnOrder(@Param("sessionId") String sessionId);
 
-    @Select("SELECT COUNT(*) FROM turn_embeddings WHERE session_id = #{sessionId}")
+    @Select("SELECT COUNT(*) FROM ai_turn_embeddings WHERE session_id = #{sessionId}")
     int countBySession(@Param("sessionId") String sessionId);
 }

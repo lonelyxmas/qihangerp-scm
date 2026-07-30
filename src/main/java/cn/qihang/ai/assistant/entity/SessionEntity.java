@@ -3,7 +3,7 @@ package cn.qihang.ai.assistant.entity;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 
-@TableName("sessions")
+@TableName("ai_sessions")
 public class SessionEntity {
 
     @TableId

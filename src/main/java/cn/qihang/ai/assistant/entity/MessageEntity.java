@@ -4,7 +4,7 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 
-@TableName("messages")
+@TableName("ai_messages")
 public class MessageEntity {
 
     @TableId(type = IdType.AUTO)
