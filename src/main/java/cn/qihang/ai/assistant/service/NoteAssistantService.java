@@ -186,23 +186,23 @@ public class NoteAssistantService {
             }
 
             StringBuilder fullReply = new StringBuilder();
-            
-            String reply = client.prompt()
+
+            client.prompt()
                     .system(SYSTEM_PROMPT)
                     .user(fullMessage)
-                    .call()
-                    .content();
+                    .stream()
+                    .content()
+                    .doOnNext(chunk -> {
+                        fullReply.append(chunk);
+                        if (chunkCallback != null) {
+                            chunkCallback.accept(chunk);
+                        }
+                    })
+                    .blockLast();
 
-            if (reply != null && !reply.isEmpty()) {
-                fullReply.append(reply);
-                reply = reply.trim().replaceAll("\\n{3,}", "\n\n");
-                
-                if (chunkCallback != null) {
-                    chunkCallback.accept(reply);
-                }
-            }
+            String reply = fullReply.toString().trim().replaceAll("\\n{3,}", "\n\n");
             
-            log.info("[编排] 回复长度: {}", reply != null ? reply.length() : 0);
+            log.info("[编排] 回复长度: {}", reply.length());
 
             // Step 4: 记录决策追踪
             String finalReply = reply;
