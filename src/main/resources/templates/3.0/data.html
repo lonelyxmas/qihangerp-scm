@@ -64,6 +64,21 @@
         .modal-header h3 { font-size: 16px; font-weight: 600; }
         .modal-body { padding: 20px; }
         .modal-footer { padding: 16px 20px; border-top: 1px solid var(--border); display: flex; align-items: center; justify-content: flex-end; gap: 8px; }
+
+        .msg { padding: 10px 16px; border-radius: var(--radius-sm); font-size: 13px; margin-bottom: 8px; position: fixed; top: 20px; right: 20px; z-index: 9999; }
+        .msg-success { background: #dcfce7; color: #166534; }
+        .msg-error { background: #fee2e2; color: #991b1b; }
+        .msg-info { background: #dbeafe; color: #1e40af; }
+
+        .form-group { margin-bottom: 12px; }
+        .form-group label { display: block; font-size: 13px; font-weight: 500; color: var(--text-secondary); margin-bottom: 6px; }
+        .form-group input, .form-group textarea, .form-group select { width: 100%; padding: 8px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 13px; outline: none; background: white; }
+        .form-group input:focus, .form-group textarea:focus, .form-group select:focus { border-color: var(--primary); }
+
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-primary:hover { background: var(--primary-dark); }
+        .btn-danger { background: #ef4444; color: white; }
+        .btn-danger:hover { background: #dc2626; }
     </style>
 </head>
 <body>
@@ -88,6 +103,20 @@
         </div>
     </main>
 
+    <div id="recordModal" class="modal-overlay" onclick="closeModal('recordModal')">
+        <div class="modal-box" style="width:520px;" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h3 id="recordModalTitle">新增记录</h3>
+                <button class="btn btn-secondary" onclick="closeModal('recordModal')">✕</button>
+            </div>
+            <div class="modal-body" id="recordFormBody"></div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('recordModal')">取消</button>
+                <button class="btn btn-primary" onclick="saveRecord()">保存</button>
+            </div>
+        </div>
+    </div>
+
     <div id="detailModal" class="modal-overlay" onclick="closeModal('detailModal')">
         <div class="modal-box" style="width:540px;" onclick="event.stopPropagation()">
             <div class="modal-header">
@@ -96,6 +125,8 @@
             </div>
             <div class="modal-body" id="recordDetailBody"></div>
             <div class="modal-footer">
+                <button class="btn btn-danger" onclick="deleteFromDetail()">🗑️ 删除</button>
+                <button class="btn btn-primary" onclick="editFromDetail()">✏️ 编辑</button>
                 <button class="btn btn-secondary" onclick="closeModal('detailModal')">关闭</button>
             </div>
         </div>
@@ -106,7 +137,7 @@
 const API = '/api/datacenter';
 let modules = [], allDatasets = [], currentModule = null, currentDs = null;
 let currentDsId = null, allRecords = [], currentPage = 0, pageSize = 20, totalRecords = 0;
-let viewingRecord = null;
+let viewingRecord = null, editingRecordId = null;
 
 function toast(msg, type) {
     const d = document.createElement('div');
@@ -201,6 +232,7 @@ async function openDataset(dsId) {
 function renderDatasetView() {
     if (!currentDs) return '';
     let html = '<div class="toolbar">';
+    html += '<button class="btn btn-sm btn-primary" onclick="showAddRecord()">+ 新增记录</button>';
     html += '<div class="search-box"><input type="text" id="recordSearch" placeholder="🔍 搜索记录..." onkeyup="handleRecordSearch(event)"></div>';
     html += '<button class="btn btn-sm btn-secondary" onclick="handleRecordSearchBtn()">搜索</button>';
     html += '</div>';
@@ -227,13 +259,15 @@ function renderDatasetView() {
             }
         }
         const rid = rec._id || rec.id;
-        html += '<td><button class="action-btn" onclick="viewRecord(\'' + rid + '\')">👁️</button></td></tr>';
+        html += '<td><button class="action-btn" onclick="viewRecord(\'' + rid + '\')">👁️</button>' +
+            '<button class="action-btn" onclick="editRecord(\'' + rid + '\')">✏️</button>' +
+            '<button class="action-btn" onclick="deleteRecord(\'' + rid + '\')">🗑️</button></td></tr>';
     }
 
     html += '</tbody></table>';
     if (allRecords.length === 0) {
         html += '<div class="empty-state"><div class="icon">📝</div><div class="title">暂无记录</div>' +
-            '<div style="font-size:13px;color:var(--text-muted);margin-top:8px;">该数据集暂无记录</div></div>';
+            '<button class="btn btn-primary" onclick="showAddRecord()">+ 新增记录</button></div>';
     }
     return html;
 }
@@ -266,6 +300,136 @@ function handleRecordSearch(e) {
 }
 function handleRecordSearchBtn() {
     loadRecords(0);
+}
+
+function requireLogin(action) {
+    if (checkLogin()) { action(); return; }
+    showLoginModal(action);
+}
+
+function showAddRecord() {
+    requireLogin(function() {
+        editingRecordId = null;
+        document.getElementById('recordModalTitle').textContent = '新增记录';
+        renderRecordForm();
+        showModal('recordModal');
+    });
+}
+
+function renderRecordForm(record) {
+    const body = document.getElementById('recordFormBody');
+    if (!currentDs || !currentDs.schema || !currentDs.schema.fields) {
+        body.innerHTML = '<div>该数据集没有配置字段</div>';
+        return;
+    }
+    let html = '';
+    const recordNum = record ? (record.recordNum || record['编号'] || '') : '';
+    html += '<div class="form-group"><label>编码</label><input id="recordNum" type="text" value="' + recordNum + '" placeholder="自动生成"></div>';
+
+    const typeOpts = currentDs.schema.typeOptions || [];
+    const curType = record ? (record.type || record['类型'] || '') : '';
+    html += '<div class="form-group"><label>类型</label><select id="recordType"><option value="">请选择</option>';
+    for (let i = 0; i < typeOpts.length; i++) {
+        const sel = typeOpts[i] === curType ? ' selected' : '';
+        html += '<option value="' + typeOpts[i] + '"' + sel + '>' + typeOpts[i] + '</option>';
+    }
+    html += '</select></div>';
+
+    const fields = currentDs.schema.fields;
+    for (let i = 0; i < fields.length; i++) {
+        const f = fields[i];
+        if (f.name === 'status' || f.name === 'type') continue;
+        const val = record ? (record[f.name] || record[f.displayName] || '') : '';
+        html += '<div class="form-group"><label>' + (f.displayName || f.name) + '</label><input id="recordField_' + f.name + '" type="text" value="' + val + '"></div>';
+    }
+
+    const statusOpts = currentDs.schema.statusOptions || [];
+    const curStatus = record ? (record.status || record['状态'] || '') : '';
+    html += '<div class="form-group"><label>状态</label><select id="recordStatus"><option value="">请选择</option>';
+    for (let i = 0; i < statusOpts.length; i++) {
+        const sel = statusOpts[i] === curStatus ? ' selected' : '';
+        html += '<option value="' + statusOpts[i] + '"' + sel + '>' + statusOpts[i] + '</option>';
+    }
+    html += '</select></div>';
+
+    body.innerHTML = html;
+}
+
+function editRecord(id) {
+    requireLogin(function() {
+        const record = allRecords.find(function(r){ return (r._id || r.id) === id; });
+        if (!record) return;
+        editingRecordId = id;
+        document.getElementById('recordModalTitle').textContent = '编辑记录';
+        renderRecordForm(record);
+        showModal('recordModal');
+    });
+}
+
+function editFromDetail() {
+    if (!viewingRecord) return;
+    editRecord(viewingRecord._id || viewingRecord.id);
+    closeModal('detailModal');
+}
+
+function deleteFromDetail() {
+    if (!viewingRecord) return;
+    deleteRecord(viewingRecord._id || viewingRecord.id);
+    closeModal('detailModal');
+}
+
+async function saveRecord() {
+    if (!currentDs) return;
+    const record = {
+        type: document.getElementById('recordType').value,
+        status: document.getElementById('recordStatus').value,
+        recordNum: document.getElementById('recordNum').value
+    };
+    if (currentDs.schema && currentDs.schema.fields) {
+        const fields = currentDs.schema.fields;
+        for (let i = 0; i < fields.length; i++) {
+            const f = fields[i];
+            if (f.name !== 'status' && f.name !== 'type') {
+                const el = document.getElementById('recordField_' + f.name);
+                if (el) record[f.name] = el.value;
+            }
+        }
+    }
+    let url = API + '/datasets/' + currentDs.id + '/records';
+    let method = 'POST';
+    if (editingRecordId) {
+        url += '/' + editingRecordId;
+        method = 'PUT';
+    }
+    const r = await apiFetch(url, {
+        method: method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ data: record })
+    });
+    const d = await r.json();
+    if (checkAuthError(d)) { handleUnauthenticated(); return; }
+    if (d.ok) {
+        closeModal('recordModal');
+        toast(editingRecordId ? '记录已更新' : '记录已新增', 'success');
+        await loadRecords(currentPage);
+    } else {
+        toast(d.error || '保存失败', 'error');
+    }
+}
+
+async function deleteRecord(id) {
+    if (!confirm('确定要删除这条记录吗？')) return;
+    requireLogin(async function() {
+        const r = await apiFetch(API + '/datasets/' + currentDs.id + '/records/' + id, { method: 'DELETE' });
+        const d = await r.json();
+        if (checkAuthError(d)) { handleUnauthenticated(); return; }
+        if (d.ok) {
+            toast('记录已删除', 'success');
+            await loadRecords(currentPage);
+        } else {
+            toast(d.error || '删除失败', 'error');
+        }
+    });
 }
 
 function viewRecord(id) {
