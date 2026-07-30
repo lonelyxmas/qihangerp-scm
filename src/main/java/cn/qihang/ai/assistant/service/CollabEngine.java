@@ -20,16 +20,16 @@ public class CollabEngine {
     private final ActivityLogDbService activityLogDbService;
     private final NotificationDbService notificationDbService;
     private final FeishuService feishuService;
-    private final ConfigService configService;
+    private final FeishuConfigResolver feishuConfigResolver;
 
     public CollabEngine(ActivityLogDbService activityLogDbService,
                         NotificationDbService notificationDbService,
                         FeishuService feishuService,
-                        ConfigService configService) {
+                        FeishuConfigResolver feishuConfigResolver) {
         this.activityLogDbService = activityLogDbService;
         this.notificationDbService = notificationDbService;
         this.feishuService = feishuService;
-        this.configService = configService;
+        this.feishuConfigResolver = feishuConfigResolver;
     }
 
     public void processNewRecord(DataSet ds, DataSetRecordEntity entity) {
@@ -90,8 +90,7 @@ public class CollabEngine {
     }
 
     private void sendFeishu(String title, String content) {
-        var config = configService.load();
-        String webhookUrl = config.getFeishuWebhookUrl();
+        String webhookUrl = feishuConfigResolver.getWebhookUrl();
         if (webhookUrl == null || webhookUrl.isEmpty()) return;
         feishuService.sendPost("【数据协作】" + title, List.of(
                 List.of(Map.of("tag", "text", "text", content))

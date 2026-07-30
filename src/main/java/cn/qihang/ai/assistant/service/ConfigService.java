@@ -55,11 +55,6 @@ public class ConfigService {
     }
 
     private void mergeDefaultValues(Config config) {
-        Config defaultConfig = Config.defaultConfig("");
-        
-        if (config.isFeishuPollingEnabled() == null) {
-            config.setFeishuPollingEnabled(defaultConfig.isFeishuPollingEnabled());
-        }
     }
 
     public void save(Config config) {

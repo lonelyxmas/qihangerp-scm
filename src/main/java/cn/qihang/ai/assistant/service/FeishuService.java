@@ -1,6 +1,5 @@
 package cn.qihang.ai.assistant.service;
 
-import cn.qihang.ai.assistant.config.AppConfig;
 import cn.qihang.ai.assistant.util.TimeUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,8 +18,7 @@ public class FeishuService {
 
     private static final Logger log = LoggerFactory.getLogger(FeishuService.class);
 
-    private final AppConfig appConfig;
-    private final ConfigService configService;
+    private final FeishuConfigResolver feishuConfigResolver;
     private final LogService logService;
     private final RestClient restClient;
 
@@ -28,10 +26,9 @@ public class FeishuService {
     private volatile long tokenExpiresAt;
     private final Object tokenLock = new Object();
 
-    public FeishuService(AppConfig appConfig, ConfigService configService,
+    public FeishuService(FeishuConfigResolver feishuConfigResolver,
                           LogService logService, RestClient.Builder restClientBuilder) {
-        this.appConfig = appConfig;
-        this.configService = configService;
+        this.feishuConfigResolver = feishuConfigResolver;
         this.logService = logService;
         var httpClient = java.net.http.HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(10))
@@ -97,8 +94,7 @@ public class FeishuService {
     // Webhook-based message push
     // Returns true on success, false on failure
     public boolean sendPost(String title, List<List<Map<String, String>>> paragraphs) {
-        var config = configService.load();
-        String webhookUrl = config.getFeishuWebhookUrl();
+        String webhookUrl = feishuConfigResolver.getWebhookUrl();
         if (webhookUrl == null || webhookUrl.isEmpty()) {
             String msg = "未配置 Webhook URL";
             log.warn("[飞书推送] {}", msg);
@@ -177,8 +173,7 @@ public class FeishuService {
      * 使用飞书消息卡片 JSON 格式
      */
     public boolean sendCard(String title, String contentHtml) {
-        var config = configService.load();
-        String webhookUrl = config.getFeishuWebhookUrl();
+        String webhookUrl = feishuConfigResolver.getWebhookUrl();
         if (webhookUrl == null || webhookUrl.isEmpty()) {
             String msg = "未配置 Webhook URL";
             log.warn("[飞书卡片推送] {}", msg);

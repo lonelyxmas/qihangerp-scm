@@ -14,7 +14,7 @@ public class Config {
     private String feishuAppId;
     private String feishuAppSecret;
     private String feishuChatId;
-    private Boolean feishuPollingEnabled = false;
+
     
     private String logFile;
     private Map<String, Map<String, List<String>>> columnSettings = new HashMap<>();
@@ -38,8 +38,7 @@ public class Config {
     public void setFeishuAppSecret(String feishuAppSecret) { this.feishuAppSecret = feishuAppSecret; }
     public String getFeishuChatId() { return feishuChatId; }
     public void setFeishuChatId(String feishuChatId) { this.feishuChatId = feishuChatId; }
-    public Boolean isFeishuPollingEnabled() { return feishuPollingEnabled; }
-    public void setFeishuPollingEnabled(Boolean feishuPollingEnabled) { this.feishuPollingEnabled = feishuPollingEnabled; }
+
     public String getLogFile() { return logFile; }
     public void setLogFile(String logFile) { this.logFile = logFile; }
     public String getAiProvider() { return "direct"; }

@@ -13,7 +13,6 @@ import com.lark.oapi.service.im.v1.model.CreateMessageResp;
 import com.lark.oapi.service.im.v1.model.P2MessageReceiveV1;
 import com.lark.oapi.service.im.v1.model.ext.MessageText;
 import cn.qihang.ai.assistant.config.AppConfig;
-import cn.qihang.ai.assistant.model.Config;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -32,7 +31,7 @@ public class FeishuLongConnectionService {
 
     private static final Logger log = LoggerFactory.getLogger(FeishuLongConnectionService.class);
 
-    private final ConfigService configService;
+    private final FeishuConfigResolver feishuConfigResolver;
     private final LlmService llmService;
     private final NoteAssistantService noteAssistantService;
     private final LogService logService;
@@ -50,13 +49,13 @@ public class FeishuLongConnectionService {
         return t;
     });
 
-    public FeishuLongConnectionService(ConfigService configService,
+    public FeishuLongConnectionService(FeishuConfigResolver feishuConfigResolver,
                                         LlmService llmService,
                                         NoteAssistantService noteAssistantService,
                                         LogService logService,
                                         FeishuChatSessionService feishuChatSessionService,
                                         AppConfig appConfig) {
-        this.configService = configService;
+        this.feishuConfigResolver = feishuConfigResolver;
         this.llmService = llmService;
         this.noteAssistantService = noteAssistantService;
         this.logService = logService;
@@ -66,14 +65,8 @@ public class FeishuLongConnectionService {
 
     @PostConstruct
     public void init() {
-        Config config = configService.load();
-        if (!Boolean.TRUE.equals(config.isFeishuPollingEnabled())) {
-            log.info("[飞书长连接] 未启用，跳过初始化");
-            return;
-        }
-
-        String appId = config.getFeishuAppId();
-        String appSecret = config.getFeishuAppSecret();
+        String appId = feishuConfigResolver.getAppId();
+        String appSecret = feishuConfigResolver.getAppSecret();
 
         if (appId == null || appId.isEmpty() || appSecret == null || appSecret.isEmpty()) {
             log.warn("[飞书长连接] 配置不完整，跳过初始化");
@@ -416,9 +409,8 @@ public class FeishuLongConnectionService {
 
     public void restart() {
         closeWsOnly();
-        Config config = configService.load();
-        String appId = config.getFeishuAppId();
-        String appSecret = config.getFeishuAppSecret();
+        String appId = feishuConfigResolver.getAppId();
+        String appSecret = feishuConfigResolver.getAppSecret();
         if (appId != null && !appId.isEmpty() && appSecret != null && !appSecret.isEmpty()) {
             startLongConnection(appId, appSecret);
         }

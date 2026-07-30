@@ -204,9 +204,6 @@
                         <div id="chatList" class="mt-2" style="display:none;"></div>
                         <div class="text-muted" style="font-size:12px;margin-top:4px;">先填入 App ID 和 Secret，点击"获取群列表"选择你要监听的群</div>
                     </div>
-                    <div class="form-group" style="margin-bottom:16px;">
-                        <label class="toggle-label"><input type="checkbox" id="feishuPollingEnabled"><span class="toggle-slider"></span>启用消息轮询（每15秒检查一次）</label>
-                    </div>
                     <div class="flex" style="gap:8px;">
                         <button type="submit" class="btn btn-primary">保存飞书配置</button>
                         <button type="button" class="btn btn-secondary" onclick="testFeishu()" id="testFeishuBtn">发送测试消息</button>
@@ -633,7 +630,6 @@
         if (cfg.feishuAppId) document.getElementById('feishuAppId').value = cfg.feishuAppId;
         if (cfg.feishuAppSecret) document.getElementById('feishuAppSecret').value = cfg.feishuAppSecret;
         if (cfg.feishuChatId) document.getElementById('feishuChatId').value = cfg.feishuChatId;
-        if (cfg.feishuPollingEnabled) document.getElementById('feishuPollingEnabled').checked = true;
     }).catch(function(){ /* ignore - login overlay handles auth */ });
 
     function saveWebhook() {
@@ -652,7 +648,7 @@
         form.append('appId', document.getElementById('feishuAppId').value.trim());
         form.append('appSecret', document.getElementById('feishuAppSecret').value.trim());
         form.append('chatId', document.getElementById('feishuChatId').value.trim());
-        form.append('pollingEnabled', document.getElementById('feishuPollingEnabled').checked ? 'on' : 'off');
+
         const res = await apiFetch('/api/config/feishu', { method: 'POST', body: form });
         const data = await res.json();
         const status = document.getElementById('feishuStatus');

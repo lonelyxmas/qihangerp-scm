@@ -4,6 +4,7 @@ import cn.qihang.ai.assistant.entity.KbBaseEntity;
 import cn.qihang.ai.assistant.entity.LlmProfileEntity;
 import cn.qihang.ai.assistant.model.Config;
 import cn.qihang.ai.assistant.service.ConfigService;
+import cn.qihang.ai.assistant.service.FeishuConfigResolver;
 import cn.qihang.ai.assistant.service.FeishuService;
 import cn.qihang.ai.assistant.service.KbBaseService;
 import cn.qihang.ai.assistant.service.LogService;
@@ -20,6 +21,7 @@ import java.util.stream.Collectors;
 public class ApiConfigController {
 
     private final ConfigService configService;
+    private final FeishuConfigResolver feishuConfigResolver;
     private final FeishuService feishuService;
     private final LogService logService;
     private final EmbeddingService embeddingService;
@@ -28,7 +30,7 @@ public class ApiConfigController {
     private final SessionService sessionService;
     private final KbBaseService kbBaseService;
 
-    public ApiConfigController(ConfigService configService, FeishuService feishuService,
+    public ApiConfigController(ConfigService configService, FeishuConfigResolver feishuConfigResolver, FeishuService feishuService,
                                 LogService logService,
                                 EmbeddingService embeddingService,
                                 LlmProfileDbService llmProfileDbService,
@@ -36,6 +38,7 @@ public class ApiConfigController {
                                 SessionService sessionService,
                                 KbBaseService kbBaseService) {
         this.configService = configService;
+        this.feishuConfigResolver = feishuConfigResolver;
         this.feishuService = feishuService;
         this.logService = logService;
         this.embeddingService = embeddingService;
@@ -47,16 +50,20 @@ public class ApiConfigController {
 
     @GetMapping("/api/config")
     public Config getConfig() {
-        return configService.load();
+        Config cfg = configService.load();
+        cfg.setFeishuWebhookUrl(feishuConfigResolver.getWebhookUrl());
+        cfg.setFeishuAppId(feishuConfigResolver.getAppId());
+        cfg.setFeishuAppSecret(feishuConfigResolver.getAppSecret());
+        cfg.setFeishuChatId(feishuConfigResolver.getChatId());
+
+        return cfg;
     }
 
     @PostMapping("/api/config/webhook")
     public Map<String, Object> updateWebhook(@RequestParam String url) {
         if (!url.startsWith("https://"))
             return Map.of("ok", false, "error", "URL 必须以 https:// 开头");
-        Config cfg = configService.load();
-        cfg.setFeishuWebhookUrl(url);
-        configService.save(cfg);
+        feishuConfigResolver.saveWebhookUrl(url);
         logService.add("配置更新", "成功", "飞书 Webhook URL 已更新");
         return Map.of("ok", true);
     }
@@ -65,14 +72,8 @@ public class ApiConfigController {
     public Map<String, Object> updateFeishu(
             @RequestParam(required = false, defaultValue = "") String appId,
             @RequestParam(required = false, defaultValue = "") String appSecret,
-            @RequestParam(required = false, defaultValue = "") String chatId,
-            @RequestParam(required = false, defaultValue = "off") String pollingEnabled) {
-        Config cfg = configService.load();
-        cfg.setFeishuAppId(appId);
-        cfg.setFeishuAppSecret(appSecret);
-        cfg.setFeishuChatId(chatId);
-        cfg.setFeishuPollingEnabled("on".equals(pollingEnabled));
-        configService.save(cfg);
+            @RequestParam(required = false, defaultValue = "") String chatId) {
+        feishuConfigResolver.saveFeishuConfig(appId, appSecret, chatId);
         logService.add("配置更新", "成功", "飞书消息接收配置已更新");
         return Map.of("ok", true);
     }
