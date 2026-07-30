@@ -184,16 +184,21 @@
                         document.getElementById('sidebarGuest').style.display = 'none';
                         document.getElementById('sidebarUserName').textContent = name;
                         document.getElementById('sidebarUserAvatar').textContent = name.charAt(0).toUpperCase();
+                        document.dispatchEvent(new CustomEvent('auth-change'));
                     }
                 }).catch(function() {});
             }
         }
         function logout() {
-            fetch('/api/sys-api/logout', { method: 'POST' }).then(function() {
+            var token = localStorage.getItem('Admin-Token');
+            var headers = {};
+            if (token) headers['Authorization'] = 'Bearer ' + token;
+            fetch('/api/sys-api/logout', { method: 'POST', headers: headers }).then(function() {
                 localStorage.removeItem('Admin-Token');
                 document.cookie = 'Admin-Token=;path=/;max-age=0';
                 document.getElementById('sidebarLoggedIn').style.display = 'none';
                 document.getElementById('sidebarGuest').style.display = '';
+                document.dispatchEvent(new CustomEvent('auth-change'));
             });
         }
         document.addEventListener('DOMContentLoaded', updateSidebar);

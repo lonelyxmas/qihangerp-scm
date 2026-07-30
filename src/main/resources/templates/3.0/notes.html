@@ -15,6 +15,7 @@
         :root {
             --kb-primary: #6366f1;
             --kb-primary-light: rgba(99,102,241,0.08);
+            --kb-primary-bg: #eef2ff;
             --kb-success: #22c55e;
             --kb-warning: #f59e0b;
             --kb-error: #ef4444;
@@ -32,14 +33,23 @@
         .kb-main { flex: 1; display: flex; flex-direction: column; overflow: hidden; background: var(--kb-bg-alt); }
         .kb-sidebar-header { padding: 12px 16px; border-bottom: 1px solid var(--kb-border); flex-shrink: 0; }
         .kb-sidebar-header-row { display: flex; align-items: center; gap: 8px; }
-        .kb-select { padding: 6px 10px; border: 1px solid var(--kb-border); border-radius: var(--kb-radius); font-size: 13px; outline: none; background: var(--kb-bg); color: var(--kb-text); cursor: pointer; flex: 1; }
-        .kb-select:focus { border-color: var(--kb-primary); }
+
+        .kb-kb-list { display: flex; flex-wrap: wrap; gap: 6px; flex: 1; }
+        .kb-kb-card { padding: 6px 12px; border: 1px solid var(--kb-border); border-radius: 6px; font-size: 12px; cursor: pointer; background: var(--kb-bg); color: var(--kb-text-secondary); transition: all 0.15s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 140px; font-weight: 500; }
+        .kb-kb-card:hover { border-color: var(--kb-primary); color: var(--kb-primary); background: var(--kb-primary-bg); }
+        .kb-kb-card.active { border-color: var(--kb-primary); background: var(--kb-primary); color: white; }
+        .kb-kb-card.single { cursor: default; border-color: transparent; background: transparent; color: var(--kb-text); font-size: 14px; font-weight: 600; padding: 4px 0; max-width: none; }
         .kb-sidebar-body { flex: 1; overflow-y: auto; padding: 4px 0; }
         .kb-sidebar-footer { padding: 8px 16px; border-top: 1px solid var(--kb-border); flex-shrink: 0; display: flex; gap: 6px; }
 
         .kb-search-row { display: flex; gap: 6px; padding: 8px 16px 4px; }
         .kb-search-row input { flex: 1; padding: 6px 10px; border: 1px solid var(--kb-border); border-radius: var(--kb-radius); font-size: 13px; outline: none; background: var(--kb-bg-alt); color: var(--kb-text); }
         .kb-search-row input:focus { border-color: var(--kb-primary); }
+
+        .kb-filter-row { display: flex; gap: 4px; padding: 4px 16px; overflow-x: auto; flex-shrink: 0; }
+        .kb-filter-chip { padding: 2px 10px; border-radius: 10px; font-size: 11px; cursor: pointer; white-space: nowrap; border: 1px solid var(--kb-border); color: var(--kb-text-secondary); background: transparent; transition: all 0.15s; flex-shrink: 0; }
+        .kb-filter-chip:hover { background: var(--kb-hover); border-color: var(--kb-primary); color: var(--kb-primary); }
+        .kb-filter-chip.active { background: var(--kb-primary); color: white; border-color: var(--kb-primary); }
 
         .kb-stats-row { display: flex; gap: 16px; padding: 6px 16px 8px; font-size: 12px; color: var(--kb-text-muted); border-bottom: 1px solid var(--kb-border); }
         .kb-stats-row span { font-weight: 600; color: var(--kb-text); }
@@ -145,6 +155,8 @@
         .kb-dialog-close { background: none; border: none; cursor: pointer; font-size: 18px; color: var(--kb-text-muted); padding: 2px; border-radius: 4px; }
         .kb-dialog-close:hover { background: var(--kb-hover); color: var(--kb-text); }
         .kb-dialog-body { padding: 20px; }
+        .kb-dialog-body:only-child { height: auto; }
+        .kb-dialog-body.flex-body { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
         .kb-dialog-body label { display: block; font-size: 12px; font-weight: 500; color: var(--kb-text-secondary); margin-bottom: 4px; }
         .kb-dialog-body input[type="text"] { width: 100%; padding: 8px 10px; border: 1px solid var(--kb-border); border-radius: var(--kb-radius); font-size: 13px; outline: none; box-sizing: border-box; }
         .kb-dialog-body input[type="text"]:focus { border-color: var(--kb-primary); }
@@ -173,6 +185,29 @@
         .kb-no-kb { display: flex; align-items: center; justify-content: center; height: 100%; color: var(--kb-text-muted); font-size: 14px; }
         .hidden { display: none !important; }
 
+        .kb-md-split { display: flex; gap: 12px; height: 420px; }
+        .kb-md-editor-pane, .kb-md-preview-pane { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+        .kb-md-pane-label { font-size: 11px; font-weight: 600; color: var(--kb-text-secondary); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+        .kb-md-textarea { flex: 1; padding: 10px; border: 1px solid var(--kb-border); border-radius: var(--kb-radius); font-size: 13px; line-height: 1.6; font-family: monospace; outline: none; resize: none; background: var(--kb-bg-alt); color: var(--kb-text); }
+        .kb-md-textarea:focus { border-color: var(--kb-primary); }
+        .kb-md-preview { flex: 1; overflow-y: auto; padding: 10px; border: 1px solid var(--kb-border); border-radius: var(--kb-radius); background: var(--kb-bg); font-size: 14px; line-height: 1.7; }
+        .kb-md-preview h1 { font-size: 20px; font-weight: 700; margin: 0 0 12px; padding-bottom: 6px; border-bottom: 2px solid var(--kb-border); }
+        .kb-md-preview h2 { font-size: 17px; font-weight: 600; margin: 20px 0 10px; }
+        .kb-md-preview h3 { font-size: 15px; font-weight: 600; margin: 16px 0 8px; }
+        .kb-md-preview p { margin-bottom: 10px; }
+        .kb-md-preview ul, .kb-md-preview ol { padding-left: 22px; margin-bottom: 10px; }
+        .kb-md-preview code { background: var(--kb-bg-alt); padding: 2px 6px; border-radius: 4px; font-size: 12px; }
+        .kb-md-preview pre { background: #1e293b; color: #e2e8f0; padding: 10px 14px; border-radius: var(--kb-radius); overflow-x: auto; margin: 10px 0; font-size: 12px; }
+        .kb-md-preview pre code { background: none; color: inherit; padding: 0; }
+        .kb-md-preview blockquote { border-left: 4px solid var(--kb-primary); padding: 4px 12px; color: var(--kb-text-secondary); margin: 10px 0; background: var(--kb-primary-light); border-radius: 0 var(--kb-radius) var(--kb-radius) 0; }
+        .kb-md-preview table { width: 100%; border-collapse: collapse; margin: 10px 0; font-size: 13px; }
+        .kb-md-preview th { background: var(--kb-primary-light); padding: 6px 10px; border: 1px solid var(--kb-border); text-align: left; font-weight: 600; }
+        .kb-md-preview td { padding: 4px 10px; border: 1px solid var(--kb-border); }
+        .kb-md-preview a { color: var(--kb-primary); text-decoration: none; }
+        .kb-md-preview a:hover { text-decoration: underline; }
+        .kb-md-preview hr { border: none; border-top: 1px solid var(--kb-border); margin: 16px 0; }
+        .kb-md-preview img { max-width: 100%; border-radius: var(--kb-radius); }
+
         @media (max-width: 768px) {
             .kb-split { flex-direction: column; }
             .kb-sidebar { width: 100%; border-right: none; border-bottom: 1px solid var(--kb-border); max-height: 50%; }
@@ -196,15 +231,29 @@
                     <aside class="kb-sidebar">
                         <div class="kb-sidebar-header">
                             <div class="kb-sidebar-header-row">
-                                <select class="kb-select" v-model="currentKbId" @change="onKbChange">
-                                    <option v-for="kb in kbList" :key="kb.id" :value="kb.id">{{ kb.name }}</option>
-                                </select>
+                                <div class="kb-kb-list">
+                                    <div v-for="kb in kbList" :key="kb.id"
+                                         class="kb-kb-card"
+                                         :class="{ active: currentKbId === kb.id, single: kbList.length === 1 }"
+                                         @click="selectKb(kb.id)">
+                                        {{ kb.name }}
+                                    </div>
+                                </div>
                                 <button class="kb-btn kb-btn-icon kb-btn-ghost" @click="loadDocuments" title="刷新">&#x1F504;</button>
                             </div>
                         </div>
                         <div class="kb-search-row">
                             <input type="text" placeholder="搜索文档名称或标签..." v-model="searchQuery" @keyup.enter="doSearch">
                             <button class="kb-btn kb-btn-ghost kb-btn-sm" v-show="isSearchMode" @click="clearSearch">&#x2715;</button>
+                        </div>
+                        <div class="kb-filter-row" v-if="fileTypes.length > 1">
+                            <span class="kb-filter-chip" :class="{ active: !fileTypeFilter }" @click="fileTypeFilter = null">全部</span>
+                            <span v-for="ft in fileTypes" :key="ft"
+                                  class="kb-filter-chip"
+                                  :class="{ active: fileTypeFilter === ft }"
+                                  @click="fileTypeFilter = ft">
+                                {{ ft }}
+                            </span>
                         </div>
                         <div class="kb-stats-row">
                             文档 <span>{{ documents.length }}</span>
@@ -213,20 +262,20 @@
                             分类 <span>{{ categories.length }}</span>
                         </div>
                         <div v-show="isSearchMode" style="padding:4px 16px 2px;font-size:12px;color:var(--kb-text-muted);">
-                            找到 {{ filteredDocs.length }} 个结果
+                            找到 {{ filteredDocuments.length }} 个结果
                         </div>
                         <div class="kb-sidebar-body">
                             <div v-if="!categoryTree.length" class="kb-empty-list">
                                 <div style="font-size:28px;margin-bottom:8px;">&#x1F4C2;</div>
                                 <div>暂无文档</div>
-                                <button class="kb-btn kb-btn-primary kb-btn-sm" style="margin-top:10px;" @click="openUpload">上传文档</button>
+                                <button v-if="isLoggedIn" class="kb-btn kb-btn-primary kb-btn-sm" style="margin-top:10px;" @click="openUpload">上传文档</button>
                             </div>
                             <div v-for="group in categoryTree" :key="'g-' + group.id">
                                 <div class="kb-cat-header" @click="toggleCategory(group.id)">
                                     <span class="kb-cat-arrow">{{ expandedCategories[group.id] ? '&#x25BC;' : '&#x25B6;' }}</span>
                                     <span class="kb-cat-name">{{ group.name }}</span>
                                     <span class="kb-cat-count">({{ group.docs.length }})</span>
-                                    <span class="kb-cat-actions">
+                                    <span class="kb-cat-actions" v-if="isLoggedIn">
                                         <button class="kb-btn kb-btn-ghost kb-btn-icon" style="font-size:10px;padding:2px 4px;" @click.stop="openNewNoteInCategory(group.id)" title="新建文档">&#x2795;</button>
                                         <button v-if="group.id > 0" class="kb-btn kb-btn-ghost kb-btn-icon" style="font-size:10px;padding:2px 4px;" @click.stop="editCategory(group)" title="编辑分类">&#x2699;</button>
                                     </span>
@@ -251,8 +300,9 @@
                                 </div>
                             </div>
                         </div>
-                        <div class="kb-sidebar-footer">
-                            <button class="kb-btn kb-btn-primary" style="flex:1;justify-content:center;" @click="openUpload">&#x2B06; 上传</button>
+                        <div class="kb-sidebar-footer" v-if="isLoggedIn">
+                            <button class="kb-btn kb-btn-primary" style="flex:1;justify-content:center;" @click="openNewMd">&#x1F4DD; 新建 Markdown</button>
+                            <button class="kb-btn kb-btn-outline" style="flex:1;justify-content:center;" @click="openUpload">&#x2B06; 上传</button>
                             <button class="kb-btn kb-btn-outline" style="flex:1;justify-content:center;" @click="showAddCategory">&#x2795; 分类</button>
                         </div>
                     </aside>
@@ -283,11 +333,11 @@
                                     <span class="kb-tag-editor-label">标签</span>
                                     <template v-if="selectedDocTags.length">
                                         <span v-for="(t, i) in selectedDocTags" :key="i" :class="'kb-tag kb-tag-color-' + (i % 8)">
-                                            {{ t }} <span style="cursor:pointer;opacity:0.6;margin-left:2px;" @click="removeTag(t)" v-if="canEditDoc(selectedDoc)">&#x2715;</span>
+                                            {{ t }} <span style="cursor:pointer;opacity:0.6;margin-left:2px;" @click="removeTag(t)" v-if="isLoggedIn && canEditDoc(selectedDoc)">&#x2715;</span>
                                         </span>
                                     </template>
                                     <span v-else style="font-size:12px;color:var(--kb-text-muted);">无标签</span>
-                                    <input class="kb-tag-input" v-model="tagInput" placeholder="+ 添加" @keyup.enter="addTag" v-if="canEditDoc(selectedDoc)">
+                                    <input class="kb-tag-input" v-model="tagInput" placeholder="+ 添加" @keyup.enter="addTag" v-if="isLoggedIn && canEditDoc(selectedDoc)">
                                 </div>
 
                                 <!-- Download button -->
@@ -308,7 +358,7 @@
                                 <!-- Content tab -->
                                 <div v-show="contentTab === 'content'">
                                     <!-- Edit bar -->
-                                    <div style="margin-bottom:10px;display:flex;gap:8px;" v-if="canEditDoc(selectedDoc)">
+                                    <div style="margin-bottom:10px;display:flex;gap:8px;" v-if="isLoggedIn && canEditDoc(selectedDoc)">
                                         <button v-if="!editing" class="kb-btn kb-btn-primary kb-btn-sm" @click="startEditing">&#x270F; 编辑</button>
                                         <template v-if="editing">
                                             <button class="kb-btn kb-btn-success kb-btn-sm" @click="saveEditing">&#x2714; 保存</button>
@@ -430,12 +480,47 @@
                         <button class="kb-btn kb-btn-primary" @click="confirmCatDialog" :disabled="!catEditName.trim()">{{ catEditId ? '保存' : '创建' }}</button>
                     </div>
                 </div>
+
+                <!-- New Markdown Dialog -->
+                <div class="kb-overlay" :class="{ open: newMdOpen }"></div>
+                <div class="kb-dialog" :class="{ open: newMdOpen }" style="width:1200px;height:900px;max-width:95vw;max-height:92vh;display:flex;flex-direction:column;">
+                    <div class="kb-dialog-header">
+                        <h3>新建 Markdown 文档</h3>
+                        <button class="kb-dialog-close" @click="closeNewMdDialog">&#x2715;</button>
+                    </div>
+                    <div class="kb-dialog-body flex-body">
+                        <div style="margin-bottom:10px;display:flex;gap:8px;align-items:center;flex-shrink:0;">
+                            <label style="margin:0;white-space:nowrap;">文件名</label>
+                            <input type="text" v-model="newMdName" placeholder="输入文件名（自动添加 .md）" style="flex:1;padding:6px 10px;border:1px solid var(--kb-border);border-radius:var(--kb-radius);font-size:13px;outline:none;box-sizing:border-box;">
+                            <label style="margin:0;white-space:nowrap;">分类</label>
+                            <select v-model="newMdCategoryId" style="padding:6px 10px;border:1px solid var(--kb-border);border-radius:var(--kb-radius);font-size:13px;outline:none;background:var(--kb-bg);color:var(--kb-text);">
+                                <option :value="null">无</option>
+                                <option v-for="cat in categories" :key="cat.id" :value="cat.id">{{ cat.name }}</option>
+                            </select>
+                        </div>
+                        <div class="kb-md-split" style="flex:1;min-height:0;">
+                            <div class="kb-md-editor-pane">
+                                <div class="kb-md-pane-label">Markdown 编辑</div>
+                                <textarea class="kb-md-textarea" v-model="newMdContent" placeholder="在此输入 Markdown 内容..."></textarea>
+                            </div>
+                            <div class="kb-md-preview-pane">
+                                <div class="kb-md-pane-label">预览</div>
+                                <div class="kb-md-preview" id="newMdPreview"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="kb-dialog-footer">
+                        <button class="kb-btn kb-btn-outline" @click="closeNewMdDialog">取消</button>
+                        <button class="kb-btn kb-btn-primary" @click="confirmNewMd" :disabled="!newMdName.trim()">创建</button>
+                    </div>
+                </div>
             </template>
         </div>
     </main>
 
     <script>
     var initialKbList = [/*[[${kbList}]]*/];
+    var isLoggedIn = /*[[${isLoggedIn}]]*/ false;
     </script>
     <script th:inline="none">
     var { createApp, ref, computed, watch, onMounted, nextTick } = Vue;
@@ -476,24 +561,46 @@
             var catEditId = ref(null);
             var catEditName = ref('');
 
+            var newMdOpen = ref(false);
+            var newMdName = ref('');
+            var newMdContent = ref('');
+            var newMdCategoryId = ref(null);
+
             var currentUser = ref('');
+            var isLoggedIn = ref(false);
 
             var hasKb = computed(function() { return kbList.value.length > 0; });
 
-            var filteredDocs = computed(function() {
-                var docs = documents.value;
-                if (!isSearchMode.value || !searchQuery.value) return docs;
-                var q = searchQuery.value.toLowerCase();
-                return docs.filter(function(doc) {
-                    if ((doc.name || '').toLowerCase().indexOf(q) !== -1) return true;
-                    if ((doc.tags || []).some(function(t) { return t.toLowerCase().indexOf(q) !== -1; })) return true;
-                    return false;
+            var fileTypeFilter = ref(null);
+
+            var fileTypes = computed(function() {
+                var set = {};
+                documents.value.forEach(function(doc) {
+                    var ft = doc.fileType || 'md';
+                    set[ft] = true;
                 });
+                return Object.keys(set).sort();
+            });
+
+            var filteredDocuments = computed(function() {
+                var docs = documents.value;
+                if (fileTypeFilter.value) {
+                    docs = docs.filter(function(doc) { return (doc.fileType || 'md') === fileTypeFilter.value; });
+                }
+                if (isSearchMode.value && searchQuery.value) {
+                    var q = searchQuery.value.toLowerCase();
+                    docs = docs.filter(function(doc) {
+                        if ((doc.name || '').toLowerCase().indexOf(q) !== -1) return true;
+                        if ((doc.tags || []).some(function(t) { return t.toLowerCase().indexOf(q) !== -1; })) return true;
+                        return false;
+                    });
+                }
+                return docs;
             });
 
             var categoryTree = computed(function() {
                 var grouped = {};
-                documents.value.forEach(function(doc) {
+                filteredDocuments.value.forEach(function(doc) {
                     var cid = doc.categoryId || -1;
                     if (!grouped[cid]) grouped[cid] = [];
                     grouped[cid].push(doc);
@@ -570,10 +677,13 @@
                 }
             }
 
-            function onKbChange() {
+            function selectKb(id) {
+                if (currentKbId.value === id) return;
+                currentKbId.value = id;
                 selectedDoc.value = null;
                 isSearchMode.value = false;
                 searchQuery.value = '';
+                fileTypeFilter.value = null;
                 loadDocuments();
                 loadCategories();
             }
@@ -874,6 +984,70 @@
                 }
             }
 
+            // New Markdown
+            function openNewMd() {
+                newMdName.value = '';
+                newMdContent.value = '';
+                newMdCategoryId.value = null;
+                newMdOpen.value = true;
+                setTimeout(renderNewMdPreview, 100);
+            }
+
+            function closeNewMdDialog() {
+                newMdOpen.value = false;
+                newMdName.value = '';
+                newMdContent.value = '';
+                newMdCategoryId.value = null;
+            }
+
+            function renderNewMdPreview() {
+                var el = document.getElementById('newMdPreview');
+                if (!el) return;
+                var content = newMdContent.value || '';
+                try {
+                    el.innerHTML = marked.parse(content);
+                } catch(e) {
+                    el.textContent = content;
+                }
+            }
+
+            watch(newMdContent, function() {
+                nextTick(renderNewMdPreview);
+            });
+
+            async function confirmNewMd() {
+                var name = newMdName.value.trim();
+                if (!name) return;
+                if (!name.endsWith('.md')) name += '.md';
+                var catId = newMdCategoryId.value;
+                var mdContent = newMdContent.value;
+                try {
+                    var formData = new FormData();
+                    formData.append('filename', name);
+                    formData.append('content', mdContent);
+                    if (catId) formData.append('categoryId', catId);
+                    var r = await authFetch('/api/kb/' + currentKbId.value + '/notes/new', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    var d = await r.json();
+                    closeNewMdDialog();
+                    if (d.ok) {
+                        isSearchMode.value = false;
+                        searchQuery.value = '';
+                        fileTypeFilter.value = null;
+                        await loadDocuments();
+                        var found = documents.value.find(function(doc) { return doc.path === d.path; });
+                        if (found) selectDoc(found);
+                    } else {
+                        alert('新建失败: ' + (d.error || '未知错误'));
+                    }
+                } catch(e) {
+                    closeNewMdDialog();
+                    alert('新建失败: ' + e.message);
+                }
+            }
+
             // Category CRUD
             function editCategory(group) {
                 catEditId.value = group.id;
@@ -932,11 +1106,8 @@
             // Permission
             function canEditDoc(doc) {
                 if (!doc) return false;
-                // currentUser comes from meta tag; fallback to empty
-                var user = currentUser.value || '';
-                if (!user) return true; // fallback: allow if unknown
-                // admin check: userId 1
-                return true; // Server handles permission; UI shows buttons for all but server will reject
+                if (!isLoggedIn.value) return false;
+                return true;
             }
 
             // Utils
@@ -967,11 +1138,20 @@
                 if (contentTab.value === 'content' && !editing.value) nextTick(renderContent);
             });
 
-            onMounted(init);
+            function updateLoginState() {
+                isLoggedIn.value = !!localStorage.getItem('Admin-Token');
+            }
+
+            document.addEventListener('auth-change', updateLoginState);
+
+            onMounted(function() {
+                updateLoginState();
+                init();
+            });
 
             return {
-                kbList, currentKbId, documents, searchQuery, isSearchMode, hasKb,
-                filteredDocs, totalChunks, tagCount,
+                kbList, currentKbId, documents, searchQuery, isSearchMode, hasKb, isLoggedIn,
+                filteredDocuments, fileTypeFilter, fileTypes, totalChunks, tagCount,
                 categoryTree, expandedCategories,
                 selectedDoc, selectedDocTags, tagInput, contentTab, docContent, docContentLoading,
                 chunks, chunksLoading, chunkExpanded,
@@ -979,8 +1159,9 @@
                 uploadOpen, dragOver, uploadItems,
                 newNoteOpen, newNoteName, newNoteCategoryId,
                 catDialogOpen, catEditId, catEditName,
+                newMdOpen, newMdName, newMdContent, newMdCategoryId,
                 categories,
-                onKbChange, loadDocuments, doSearch, clearSearch,
+                selectKb, loadDocuments, doSearch, clearSearch,
                 selectDoc, switchTab, toggleChunk,
                 startEditing, cancelEditing, saveEditing,
                 addTag, removeTag, saveTags,
@@ -988,6 +1169,7 @@
                 openNewNoteDialog, openNewNoteInCategory, closeNewNoteDialog, confirmNewNote,
                 toggleCategory, getCategoryName,
                 showAddCategory, editCategory, closeCatDialog, confirmCatDialog, deleteCategory,
+                openNewMd, closeNewMdDialog, confirmNewMd,
                 downloadDoc, deleteDoc,
                 canEditDoc,
                 fileIcon, formatSize, statusLabel

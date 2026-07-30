@@ -61,7 +61,7 @@ public class ChatApiController {
 
     @GetMapping("/kbs")
     public ResponseEntity<Map<String, Object>> listKbs() {
-        List<KbBaseEntity> kbs = kbService.getAll();
+        List<KbBaseEntity> kbs = kbService.getAccessibleKbs();
         List<Map<String, Object>> result = new ArrayList<>();
         for (KbBaseEntity kb : kbs) {
             Map<String, Object> item = new LinkedHashMap<>();
@@ -362,7 +362,7 @@ public class ChatApiController {
         Matcher matcher = pattern.matcher(message);
         while (matcher.find()) {
             String kbName = matcher.group(1);
-            List<KbBaseEntity> kbs = kbService.getAll();
+List<KbBaseEntity> kbs = kbService.getAccessibleKbs();
             for (KbBaseEntity kb : kbs) {
                 if (kb.getName().equals(kbName) || kb.getName().contains(kbName)) {
                     return kb.getId();

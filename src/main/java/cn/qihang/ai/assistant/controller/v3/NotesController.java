@@ -28,7 +28,7 @@ public class NotesController {
     @GetMapping("/notes")
     public String notesPage(@RequestParam(required = false) Long kbId, Map<String, Object> model) {
         model.put("currentNav", "notes");
-        List<KbBaseEntity> kbList = kbService.getAll();
+        List<KbBaseEntity> kbList = kbService.getAccessibleKbs();
         model.put("kbList", kbList);
 
         if (!kbList.isEmpty()) {
