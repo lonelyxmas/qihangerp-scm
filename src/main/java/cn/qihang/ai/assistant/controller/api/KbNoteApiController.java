@@ -2,10 +2,12 @@ package cn.qihang.ai.assistant.controller.api;
 
 import cn.qihang.ai.assistant.entity.KbNoteEntity;
 import cn.qihang.ai.assistant.entity.KbBaseEntity;
+import cn.qihang.ai.assistant.entity.KbEmbeddingEntity;
 import cn.qihang.ai.assistant.service.DocumentParserService;
 import cn.qihang.ai.assistant.service.KbBaseService;
 import cn.qihang.ai.assistant.service.LogService;
 import cn.qihang.ai.assistant.service.db.KbNoteDbService;
+import cn.qihang.ai.assistant.service.db.KbEmbeddingDbService;
 import cn.qihang.ai.assistant.util.TimeUtil;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -20,15 +22,18 @@ public class KbNoteApiController {
 
     private final KbBaseService kbService;
     private final KbNoteDbService kbNoteDbService;
+    private final KbEmbeddingDbService kbEmbeddingDbService;
     private final LogService logService;
     private final DocumentParserService documentParserService;
 
     public KbNoteApiController(KbBaseService kbService,
                                KbNoteDbService kbNoteDbService,
+                               KbEmbeddingDbService kbEmbeddingDbService,
                                LogService logService,
                                DocumentParserService documentParserService) {
         this.kbService = kbService;
         this.kbNoteDbService = kbNoteDbService;
+        this.kbEmbeddingDbService = kbEmbeddingDbService;
         this.logService = logService;
         this.documentParserService = documentParserService;
     }
@@ -41,6 +46,92 @@ public class KbNoteApiController {
             List<KbNoteEntity> all = kbNoteDbService.listByKbId(id);
             Map<String, Object> tree = buildTree(all);
             return Map.of("ok", true, "tree", tree);
+        } catch (Exception e) {
+            return Map.of("ok", false, "error", e.getMessage());
+        }
+    }
+
+    @GetMapping("/{id}/notes/list")
+    public Map<String, Object> listNotes(@PathVariable Long id) {
+        KbBaseEntity kb = kbService.getById(id);
+        if (kb == null) return Map.of("ok", false, "error", "知识库不存在");
+        try {
+            List<KbNoteEntity> all = kbNoteDbService.listByKbId(id);
+            List<Map<String, Object>> docs = new ArrayList<>();
+            for (KbNoteEntity note : all) {
+                if (note.getIsDir() == 1) continue;
+                int chunkCount = kbEmbeddingDbService.countByKbAndPath(id, note.getPath());
+                Map<String, Object> doc = new LinkedHashMap<>();
+                doc.put("id", note.getId());
+                doc.put("name", note.getName());
+                doc.put("path", note.getPath());
+                doc.put("fileType", note.getFileType() != null ? note.getFileType() : "");
+                doc.put("fileSize", note.getFileSize() != null ? note.getFileSize() : 0);
+                doc.put("tags", parseTags(note.getTags()));
+                doc.put("status", note.getStatus() != null ? note.getStatus() : "ready");
+                doc.put("chunkCount", chunkCount);
+                doc.put("createdAt", note.getCreatedAt());
+                doc.put("updatedAt", note.getUpdatedAt());
+                docs.add(doc);
+            }
+            docs.sort(Comparator.comparing(m -> (String) m.get("updatedAt"), Comparator.nullsLast(Comparator.reverseOrder())));
+            return Map.of("ok", true, "documents", docs);
+        } catch (Exception e) {
+            return Map.of("ok", false, "error", e.getMessage());
+        }
+    }
+
+    @GetMapping("/{id}/notes/chunks")
+    public Map<String, Object> getChunks(@PathVariable Long id, @RequestParam String path) {
+        KbBaseEntity kb = kbService.getById(id);
+        if (kb == null) return Map.of("ok", false, "error", "知识库不存在");
+        try {
+            List<KbEmbeddingEntity> chunks = kbEmbeddingDbService.listByKbAndPath(id, path);
+            List<Map<String, Object>> list = new ArrayList<>();
+            for (KbEmbeddingEntity c : chunks) {
+                Map<String, Object> m = new LinkedHashMap<>();
+                m.put("chunkIndex", c.getChunkIndex());
+                m.put("content", c.getContent());
+                m.put("pathContext", c.getPathContext() != null ? c.getPathContext() : "");
+                m.put("createdAt", c.getCreatedAt());
+                list.add(m);
+            }
+            return Map.of("ok", true, "chunks", list);
+        } catch (Exception e) {
+            return Map.of("ok", false, "error", e.getMessage());
+        }
+    }
+
+    @PostMapping("/{id}/notes/tags")
+    public Map<String, Object> updateTags(@PathVariable Long id, @RequestBody Map<String, Object> body) {
+        KbBaseEntity kb = kbService.getById(id);
+        if (kb == null) return Map.of("ok", false, "error", "知识库不存在");
+        String path = (String) body.getOrDefault("path", "");
+        if (path.isEmpty()) return Map.of("ok", false, "error", "路径不能为空");
+        KbNoteEntity note = kbNoteDbService.getByKbIdAndPath(id, path);
+        if (note == null) return Map.of("ok", false, "error", "文件不存在");
+        @SuppressWarnings("unchecked")
+        List<String> tags = (List<String>) body.getOrDefault("tags", new ArrayList<>());
+        note.setTags(toJsonArray(tags));
+        note.setUpdatedAt(TimeUtil.nowStr());
+        kbNoteDbService.updateById(note);
+        return Map.of("ok", true, "tags", tags);
+    }
+
+    @GetMapping("/{id}/notes/tags-list")
+    public Map<String, Object> getAllTags(@PathVariable Long id) {
+        KbBaseEntity kb = kbService.getById(id);
+        if (kb == null) return Map.of("ok", false, "error", "知识库不存在");
+        try {
+            List<KbNoteEntity> all = kbNoteDbService.listByKbId(id);
+            Set<String> tagSet = new LinkedHashSet<>();
+            for (KbNoteEntity note : all) {
+                String t = note.getTags();
+                if (t != null && !t.isBlank() && !t.equals("[]")) {
+                    tagSet.addAll(parseTags(t));
+                }
+            }
+            return Map.of("ok", true, "tags", new ArrayList<>(tagSet));
         } catch (Exception e) {
             return Map.of("ok", false, "error", e.getMessage());
         }
@@ -224,6 +315,10 @@ public class KbNoteApiController {
             note.setName(originalName);
             note.setIsDir(0);
             note.setContent(content);
+            note.setFileType(documentParserService.getExtension(originalName));
+            note.setFileSize((long) data.length);
+            note.setTags("[]");
+            note.setStatus("ready");
             note.setCreatedAt(now);
             note.setUpdatedAt(now);
             kbNoteDbService.save(note);
@@ -281,6 +376,27 @@ public class KbNoteApiController {
                 kbNoteDbService.save(dir);
             }
         }
+    }
+
+    private List<String> parseTags(String tagsJson) {
+        if (tagsJson == null || tagsJson.isBlank() || tagsJson.equals("[]")) return new ArrayList<>();
+        try {
+            com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+            return mapper.readValue(tagsJson, List.class);
+        } catch (Exception e) {
+            return new ArrayList<>();
+        }
+    }
+
+    private String toJsonArray(List<String> tags) {
+        if (tags == null || tags.isEmpty()) return "[]";
+        StringBuilder sb = new StringBuilder("[");
+        for (int i = 0; i < tags.size(); i++) {
+            if (i > 0) sb.append(",");
+            sb.append("\"").append(com.fasterxml.jackson.core.io.JsonStringEncoder.getInstance().quoteAsString(tags.get(i))).append("\"");
+        }
+        sb.append("]");
+        return sb.toString();
     }
 
     private Map<String, Object> buildTree(List<KbNoteEntity> notes) {

@@ -4,470 +4,575 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="/css/app.css">
-    <title>启航 AI 协作平台 - 笔记</title>
+    <title>启航 AI 协作平台 - 知识库</title>
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.21/dist/katex.min.js"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.21/dist/contrib/auto-render.min.js"
             onload="window.__katexLoaded = true"></script>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.21/dist/katex.min.css">
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
     <style>
-        /* Notes Container */
-        .notes-container { display: flex; flex: 1; overflow: hidden; }
+        :root {
+            --kb-primary: #6366f1;
+            --kb-primary-light: rgba(99,102,241,0.08);
+            --kb-success: #22c55e;
+            --kb-warning: #f59e0b;
+            --kb-error: #ef4444;
+            --kb-text: #1e293b;
+            --kb-text-secondary: #64748b;
+            --kb-text-muted: #94a3b8;
+            --kb-border: #e2e8f0;
+            --kb-hover: #f8fafc;
+            --kb-bg: #ffffff;
+            --kb-bg-alt: #f8fafc;
+            --kb-radius: 8px;
+        }
+        .kb-split { display: flex; flex: 1; overflow: hidden; gap: 0; }
+        .kb-sidebar { width: 340px; background: var(--kb-bg); border-right: 1px solid var(--kb-border); display: flex; flex-direction: column; flex-shrink: 0; }
+        .kb-main { flex: 1; display: flex; flex-direction: column; overflow: hidden; background: var(--kb-bg-alt); }
+        .kb-sidebar-header { padding: 12px 16px; border-bottom: 1px solid var(--kb-border); flex-shrink: 0; }
+        .kb-sidebar-header-row { display: flex; align-items: center; gap: 8px; }
+        .kb-select { padding: 6px 10px; border: 1px solid var(--kb-border); border-radius: var(--kb-radius); font-size: 13px; outline: none; background: var(--kb-bg); color: var(--kb-text); cursor: pointer; flex: 1; }
+        .kb-select:focus { border-color: var(--kb-primary); }
+        .kb-sidebar-body { flex: 1; overflow-y: auto; padding: 4px 0; }
+        .kb-sidebar-footer { padding: 8px 16px; border-top: 1px solid var(--kb-border); flex-shrink: 0; }
 
-        /* File Tree */
-        .file-tree { width: 320px; background: white; border-right: 1px solid var(--border); display: flex; flex-direction: column; flex-shrink: 0; }
-        .tree-header { padding: 16px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
-        .tree-header-row { display: flex; align-items: center; gap: 8px; }
-        .tree-title { font-size: 14px; font-weight: 600; color: var(--text-primary); flex: 1; }
-        .kb-select { padding: 4px 8px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 12px; outline: none; background: white; color: var(--text-primary); cursor: pointer; }
-        .kb-select:focus { border-color: var(--primary); }
-        .refresh-btn { background: none; border: none; cursor: pointer; font-size: 16px; color: var(--text-muted); padding: 2px; }
-        .refresh-btn:hover { color: var(--primary); }
+        .kb-search-row { display: flex; gap: 6px; padding: 8px 16px 4px; }
+        .kb-search-row input { flex: 1; padding: 6px 10px; border: 1px solid var(--kb-border); border-radius: var(--kb-radius); font-size: 13px; outline: none; background: var(--kb-bg-alt); color: var(--kb-text); }
+        .kb-search-row input:focus { border-color: var(--kb-primary); }
 
-        .tree-body { flex: 1; overflow-y: auto; padding: 8px; }
-        .tree-item { display: flex; align-items: center; gap: 6px; padding: 6px 10px; cursor: pointer; border-radius: var(--radius-sm); font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .tree-item:hover { background: var(--hover); }
-        .tree-item.active { background: rgba(99, 102, 241, 0.1); color: var(--primary); }
-        .tree-item.folder { font-weight: 500; color: var(--text-primary); }
-        .tree-item.file { color: var(--text-secondary); }
-        .tree-arrow { font-size: 10px; width: 12px; text-align: center; flex-shrink: 0; color: var(--text-muted); }
-        .tree-icon { font-size: 14px; flex-shrink: 0; width: 18px; text-align: center; }
-        .tree-name { flex: 1; overflow: hidden; text-overflow: ellipsis; }
-        .tree-children { padding-left: 12px; }
-        .tree-children.collapsed { display: none; }
+        .kb-stats-row { display: flex; gap: 16px; padding: 6px 16px 8px; font-size: 12px; color: var(--kb-text-muted); border-bottom: 1px solid var(--kb-border); }
+        .kb-stats-row span { font-weight: 600; color: var(--kb-text); }
 
-        .tree-empty { text-align: center; padding: 40px 16px; color: var(--text-muted); font-size: 13px; }
+        .kb-doc-item { display: flex; align-items: center; gap: 8px; padding: 8px 16px; cursor: pointer; font-size: 13px; color: var(--kb-text); border-bottom: 1px solid var(--kb-border); transition: background 0.1s; }
+        .kb-doc-item:hover { background: var(--kb-hover); }
+        .kb-doc-item.active { background: var(--kb-primary-light); border-left: 3px solid var(--kb-primary); }
+        .kb-doc-item .doc-info { flex: 1; min-width: 0; }
+        .kb-doc-item .doc-name { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .kb-doc-item .doc-meta { font-size: 11px; color: var(--kb-text-muted); margin-top: 2px; display: flex; gap: 8px; }
+        .kb-doc-item .doc-actions { flex-shrink: 0; opacity: 0; transition: opacity 0.1s; }
+        .kb-doc-item:hover .doc-actions { opacity: 1; }
 
-        /* Search */
-        .search-row { display: flex; gap: 6px; padding: 8px 16px 0; }
-        .search-row input { flex: 1; padding: 6px 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 13px; outline: none; background: var(--bg-main); color: var(--text-primary); }
-        .search-row input:focus { border-color: var(--primary); }
-        .search-row button { padding: 6px 14px; background: var(--primary); color: white; border: none; border-radius: var(--radius-sm); font-size: 13px; cursor: pointer; white-space: nowrap; }
-        .search-row button:hover { background: var(--primary-dark); }
-        .search-row button:active { transform: scale(0.97); }
-        .search-results { flex: 1; overflow-y: auto; padding: 8px; }
-        .search-result-item { padding: 8px 10px; border-radius: var(--radius-sm); cursor: pointer; font-size: 13px; border-bottom: 1px solid var(--border); }
-        .search-result-item:hover { background: var(--hover); }
-        .search-result-item.active { background: rgba(99, 102, 241, 0.1); color: var(--primary); }
-        .search-result-item.active .search-result-file { color: var(--primary); }
-        .search-result-item:last-child { border-bottom: none; }
-        .search-result-file { font-weight: 500; color: var(--text-primary); display: flex; align-items: center; gap: 6px; }
-        .search-result-snippet { color: var(--text-secondary); font-size: 12px; margin-top: 3px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.5; }
-        .search-result-score { font-size: 11px; color: var(--text-muted); margin-left: auto; }
+        .kb-empty-list { text-align: center; padding: 40px 16px; color: var(--kb-text-muted); font-size: 13px; }
 
-        /* Note Preview */
-        .note-preview { flex: 1; display: flex; flex-direction: column; overflow: hidden; background: var(--bg-main); }
-        .preview-header { padding: 16px 24px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; background: white; flex-shrink: 0; }
-        .preview-title { font-size: 15px; font-weight: 600; color: var(--text-primary); }
-        .preview-path { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
-        .preview-actions { display: flex; gap: 6px; }
+        .kb-btn { display: inline-flex; align-items: center; gap: 4px; padding: 6px 14px; border: none; border-radius: var(--kb-radius); font-size: 12px; font-weight: 500; cursor: pointer; transition: all 0.15s; white-space: nowrap; }
+        .kb-btn:active { transform: scale(0.97); }
+        .kb-btn-primary { background: var(--kb-primary); color: white; }
+        .kb-btn-primary:hover { background: #4f46e5; }
+        .kb-btn-outline { background: white; color: var(--kb-text); border: 1px solid var(--kb-border); }
+        .kb-btn-outline:hover { background: var(--kb-hover); border-color: #cbd5e1; }
+        .kb-btn-ghost { background: transparent; color: var(--kb-text-secondary); padding: 4px 8px; }
+        .kb-btn-ghost:hover { background: var(--kb-hover); color: var(--kb-text); }
+        .kb-btn-sm { padding: 4px 8px; font-size: 11px; }
+        .kb-btn-icon { padding: 4px 6px; font-size: 14px; }
 
-        .preview-content { flex: 1; overflow-y: auto; padding: 32px 48px; font-size: 14px; line-height: 1.85; color: var(--text-primary); background: white; }
-        .preview-content h1 { font-size: 28px; font-weight: 700; margin: 0 0 20px; padding-bottom: 12px; border-bottom: 2px solid var(--border); }
-        .preview-content h2 { font-size: 22px; font-weight: 600; margin: 32px 0 16px; padding-left: 12px; border-left: 4px solid var(--primary); }
-        .preview-content h3 { font-size: 18px; font-weight: 600; margin: 24px 0 12px; }
-        .preview-content h4 { font-size: 16px; font-weight: 600; margin: 20px 0 8px; }
-        .preview-content p { margin-bottom: 16px; }
-        .preview-content ul, .preview-content ol { padding-left: 28px; margin-bottom: 16px; }
-        .preview-content li { margin-bottom: 4px; }
-        .preview-content li::marker { color: var(--primary); }
-        .preview-content code { background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-family: "SF Mono", "Fira Code", monospace; font-size: 13px; color: var(--primary-dark); }
-        .preview-content pre { background: #1e293b; color: #e2e8f0; padding: 16px 20px; border-radius: var(--radius-sm); overflow-x: auto; margin: 16px 0; font-size: 13px; line-height: 1.6; }
-        .preview-content pre code { background: none; color: inherit; padding: 0; font-size: inherit; }
-        .preview-content blockquote { border-left: 4px solid var(--primary); padding: 8px 16px; color: var(--text-secondary); margin: 16px 0; background: rgba(99, 102, 241, 0.04); border-radius: 0 var(--radius-sm) var(--radius-sm) 0; }
-        .preview-content blockquote p { margin: 0; }
-        .preview-content table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 13px; }
-        .preview-content th { background: rgba(99, 102, 241, 0.08); color: var(--primary-dark); font-weight: 600; padding: 10px 12px; border: 1px solid var(--border); text-align: left; }
-        .preview-content td { padding: 8px 12px; border: 1px solid var(--border); }
-        .preview-content tr:nth-child(even) { background: #fafbfc; }
-        .preview-content a { color: var(--primary); text-decoration: none; }
-        .preview-content a:hover { text-decoration: underline; }
-        .preview-content hr { border: none; border-top: 1px solid var(--border); margin: 24px 0; }
-        .preview-content img { max-width: 100%; border-radius: var(--radius-sm); margin: 12px 0; }
-        .preview-content .katex-display { margin: 16px 0; }
+        .kb-tag { display: inline-flex; align-items: center; gap: 2px; padding: 1px 7px; border-radius: 10px; font-size: 11px; font-weight: 500; cursor: default; }
+        .kb-tag-color-0 { background: #f0f9ff; color: #0284c7; }
+        .kb-tag-color-1 { background: #f0fdf4; color: #16a34a; }
+        .kb-tag-color-2 { background: #fefce8; color: #ca8a04; }
+        .kb-tag-color-3 { background: #fdf2f8; color: #db2777; }
+        .kb-tag-color-4 { background: #f5f3ff; color: #7c3aed; }
+        .kb-tag-color-5 { background: #fff7ed; color: #ea580c; }
+        .kb-tag-color-6 { background: #ecfeff; color: #0891b2; }
+        .kb-tag-color-7 { background: #f1f5f9; color: #475569; }
 
-        .empty-state { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 60px 20px; color: var(--text-muted); }
-        .empty-icon { font-size: 64px; margin-bottom: 20px; opacity: 0.4; }
-        .empty-title { font-size: 18px; font-weight: 500; margin-bottom: 8px; color: var(--text-secondary); }
-        .empty-desc { font-size: 14px; color: var(--text-muted); }
+        .kb-status { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; }
+        .kb-status-dot { width: 5px; height: 5px; border-radius: 50%; display: inline-block; }
+        .kb-status-ready .kb-status-dot { background: var(--kb-success); }
+        .kb-status-parsing .kb-status-dot { background: var(--kb-warning); }
+        .kb-status-indexing .kb-status-dot { background: var(--kb-primary); }
+        .kb-status-error .kb-status-dot { background: var(--kb-error); }
 
-        /* No KB state */
-        .no-kb-state { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 60px 20px; color: var(--text-muted); }
+        .kb-main-header { padding: 16px 24px; border-bottom: 1px solid var(--kb-border); background: var(--kb-bg); flex-shrink: 0; }
+        .kb-main-title { font-size: 15px; font-weight: 600; color: var(--kb-text); display: flex; align-items: center; gap: 8px; }
+        .kb-main-path { font-size: 12px; color: var(--kb-text-muted); margin-top: 2px; word-break: break-all; }
+        .kb-main-body { flex: 1; overflow-y: auto; padding: 20px 24px; }
+
+        .kb-meta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
+        .kb-meta-item { padding: 10px 14px; background: var(--kb-bg); border: 1px solid var(--kb-border); border-radius: var(--kb-radius); }
+        .kb-meta-label { font-size: 11px; color: var(--kb-text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px; }
+        .kb-meta-value { font-size: 13px; color: var(--kb-text); font-weight: 500; }
+
+        .kb-tag-editor { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; padding: 10px 14px; background: var(--kb-bg); border: 1px solid var(--kb-border); border-radius: var(--kb-radius); margin-bottom: 20px; }
+        .kb-tag-editor-label { font-size: 11px; color: var(--kb-text-muted); font-weight: 500; margin-right: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .kb-tag-input { border: none; outline: none; padding: 3px 6px; font-size: 12px; background: transparent; color: var(--kb-text); width: 90px; }
+        .kb-tag-input::placeholder { color: var(--kb-text-muted); }
+
+        .kb-chunk-item { padding: 10px 14px; background: var(--kb-bg); border: 1px solid var(--kb-border); border-radius: var(--kb-radius); margin-bottom: 8px; border-left: 3px solid var(--kb-primary); }
+        .kb-chunk-index { font-size: 11px; color: var(--kb-text-muted); font-weight: 500; margin-bottom: 4px; }
+        .kb-chunk-content { font-size: 13px; color: var(--kb-text); line-height: 1.6; white-space: pre-wrap; word-break: break-word; max-height: 100px; overflow-y: auto; }
+        .kb-chunk-content.expanded { max-height: none; }
+        .kb-chunk-expand { font-size: 11px; color: var(--kb-primary); cursor: pointer; margin-top: 2px; display: inline-block; }
+
+        .kb-empty-detail { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: var(--kb-text-muted); text-align: center; padding: 40px; }
+        .kb-empty-detail-icon { font-size: 48px; margin-bottom: 12px; opacity: 0.5; }
+        .kb-empty-detail-title { font-size: 16px; font-weight: 500; color: var(--kb-text-secondary); margin-bottom: 4px; }
+        .kb-empty-detail-desc { font-size: 13px; }
+
+        .kb-loading { display: inline-block; width: 12px; height: 12px; border: 2px solid var(--kb-border); border-top-color: var(--kb-primary); border-radius: 50%; animation: kb-spin 0.6s linear infinite; }
+        @keyframes kb-spin { to { transform: rotate(360deg); } }
+
+        .kb-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.3); z-index: 999; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
+        .kb-overlay.open { opacity: 1; pointer-events: auto; }
+        .kb-dialog { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0.95); background: white; border-radius: 12px; box-shadow: 0 4px 16px rgba(0,0,0,0.1); z-index: 1000; width: 480px; max-width: 90vw; opacity: 0; pointer-events: none; transition: all 0.2s; }
+        .kb-dialog.open { opacity: 1; pointer-events: auto; transform: translate(-50%, -50%) scale(1); }
+        .kb-dialog-header { padding: 14px 20px; border-bottom: 1px solid var(--kb-border); display: flex; align-items: center; justify-content: space-between; }
+        .kb-dialog-header h3 { margin: 0; font-size: 15px; font-weight: 600; color: var(--kb-text); }
+        .kb-dialog-close { background: none; border: none; cursor: pointer; font-size: 18px; color: var(--kb-text-muted); padding: 2px; border-radius: 4px; }
+        .kb-dialog-close:hover { background: var(--kb-hover); color: var(--kb-text); }
+        .kb-dialog-body { padding: 20px; }
+        .kb-dialog-footer { padding: 12px 20px; border-top: 1px solid var(--kb-border); display: flex; justify-content: flex-end; gap: 8px; }
+        .kb-upload-zone { border: 2px dashed var(--kb-border); border-radius: var(--kb-radius); padding: 30px 20px; text-align: center; cursor: pointer; transition: all 0.2s; background: var(--kb-bg-alt); }
+        .kb-upload-zone:hover, .kb-upload-zone.dragover { border-color: var(--kb-primary); background: var(--kb-primary-light); }
+        .kb-upload-zone-icon { font-size: 36px; color: var(--kb-text-muted); margin-bottom: 6px; }
+        .kb-upload-zone-text { font-size: 14px; color: var(--kb-text-secondary); }
+        .kb-upload-zone-hint { font-size: 12px; color: var(--kb-text-muted); margin-top: 4px; }
+        .kb-upload-list { margin-top: 10px; }
+        .kb-upload-item { display: flex; align-items: center; gap: 8px; padding: 6px 10px; background: var(--kb-bg-alt); border-radius: var(--kb-radius); margin-bottom: 4px; font-size: 12px; }
+
+        .kb-no-kb { display: flex; align-items: center; justify-content: center; height: 100%; color: var(--kb-text-muted); font-size: 14px; }
         .hidden { display: none !important; }
-        .no-kb-icon { font-size: 64px; margin-bottom: 20px; opacity: 0.4; }
-        .no-kb-title { font-size: 18px; font-weight: 500; margin-bottom: 8px; color: var(--text-secondary); }
-        .no-kb-desc { font-size: 14px; color: var(--text-muted); }
 
-        /* KaTeX overrides */
-        .katex { font-size: 1em; }
-        .katex-display { overflow-x: auto; }
+        @media (max-width: 768px) {
+            .kb-split { flex-direction: column; }
+            .kb-sidebar { width: 100%; border-right: none; border-bottom: 1px solid var(--kb-border); max-height: 50%; }
+        }
     </style>
 </head>
 <body>
     <th:block th:replace="3.0/fragments/sidebar::sidebar(${currentNav})"></th:block>
-    
+
     <main class="main-content">
         <div class="content-header">
-            <h1 class="content-title">笔记</h1>
+            <h1 class="content-title">知识库</h1>
         </div>
 
-        <!-- 无笔记库时 -->
-        <div id="noKbState" class="no-kb-state hidden">
-            <div class="no-kb-icon">📚</div>
-            <div class="no-kb-title">暂无笔记库</div>
-            <div class="no-kb-desc">请先在配置页添加笔记库</div>
-        </div>
+        <div id="kbApp" class="content-body" style="padding:0;display:flex;flex-direction:column;">
+            <div v-if="!hasKb" class="kb-no-kb">暂无知识库</div>
 
-        <!-- 笔记内容区 -->
-        <div id="notesArea" class="content-body hidden">
-            <div class="notes-container">
-                <!-- 左侧文件树 -->
-                <div class="file-tree">
-                    <div class="tree-header">
-                        <div class="tree-header-row">
-                            <select id="kbSelect" class="kb-select" onchange="onKbChange(this.value)">
-                                <option value="">加载中...</option>
-                            </select>
-                            <button class="refresh-btn" onclick="refreshTree()" title="刷新">🔄</button>
+            <template v-else>
+                <div class="kb-split">
+                    <!-- Left Sidebar -->
+                    <aside class="kb-sidebar">
+                        <div class="kb-sidebar-header">
+                            <div class="kb-sidebar-header-row">
+                                <select class="kb-select" v-model="currentKbId" @change="onKbChange">
+                                    <option v-for="kb in kbList" :key="kb.id" :value="kb.id">{{ kb.name }}</option>
+                                </select>
+                                <button class="kb-btn kb-btn-icon kb-btn-ghost" @click="loadDocuments" title="刷新">&#x1F504;</button>
+                            </div>
                         </div>
-                        <div class="preview-path" id="kbPath" style="margin-top:6px;"></div>
-                        <div class="search-row">
-                            <input type="text" id="searchInput" placeholder="搜索笔记..." onkeyup="if(event.keyCode===13)doSearch()">
-                            <button onclick="doSearch()">搜索</button>
+                        <div class="kb-search-row">
+                            <input type="text" placeholder="搜索文档名称或标签..." v-model="searchQuery" @keyup.enter="doSearch">
+                            <button class="kb-btn kb-btn-ghost kb-btn-sm" v-show="isSearchMode" @click="clearSearch">&#x2715;</button>
                         </div>
+                        <div class="kb-stats-row">
+                            文档 <span>{{ documents.length }}</span>
+                            分块 <span>{{ totalChunks }}</span>
+                            标签 <span>{{ tagCount }}</span>
+                        </div>
+                        <div v-show="isSearchMode" style="padding:4px 16px 2px;font-size:12px;color:var(--kb-text-muted);">
+                            找到 {{ filteredDocs.length }} 个结果
+                        </div>
+                        <div class="kb-sidebar-body">
+                            <div v-if="!displayedDocs.length" class="kb-empty-list">
+                                <div v-if="isSearchMode">无匹配结果</div>
+                                <div v-else>
+                                    <div style="font-size:28px;margin-bottom:8px;">&#x1F4C2;</div>
+                                    <div>暂无文档</div>
+                                    <button class="kb-btn kb-btn-primary kb-btn-sm" style="margin-top:10px;" @click="openUpload">上传文档</button>
+                                </div>
+                            </div>
+                            <div v-for="doc in displayedDocs" :key="doc.path"
+                                 class="kb-doc-item"
+                                 :class="{ active: selectedDoc && selectedDoc.path === doc.path }"
+                                 @click="selectDoc(doc)">
+                                <div class="doc-info">
+                                    <div class="doc-name">{{ fileIcon(doc.fileType) }} {{ doc.name }}</div>
+                                    <div class="doc-meta">
+                                        <span>{{ doc.fileType || 'md' }}</span>
+                                        <span>{{ formatSize(doc.fileSize) }}</span>
+                                        <span :class="'kb-status kb-status-' + (doc.status || 'ready')">
+                                            <span class="kb-status-dot"></span>{{ statusLabel(doc.status) }}
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="doc-actions">
+                                    <button class="kb-btn kb-btn-ghost kb-btn-icon" @click.stop="deleteDoc(doc)" title="删除">&#x1F5D1;</button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="kb-sidebar-footer">
+                            <button class="kb-btn kb-btn-primary" style="width:100%;justify-content:center;" @click="openUpload">&#x2B06; 上传文档</button>
+                        </div>
+                    </aside>
+
+                    <!-- Right Main -->
+                    <div class="kb-main">
+                        <template v-if="selectedDoc">
+                            <div class="kb-main-header">
+                                <div class="kb-main-title">
+                                    <span>{{ fileIcon(selectedDoc.fileType) }}</span>
+                                    <span>{{ selectedDoc.name }}</span>
+                                </div>
+                                <div class="kb-main-path">{{ selectedDoc.path }}</div>
+                            </div>
+                            <div class="kb-main-body">
+                                <div class="kb-meta-grid">
+                                    <div class="kb-meta-item"><div class="kb-meta-label">类型</div><div class="kb-meta-value">{{ selectedDoc.fileType || '-' }}</div></div>
+                                    <div class="kb-meta-item"><div class="kb-meta-label">大小</div><div class="kb-meta-value">{{ formatSize(selectedDoc.fileSize) }}</div></div>
+                                    <div class="kb-meta-item"><div class="kb-meta-label">分块</div><div class="kb-meta-value">{{ chunks.length }}</div></div>
+                                    <div class="kb-meta-item"><div class="kb-meta-label">创建时间</div><div class="kb-meta-value">{{ selectedDoc.createdAt || '-' }}</div></div>
+                                </div>
+
+                                <div class="kb-tag-editor">
+                                    <span class="kb-tag-editor-label">标签</span>
+                                    <template v-if="selectedDocTags.length">
+                                        <span v-for="(t, i) in selectedDocTags" :key="i" :class="'kb-tag kb-tag-color-' + (i % 8)">
+                                            {{ t }} <span style="cursor:pointer;opacity:0.6;margin-left:2px;" @click="removeTag(t)">&#x2715;</span>
+                                        </span>
+                                    </template>
+                                    <span v-else style="font-size:12px;color:var(--kb-text-muted);">无标签</span>
+                                    <input class="kb-tag-input" v-model="tagInput" placeholder="+ 添加" @keyup.enter="addTag">
+                                </div>
+
+                                <div>
+                                    <div style="font-size:14px;font-weight:600;color:var(--kb-text);margin-bottom:10px;display:flex;align-items:center;gap:8px;">
+                                        &#x1F4C4; 文档分块
+                                        <span style="font-size:12px;color:var(--kb-text-muted);font-weight:400;">{{ chunks.length }} 个</span>
+                                        <span class="kb-loading" v-show="chunksLoading"></span>
+                                    </div>
+                                    <div v-if="chunks.length">
+                                        <div v-for="(c, i) in chunks" :key="i" class="kb-chunk-item">
+                                            <div class="kb-chunk-index">#{{ c.chunkIndex != null ? c.chunkIndex : (i + 1) }}</div>
+                                            <div class="kb-chunk-content" :class="{ expanded: chunkExpanded[i] }">{{ c.content }}</div>
+                                            <span v-if="c.content && c.content.length > 200" class="kb-chunk-expand" @click="toggleChunk(i)">
+                                                {{ chunkExpanded[i] ? '收起' : '展开全部' }}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div v-else-if="!chunksLoading" style="text-align:center;padding:40px;color:var(--kb-text-muted);font-size:13px;">暂无分块数据</div>
+                                </div>
+                            </div>
+                        </template>
+                        <template v-else>
+                            <div class="kb-empty-detail">
+                                <div class="kb-empty-detail-icon">&#x1F4C4;</div>
+                                <div class="kb-empty-detail-title">选择文档查看</div>
+                                <div class="kb-empty-detail-desc">在左侧列表中选择一个文档查看详情和分块</div>
+                            </div>
+                        </template>
                     </div>
-                    <div id="fileTree" class="tree-body">
-                        <div class="tree-empty">加载中...</div>
-                    </div>
-                    <div id="searchResults" class="search-results hidden"></div>
                 </div>
 
-                <!-- 右侧文件预览 -->
-                <div class="note-preview">
-                    <div class="preview-header">
-                        <div>
-                            <div class="preview-title" id="previewTitle">选择文件查看</div>
-                            <div class="preview-path" id="previewPath"></div>
+                <!-- Upload Dialog -->
+                <div class="kb-overlay" :class="{ open: uploadOpen }" @click="closeUpload"></div>
+                <div class="kb-dialog" id="uploadDialog" :class="{ open: uploadOpen }">
+                    <div class="kb-dialog-header">
+                        <h3>上传文档</h3>
+                        <button class="kb-dialog-close" @click="closeUpload">&#x2715;</button>
+                    </div>
+                    <div class="kb-dialog-body">
+                        <div class="kb-upload-zone" :class="{ dragover: dragOver }"
+                             @click="triggerFileInput"
+                             @dragover.prevent="dragOver = true"
+                             @dragleave.prevent="dragOver = false"
+                             @drop.prevent="onDrop">
+                            <div class="kb-upload-zone-icon">&#x1F4C4;</div>
+                            <div class="kb-upload-zone-text">点击或拖拽文件到此处上传</div>
+                            <div class="kb-upload-zone-hint">支持 PDF、DOCX、TXT、Markdown 等格式</div>
+                            <input type="file" multiple hidden id="fileInput"
+                                   accept=".md,.pdf,.docx,.doc,.txt,.html,.htm,.xml,.csv,.rtf,.odt,.xlsx,.xls,.pptx,.ppt"
+                                   @change="onFileSelected">
                         </div>
-                        <div class="preview-actions">
-                            <button class="refresh-btn" onclick="refreshCurrentNote()" title="刷新内容">🔄</button>
+                        <div class="kb-upload-list">
+                            <div v-for="(item, i) in uploadItems" :key="i" class="kb-upload-item"
+                                 :style="{ background: item.status === 'done' ? '#f0fdf4' : item.status === 'error' ? '#fef2f2' : '' }">
+                                <span>{{ fileIcon(item.ext) }}</span>
+                                <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ item.name }}</span>
+                                <span style="font-size:11px;">
+                                    <span v-if="item.status === 'uploading'" class="kb-loading"></span>
+                                    {{ item.statusText }}
+                                </span>
+                            </div>
                         </div>
                     </div>
-                    <div class="preview-content" id="previewContent">
-                        <div class="empty-state">
-                            <div class="empty-icon">📄</div>
-                            <div class="empty-title">选择笔记文件</div>
-                            <div class="empty-desc">在左侧文件树中选择一个 Markdown 文件查看内容</div>
-                        </div>
+                    <div class="kb-dialog-footer">
+                        <button class="kb-btn kb-btn-outline" @click="closeUpload">关闭</button>
                     </div>
                 </div>
-            </div>
+            </template>
         </div>
     </main>
 
     <script>
-    var currentKbId = null;
-    var currentKbList = [];
-    var currentFilePath = null;
+    var initialKbList = [/*[[${kbList}]]*/];
+    </script>
+    <script th:inline="none">
+    var { createApp, ref, computed, onMounted, nextTick } = Vue;
 
-    // ========== 初始化 ==========
-    document.addEventListener('DOMContentLoaded', function() {
-        // 使用服务端渲染的笔记库列表
-        var kbList = /*[[${kbList}]]*/ [];
-        if (kbList && kbList.length > 0) {
-            currentKbList = kbList.map(function(kb) {
-                return { id: kb.id, name: kb.name };
+    createApp({
+        setup() {
+            var kbList = ref([]);
+            var currentKbId = ref(null);
+            var documents = ref([]);
+            var searchQuery = ref('');
+            var isSearchMode = ref(false);
+
+            var selectedDoc = ref(null);
+            var selectedDocTags = ref([]);
+            var tagInput = ref('');
+            var chunks = ref([]);
+            var chunksLoading = ref(false);
+            var chunkExpanded = ref({});
+
+            var uploadOpen = ref(false);
+            var dragOver = ref(false);
+            var uploadItems = ref([]);
+
+            var hasKb = computed(function() { return kbList.value.length > 0; });
+
+            var filteredDocs = computed(function() {
+                var docs = documents.value;
+                if (!isSearchMode.value || !searchQuery.value) return docs;
+                var q = searchQuery.value.toLowerCase();
+                return docs.filter(function(doc) {
+                    if ((doc.name || '').toLowerCase().indexOf(q) !== -1) return true;
+                    if ((doc.tags || []).some(function(t) { return t.toLowerCase().indexOf(q) !== -1; })) return true;
+                    return false;
+                });
             });
-        }
-        initPage();
-    });
 
-    function initPage() {
-        if (currentKbList && currentKbList.length > 0) {
-            renderKbSelect();
-            // 默认选中第一个
-            currentKbId = currentKbList[0].id;
-            document.getElementById('kbSelect').value = currentKbId;
-            // 显示笔记区域
-            document.getElementById('notesArea').classList.remove('hidden');
-            document.getElementById('noKbState').classList.add('hidden');
-            onKbChange(currentKbId);
-        } else {
-            // 尝试从 API 获取
-            loadKbListFromApi();
-        }
-    }
+            var displayedDocs = computed(function() {
+                return isSearchMode.value ? filteredDocs.value : documents.value;
+            });
 
-    async function loadKbListFromApi() {
-        try {
-            var r = await fetch('/api/chat/kbs');
-            var d = await r.json();
-            if (d.ok && d.data && d.data.length > 0) {
-                currentKbList = d.data;
-                initPage();
-            } else {
-                document.getElementById('noKbState').classList.remove('hidden');
-                document.getElementById('notesArea').classList.add('hidden');
+            var totalChunks = computed(function() {
+                return documents.value.reduce(function(s, d) { return s + (d.chunkCount || 0); }, 0);
+            });
+
+            var tagCount = computed(function() {
+                var set = {};
+                documents.value.forEach(function(d) { (d.tags || []).forEach(function(t) { set[t] = true; }); });
+                return Object.keys(set).length;
+            });
+
+            function init() {
+                if (window.initialKbList && window.initialKbList.length > 0) {
+                    kbList.value = window.initialKbList.map(function(kb) { return { id: kb.id, name: kb.name }; });
+                    currentKbId.value = kbList.value[0].id;
+                    nextTick(loadDocuments);
+                } else {
+                    fetch('/api/chat/kbs').then(function(r) { return r.json(); }).then(function(d) {
+                        if (d.ok && d.data && d.data.length > 0) {
+                            kbList.value = d.data;
+                            currentKbId.value = kbList.value[0].id;
+                            nextTick(loadDocuments);
+                        }
+                    }).catch(function() {});
+                }
             }
-        } catch(e) {
-            document.getElementById('noKbState').classList.remove('hidden');
-            document.getElementById('notesArea').classList.add('hidden');
-        }
-    }
 
-    function renderKbSelect() {
-        var sel = document.getElementById('kbSelect');
-        sel.innerHTML = currentKbList.map(function(kb) {
-            return '<option value="' + kb.id + '">' + escapeHtml(kb.name) + '</option>';
-        }).join('');
-    }
-
-    // ========== 切换笔记库 ==========
-    function onKbChange(kbId) {
-        if (!kbId) return;
-        currentKbId = parseInt(kbId);
-        var kb = currentKbList.find(function(k) { return k.id === currentKbId; });
-        if (kb) {
-            document.getElementById('kbPath').textContent = '';
-        }
-        hideSearch();
-        // 清空预览
-        document.getElementById('previewTitle').textContent = '选择文件查看';
-        document.getElementById('previewPath').textContent = '';
-        document.getElementById('previewContent').innerHTML = '<div class="empty-state"><div class="empty-icon">📄</div><div class="empty-title">选择笔记文件</div><div class="empty-desc">在左侧文件树中选择一个 Markdown 文件查看内容</div></div>';
-        currentFilePath = null;
-        loadFileTree();
-    }
-
-    // ========== 文件树 ==========
-    async function loadFileTree() {
-        if (!currentKbId) return;
-        var tree = document.getElementById('fileTree');
-        tree.innerHTML = '<div class="tree-empty">加载中...</div>';
-
-        try {
-            var r = await fetch('/v3/api/notes/tree?kbId=' + currentKbId);
-            var d = await r.json();
-            if (d.ok && d.tree) {
-                renderTree(d.tree, tree);
-            } else {
-                tree.innerHTML = '<div class="tree-empty">暂无文件</div>';
+            function onKbChange() {
+                selectedDoc.value = null;
+                isSearchMode.value = false;
+                searchQuery.value = '';
+                loadDocuments();
             }
-        } catch(e) {
-            tree.innerHTML = '<div class="tree-empty">加载失败: ' + e.message + '</div>';
-        }
-    }
 
-    function renderTree(tree, container) {
-        container.innerHTML = '';
-        if (!tree) return;
+            async function loadDocuments() {
+                if (!currentKbId.value) return;
+                try {
+                    var r = await fetch('/api/kb/' + currentKbId.value + '/notes/list');
+                    var d = await r.json();
+                    if (d.ok) documents.value = d.documents || [];
+                } catch(e) {}
+            }
 
-        function hasContent(node) {
-            var dirs = node.dirs || [];
-            var files = node.files || [];
-            return dirs.length > 0 || files.length > 0;
-        }
+            function doSearch() {
+                if (!searchQuery.value) { clearSearch(); return; }
+                isSearchMode.value = true;
+                loadDocuments();
+            }
 
-        function renderNode(node, parentEl, indent) {
-            if (node.dirs) {
-                node.dirs.forEach(function(dir) {
-                    var children = dir.children || {};
-                    var hasChildren = hasContent(children);
+            function clearSearch() {
+                searchQuery.value = '';
+                isSearchMode.value = false;
+            }
 
-                    var folderEl = document.createElement('div');
-                    folderEl.className = 'tree-item folder';
-                    if (indent > 0) folderEl.style.paddingLeft = (indent * 12) + 'px';
+            // Selection & Detail
+            async function selectDoc(doc) {
+                selectedDoc.value = doc;
+                selectedDocTags.value = (doc.tags || []).slice();
+                tagInput.value = '';
+                chunks.value = [];
+                chunkExpanded.value = {};
+                chunksLoading.value = true;
 
-                    var arrowHtml = hasChildren
-                        ? '<span class="tree-arrow">▶</span>'
-                        : '<span class="tree-arrow" style="visibility:hidden;">▶</span>';
-                    var folderIcon = hasChildren ? '📂' : '📁';
+                try {
+                    var r = await fetch('/api/kb/' + currentKbId.value + '/notes/chunks?path=' + encodeURIComponent(doc.path));
+                    var d = await r.json();
+                    if (d.ok) chunks.value = d.chunks || [];
+                } catch(e) {}
+                chunksLoading.value = false;
+            }
 
-                    folderEl.innerHTML =
-                        arrowHtml +
-                        '<span class="tree-icon">' + folderIcon + '</span>' +
-                        '<span class="tree-name">' + escapeHtml(dir.name) + '</span>';
+            function toggleChunk(i) {
+                chunkExpanded.value[i] = !chunkExpanded.value[i];
+            }
 
-                    if (hasChildren) {
-                        folderEl.onclick = function(e) {
-                            e.stopPropagation();
-                            var childrenEl = folderEl.nextElementSibling;
-                            if (childrenEl) {
-                                childrenEl.classList.toggle('collapsed');
-                                var isCollapsed = childrenEl.classList.contains('collapsed');
-                                folderEl.querySelector('.tree-arrow').textContent = isCollapsed ? '▶' : '▼';
-                                folderEl.querySelector('.tree-icon').textContent = isCollapsed ? '📁' : '📂';
-                            }
-                        };
+            // Tags
+            async function addTag() {
+                var tag = tagInput.value.trim();
+                if (!tag || !selectedDoc.value) return;
+                if (selectedDocTags.value.indexOf(tag) !== -1) { tagInput.value = ''; return; }
+                selectedDocTags.value.push(tag);
+                tagInput.value = '';
+                await saveTags();
+            }
+
+            async function removeTag(tag) {
+                if (!selectedDoc.value) return;
+                selectedDocTags.value = selectedDocTags.value.filter(function(t) { return t !== tag; });
+                await saveTags();
+            }
+
+            async function saveTags() {
+                if (!selectedDoc.value) return;
+                try {
+                    var r = await fetch('/api/kb/' + currentKbId.value + '/notes/tags', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ path: selectedDoc.value.path, tags: selectedDocTags.value })
+                    });
+                    var d = await r.json();
+                    if (d.ok) {
+                        selectedDoc.value.tags = selectedDocTags.value.slice();
+                        loadDocuments();
                     }
-
-                    parentEl.appendChild(folderEl);
-
-                    var childContainer = document.createElement('div');
-                    childContainer.className = 'tree-children collapsed';
-                    parentEl.appendChild(childContainer);
-
-                    renderNode(children, childContainer, indent + 1);
-                });
+                } catch(e) {}
             }
 
-            if (node.files) {
-                node.files.forEach(function(file) {
-                    var fileEl = document.createElement('div');
-                    fileEl.className = 'tree-item file';
-                    if (indent > 0) fileEl.style.paddingLeft = (indent * 12) + 'px';
-                    fileEl.innerHTML = '<span class="tree-icon">📄</span><span class="tree-name">' + escapeHtml(file.name) + '</span>';
-                    fileEl.onclick = function(e) {
-                        e.stopPropagation();
-                        document.querySelectorAll('.tree-item.file').forEach(function(el) {
-                            el.classList.remove('active');
-                        });
-                        fileEl.classList.add('active');
-                        loadNote(file.path);
-                    };
-                    parentEl.appendChild(fileEl);
-                });
+            // Upload
+            function triggerFileInput() {
+                var el = document.querySelector('#uploadDialog input[type="file"]');
+                if (el) el.click();
             }
-        }
 
-        renderNode(tree, container, 0);
-    }
-
-    function refreshTree() {
-        hideSearch();
-        loadFileTree();
-    }
-
-    // ========== 搜索 ==========
-    function hideSearch() {
-        document.getElementById('searchResults').classList.add('hidden');
-        document.getElementById('fileTree').classList.remove('hidden');
-        document.getElementById('searchInput').value = '';
-    }
-
-    async function doSearch() {
-        var query = document.getElementById('searchInput').value.trim();
-        if (!query) return;
-        if (!currentKbId) {
-            alert('请先选择笔记库');
-            return;
-        }
-
-        currentSearchQuery = query;
-        var resultsEl = document.getElementById('searchResults');
-        var treeEl = document.getElementById('fileTree');
-        resultsEl.innerHTML = '<div class="tree-empty">搜索中...</div>';
-        resultsEl.classList.remove('hidden');
-        treeEl.classList.add('hidden');
-
-        try {
-            var r = await fetch('/api/ai/search?kbId=' + currentKbId + '&query=' + encodeURIComponent(query) + '&limit=20');
-            var d = await r.json();
-            if (d.ok && d.results && d.results.length > 0) {
-                resultsEl.innerHTML =
-                    '<div style="padding:4px 10px 8px;font-size:12px;color:var(--text-muted);display:flex;justify-content:space-between;align-items:center;">' +
-                    '找到 ' + d.results.length + ' 条结果<span style="cursor:pointer;color:var(--primary);" onclick="hideSearch()">← 返回文件树</span></div>' +
-                    d.results.map(function(item) {
-                        var snippet = item.content ? item.content.substring(0, 150) : '';
-                        return '<div class="search-result-item" data-path="' + escapeHtml(item.filePath) + '" onclick="searchResultClick(this, \'' + escapeHtml(item.filePath) + '\')">' +
-                            '<div class="search-result-file">📄 ' + escapeHtml(item.filePath) + '<span class="search-result-score">' + Math.round(item.score * 100) + '%</span></div>' +
-                            '<div class="search-result-snippet">' + escapeHtml(snippet) + '</div>' +
-                            '</div>';
-                    }).join('');
-            } else {
-                resultsEl.innerHTML =
-                    '<div style="padding:4px 10px 8px;font-size:12px;color:var(--text-muted);display:flex;justify-content:space-between;align-items:center;">' +
-                    '未找到匹配内容<span style="cursor:pointer;color:var(--primary);" onclick="hideSearch()">← 返回文件树</span></div>';
+            function openUpload() {
+                uploadOpen.value = true;
+                uploadItems.value = [];
+                dragOver.value = false;
             }
-        } catch(e) {
-            resultsEl.innerHTML = '<div class="tree-empty">搜索失败: ' + escapeHtml(e.message) + '</div>';
-        }
-    }
 
-    function searchResultClick(el, filePath) {
-        document.querySelectorAll('.search-result-item').forEach(function(i) { i.classList.remove('active'); });
-        el.classList.add('active');
-        loadNote(filePath);
-    }
-
-    // ========== 笔记内容 ==========
-    async function loadNote(path) {
-        if (!currentKbId || !path) return;
-        currentFilePath = path;
-
-        var titleEl = document.getElementById('previewTitle');
-        var pathEl = document.getElementById('previewPath');
-        var contentEl = document.getElementById('previewContent');
-
-        titleEl.textContent = '加载中...';
-        pathEl.textContent = path;
-        contentEl.innerHTML = '<div class="empty-state"><div class="empty-icon">⏳</div><div class="empty-title">加载中...</div></div>';
-
-        try {
-            var r = await fetch('/v3/api/notes/read?kbId=' + currentKbId + '&path=' + encodeURIComponent(path));
-            var d = await r.json();
-            if (d.ok && d.content) {
-                var fileName = path.split('/').pop().replace('.md', '');
-                titleEl.textContent = fileName;
-                pathEl.textContent = path;
-                contentEl.innerHTML = parseMarkdown(d.content);
-                // 渲染公式
-                renderMath(contentEl);
-            } else {
-                contentEl.innerHTML = '<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-title">读取失败</div><div class="empty-desc">' + (d.error || '未知错误') + '</div></div>';
+            function closeUpload() {
+                uploadOpen.value = false;
+                uploadItems.value = [];
             }
-        } catch(e) {
-            contentEl.innerHTML = '<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-title">读取失败</div><div class="empty-desc">' + e.message + '</div></div>';
-        }
-    }
 
-    function refreshCurrentNote() {
-        if (currentFilePath) {
-            loadNote(currentFilePath);
-        }
-    }
-
-    // ========== Markdown 解析 ==========
-    function parseMarkdown(text) {
-        if (!text) return '';
-        try {
-            return marked.parse(text);
-        } catch (e) {
-            return '<pre>' + escapeHtml(text) + '</pre>';
-        }
-    }
-
-    // ========== 公式渲染 ==========
-    function renderMath(el) {
-        if (!el) return;
-        // KaTeX 可能还在加载，等待
-        if (window.__katexLoaded || typeof renderMathInElement !== 'undefined') {
-            try {
-                renderMathInElement(el, {
-                    delimiters: [
-                        {left: '$$', right: '$$', display: true},
-                        {left: '$', right: '$', display: false},
-                        {left: '\\[', right: '\\]', display: true},
-                        {left: '\\(', right: '\\)', display: false}
-                    ],
-                    throwOnError: false
-                });
-            } catch(e) {
-                console.debug('KaTeX 渲染失败:', e);
+            function onDrop(e) {
+                dragOver.value = false;
+                if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                    handleFiles(e.dataTransfer.files);
+                }
             }
-        } else {
-            // 延迟重试
-            setTimeout(function() { renderMath(el); }, 500);
-        }
-    }
 
-    // ========== 工具函数 ==========
-    function escapeHtml(text) {
-        if (!text) return '';
-        var d = document.createElement('div');
-        d.textContent = String(text);
-        return d.innerHTML;
-    }
+            function onFileSelected(e) {
+                if (e.target.files && e.target.files.length > 0) {
+                    handleFiles(e.target.files);
+                    e.target.value = '';
+                }
+            }
+
+            function handleFiles(files) {
+                for (var i = 0; i < files.length; i++) {
+                    (function(file) {
+                        var ext = getExtension(file.name);
+                        var idx = uploadItems.value.length;
+                        uploadItems.value.push({ name: file.name, ext: ext, status: 'uploading', statusText: '上传中...' });
+                        uploadFile(file, idx);
+                    })(files[i]);
+                }
+            }
+
+            async function uploadFile(file, index) {
+                if (!currentKbId.value) return;
+                var formData = new FormData();
+                formData.append('file', file);
+                try {
+                    var r = await fetch('/api/kb/' + currentKbId.value + '/notes/upload', { method: 'POST', body: formData });
+                    var d = await r.json();
+                    if (d.ok) {
+                        uploadItems.value[index].status = 'done';
+                        uploadItems.value[index].statusText = '上传成功';
+                    } else {
+                        uploadItems.value[index].status = 'error';
+                        uploadItems.value[index].statusText = (d.error || '失败');
+                    }
+                    loadDocuments();
+                } catch(e) {
+                    uploadItems.value[index].status = 'error';
+                    uploadItems.value[index].statusText = e.message;
+                }
+            }
+
+            // Delete
+            async function deleteDoc(doc) {
+                if (!confirm('确认删除「' + doc.path + '」？')) return;
+                try {
+                    var r = await fetch('/api/kb/' + currentKbId.value + '/notes/delete?path=' + encodeURIComponent(doc.path), { method: 'POST' });
+                    var d = await r.json();
+                    if (d.ok) {
+                        if (selectedDoc.value && selectedDoc.value.path === doc.path) selectedDoc.value = null;
+                        loadDocuments();
+                    } else {
+                        alert('删除失败: ' + (d.error || '未知错误'));
+                    }
+                } catch(e) {
+                    alert('删除失败: ' + e.message);
+                }
+            }
+
+            // Utils
+            function fileIcon(type) {
+                var map = { 'pdf': '\uD83D\uDCD5', 'docx': '\uD83D\uDCD8', 'doc': '\uD83D\uDCD8', 'xlsx': '\uD83D\uDCCA', 'xls': '\uD83D\uDCCA', 'pptx': '\uD83D\uDCBD', 'ppt': '\uD83D\uDCBD', 'txt': '\uD83D\uDCC4', 'html': '\uD83C\uDF10', 'htm': '\uD83C\uDF10', 'xml': '\uD83D\uDCCB', 'csv': '\uD83D\uDCCB', 'rtf': '\uD83D\uDCC4', 'md': '\uD83D\uDCDD' };
+                return map[(type || '').toLowerCase()] || '\uD83D\uDCC4';
+            }
+
+            function getExtension(name) {
+                if (!name) return '';
+                var idx = name.lastIndexOf('.');
+                return idx >= 0 ? name.substring(idx + 1).toLowerCase() : '';
+            }
+
+            function formatSize(bytes) {
+                if (!bytes || bytes === 0) return '-';
+                if (bytes < 1024) return bytes + ' B';
+                if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+                return (bytes / 1048576).toFixed(1) + ' MB';
+            }
+
+            function statusLabel(status) {
+                var map = { 'ready': '就绪', 'parsing': '解析中', 'indexing': '索引中', 'error': '错误' };
+                return map[status] || status || '就绪';
+            }
+
+            onMounted(init);
+
+            return {
+                kbList, currentKbId, documents, searchQuery, isSearchMode, hasKb,
+                filteredDocs, displayedDocs, totalChunks, tagCount,
+                selectedDoc, selectedDocTags, tagInput, chunks, chunksLoading, chunkExpanded,
+                uploadOpen, dragOver, uploadItems,
+                onKbChange, loadDocuments, doSearch, clearSearch,
+                selectDoc, toggleChunk,
+                addTag, removeTag, saveTags,
+                openUpload, closeUpload, triggerFileInput, onDrop, onFileSelected,
+                deleteDoc,
+                fileIcon, formatSize, statusLabel
+            };
+        }
+    }).mount('#kbApp');
     </script>
 </body>
 </html>

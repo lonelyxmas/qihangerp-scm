@@ -3,6 +3,7 @@ package cn.qihang.ai.assistant.service.db;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import cn.qihang.ai.assistant.entity.KbEmbeddingEntity;
 import cn.qihang.ai.assistant.mapper.KbEmbeddingMapper;
+import java.util.List;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -46,5 +47,21 @@ public class KbEmbeddingDbService extends ServiceImpl<KbEmbeddingMapper, KbEmbed
                 .eq(KbEmbeddingEntity::getFilePath, filePath)
                 .eq(KbEmbeddingEntity::getChunkIndex, chunkIndex)
                 .one();
+    }
+
+    public List<KbEmbeddingEntity> listByKbAndPath(Long kbId, String filePath) {
+        return lambdaQuery()
+                .eq(KbEmbeddingEntity::getKbId, kbId)
+                .eq(KbEmbeddingEntity::getFilePath, filePath)
+                .orderByAsc(KbEmbeddingEntity::getChunkIndex)
+                .list();
+    }
+
+    public int countByKbAndPath(Long kbId, String filePath) {
+        long count = lambdaQuery()
+                .eq(KbEmbeddingEntity::getKbId, kbId)
+                .eq(KbEmbeddingEntity::getFilePath, filePath)
+                .count();
+        return (int) count;
     }
 }
