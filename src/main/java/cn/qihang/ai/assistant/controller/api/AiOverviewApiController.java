@@ -98,6 +98,47 @@ public class AiOverviewApiController {
         return ResponseEntity.ok(result);
     }
 
+    @GetMapping("/global-search")
+    public ResponseEntity<Map<String, Object>> globalSearch(@RequestParam String query,
+                                                            @RequestParam(defaultValue = "15") int limit) {
+        Map<String, Object> result = new HashMap<>();
+        try {
+            List<NoteIndexService.GlobalSearchResult> searchResults = noteIndexService.globalSearch(query, limit);
+
+            // 获取 KB 名称映射
+            Map<Long, String> kbNameMap = new HashMap<>();
+            for (NoteIndexService.GlobalSearchResult r : searchResults) {
+                if (!kbNameMap.containsKey(r.kbId())) {
+                    KbBaseEntity kb = kbService.getById(r.kbId());
+                    kbNameMap.put(r.kbId(), kb != null ? kb.getName() : "未知知识库");
+                }
+            }
+
+            List<Map<String, Object>> results = searchResults.stream()
+                    .map(r -> {
+                        Map<String, Object> item = new HashMap<>();
+                        item.put("kbId", r.kbId());
+                        item.put("kbName", kbNameMap.get(r.kbId()));
+                        item.put("filePath", r.filePath());
+                        item.put("pathContext", r.pathContext());
+                        item.put("content", r.content());
+                        item.put("score", r.score());
+                        return item;
+                    })
+                    .collect(Collectors.toList());
+
+            result.put("ok", true);
+            result.put("results", results);
+            result.put("total", results.size());
+
+        } catch (Exception e) {
+            log.error("全局搜索失败", e);
+            result.put("ok", false);
+            result.put("error", e.getMessage());
+        }
+        return ResponseEntity.ok(result);
+    }
+
     @GetMapping("/tags")
     public ResponseEntity<Map<String, Object>> getTags(@RequestParam Long kbId) {
         Map<String, Object> result = new HashMap<>();

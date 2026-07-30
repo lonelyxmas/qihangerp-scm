@@ -1,6 +1,7 @@
 package cn.qihang.ai.assistant.controller.v3;
 
 import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 
@@ -8,8 +9,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 @RequestMapping("/")
 public class AiController {
 
-    @GetMapping("/insights")
-    public String insightsPage() {
-        return "redirect:/";
+    @GetMapping("/so")
+    public String insightsPage(Model model) {
+        model.addAttribute("currentNav", "so");
+        return "3.0/insights";
     }
 }

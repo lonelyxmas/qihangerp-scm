@@ -252,6 +252,68 @@ public class NoteIndexService {
         return new IndexStats(fileCount, chunkCount);
     }
 
+    /**
+     * 全局搜索：跨所有知识库检索，返回结果包含 kbId。
+     */
+    public List<GlobalSearchResult> globalSearch(String query, int limit) {
+        if (!isAvailable()) {
+            throw new IllegalStateException("Embedding 服务不可用");
+        }
+
+        float[] queryVector = embeddingService.embed(query);
+        if (queryVector == null) {
+            throw new RuntimeException("生成查询向量失败");
+        }
+
+        List<KbEmbeddingEntity> allEntities = noteEmbeddingDbService.lambdaQuery().list();
+        if (allEntities.isEmpty()) {
+            return List.of();
+        }
+
+        List<ScoredChunk> scored = new ArrayList<>();
+        for (KbEmbeddingEntity entity : allEntities) {
+            float[] vec = bytesToFloat(Base64.getDecoder().decode(entity.getEmbedding()));
+            float score = cosineSimilarity(queryVector, vec);
+            if (score >= SIMILARITY_THRESHOLD) {
+                scored.add(new ScoredChunk(entity, score));
+            }
+        }
+
+        scored.sort((a, b) -> Float.compare(b.score, a.score));
+
+        Map<String, Integer> perFileCount = new HashMap<>();
+        List<GlobalSearchResult> results = new ArrayList<>();
+
+        for (ScoredChunk chunk : scored) {
+            String dedupKey = chunk.entity.getKbId() + "|" + chunk.entity.getFilePath();
+            int count = perFileCount.getOrDefault(dedupKey, 0);
+            if (count >= 1) continue;
+
+            perFileCount.put(dedupKey, count + 1);
+            results.add(new GlobalSearchResult(
+                    chunk.entity.getKbId(),
+                    chunk.entity.getFilePath(),
+                    chunk.entity.getPathContext(),
+                    chunk.entity.getContent(),
+                    chunk.score,
+                    chunk.entity.getChunkIndex()
+            ));
+
+            if (results.size() >= limit) break;
+        }
+
+        return results;
+    }
+
+    public record GlobalSearchResult(
+            Long kbId,
+            String filePath,
+            String pathContext,
+            String content,
+            float score,
+            int chunkIndex
+    ) {}
+
     private float cosineSimilarity(float[] a, float[] b) {
         if (a.length != b.length) return 0;
         double dot = 0, normA = 0, normB = 0;
