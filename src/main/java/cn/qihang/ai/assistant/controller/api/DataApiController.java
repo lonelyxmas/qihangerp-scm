@@ -12,9 +12,7 @@ import cn.qihang.ai.assistant.service.LlmService;
 import cn.qihang.ai.assistant.entity.SysUser;
 import cn.qihang.ai.assistant.security.LoginUser;
 import cn.qihang.ai.assistant.security.TokenService;
-import cn.qihang.ai.assistant.security.common.SecurityUtils;
-import cn.qihang.ai.assistant.service.ConfigService;
-import cn.qihang.ai.assistant.util.FileUtil;
+
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.springframework.web.context.request.RequestContextHolder;
@@ -24,7 +22,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.nio.file.Path;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -41,7 +38,6 @@ public class DataApiController {
     private final DataModuleService moduleService;
     private final DataSetImportService importService;
     private final LlmService llmService;
-    private final ConfigService configService;
     private final AiAnalysisCache analysisCache;
     private final TokenService tokenService;
 
@@ -49,14 +45,12 @@ public class DataApiController {
                              DataModuleService moduleService,
                              DataSetImportService importService,
                              LlmService llmService,
-                             ConfigService configService,
                              AiAnalysisCache analysisCache,
                              TokenService tokenService) {
         this.dataSetService = dataSetService;
         this.moduleService = moduleService;
         this.importService = importService;
         this.llmService = llmService;
-        this.configService = configService;
         this.analysisCache = analysisCache;
         this.tokenService = tokenService;
     }
@@ -645,115 +639,6 @@ public class DataApiController {
         }
 
         return "[]";
-    }
-
-    @GetMapping("/directories")
-    public ResponseEntity<Map<String, Object>> getDirectories(@RequestParam(required = false) Long kbId) {
-        try {
-            String notesDir = configService.getNotesDir(kbId);
-            Path baseDir = java.nio.file.Paths.get(notesDir);
-            List<Map<String, String>> result = new ArrayList<>();
-            
-            if (java.nio.file.Files.exists(baseDir)) {
-                try (var stream = java.nio.file.Files.list(baseDir)) {
-                    stream.filter(p -> java.nio.file.Files.isDirectory(p))
-                        .filter(p -> !p.getFileName().toString().startsWith("."))
-                        .filter(p -> !p.getFileName().toString().equals("AI"))
-                        .sorted()
-                        .forEach(p -> {
-                            result.add(Map.of(
-                                "name", p.getFileName().toString(),
-                                "path", p.getFileName().toString()
-                            ));
-                        });
-                }
-            }
-            
-            return ResponseEntity.ok(Map.of("ok", true, "data", result));
-        } catch (Exception e) {
-            return ResponseEntity.ok(Map.of("ok", false, "error", e.getMessage()));
-        }
-    }
-
-    @PostMapping("/datasets/{id}/export")
-    public ResponseEntity<Map<String, Object>> exportToDirectory(
-            @PathVariable String id,
-            @RequestBody Map<String, Object> body) {
-        try {
-            DataSet ds = dataSetService.getDataset(id);
-            if (ds == null) {
-                return ResponseEntity.ok(Map.of("ok", false, "error", "数据集不存在"));
-            }
-
-            String dir = (String) body.get("dir");
-            if (dir == null || dir.isEmpty()) {
-                return ResponseEntity.ok(Map.of("ok", false, "error", "请选择目标目录"));
-            }
-
-            List<Map<String, Object>> allRecords = dataSetService.loadRecords(id);
-
-            @SuppressWarnings("unchecked")
-            List<String> recordIds = (List<String>) body.get("recordIds");
-            List<Map<String, Object>> records;
-            if (recordIds != null && !recordIds.isEmpty()) {
-                Set<String> idSet = new HashSet<>(recordIds);
-                records = allRecords.stream()
-                    .filter(r -> idSet.contains(r.get("_id")))
-                    .toList();
-            } else {
-                records = allRecords;
-            }
-
-            if (records.isEmpty()) {
-                return ResponseEntity.ok(Map.of("ok", false, "error", "没有可导出的数据"));
-            }
-
-            String customPrompt = (String) body.get("prompt");
-
-            String notesDir = configService.getNotesDir(null);
-            Path dataDir = java.nio.file.Paths.get(notesDir).resolve(dir).resolve("data");
-            java.nio.file.Files.createDirectories(dataDir);
-            
-            String sampleData = readSampleData(dataDir);
-
-            String prompt = buildExportPrompt(records, ds, dir, sampleData, customPrompt);
-
-            String rawResponse = doAiChat("你是一个数据格式转换助手。严格按照现有格式和JSON结构输出。", prompt);
-            String jsonData = extractJsonFromResponse(rawResponse);
-
-            Object parsed = mapper.readValue(jsonData, Object.class);
-            String fileName = "data_export_" + System.currentTimeMillis() + ".json";
-            Path filePath = dataDir.resolve(fileName);
-            FileUtil.writeJson(filePath, parsed);
-
-            return ResponseEntity.ok(Map.of(
-                "ok", true,
-                "count", records.size(),
-                "file", fileName,
-                "directory", dir,
-                "message", "成功导出 " + records.size() + " 条记录到 " + dir
-            ));
-
-        } catch (Exception e) {
-            return ResponseEntity.ok(Map.of("ok", false, "error", "导出失败: " + e.getMessage()));
-        }
-    }
-
-    private String readSampleData(Path dataDir) {
-        StringBuilder sb = new StringBuilder();
-        if (java.nio.file.Files.exists(dataDir)) {
-            try (var files = java.nio.file.Files.list(dataDir)) {
-                files.filter(p -> p.toString().endsWith(".json"))
-                    .limit(2)
-                    .forEach(p -> {
-                        String content = FileUtil.readText(p);
-                        sb.append("--- ").append(p.getFileName()).append(" ---\n");
-                        sb.append(content, 0, Math.min(content.length(), 2000));
-                        sb.append("\n\n");
-                    });
-            } catch (Exception e) {}
-        }
-        return sb.toString();
     }
 
     private String buildExportPrompt(List<Map<String, Object>> records, DataSet ds,

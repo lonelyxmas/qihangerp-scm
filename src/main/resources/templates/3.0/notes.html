@@ -176,7 +176,7 @@
         var kbList = /*[[${kbList}]]*/ [];
         if (kbList && kbList.length > 0) {
             currentKbList = kbList.map(function(kb) {
-                return { id: kb.id, name: kb.name, notesDir: kb.notesDir };
+                return { id: kb.id, name: kb.name };
             });
         }
         initPage();
@@ -228,7 +228,7 @@
         currentKbId = parseInt(kbId);
         var kb = currentKbList.find(function(k) { return k.id === currentKbId; });
         if (kb) {
-            document.getElementById('kbPath').textContent = kb.notesDir || '';
+            document.getElementById('kbPath').textContent = '';
         }
         hideSearch();
         // 清空预览

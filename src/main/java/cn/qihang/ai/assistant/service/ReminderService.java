@@ -1,16 +1,12 @@
 package cn.qihang.ai.assistant.service;
 
-import cn.qihang.ai.assistant.config.AppConfig;
-import cn.qihang.ai.assistant.model.ReminderData;
 import cn.qihang.ai.assistant.model.ReminderData.Reminder;
-import cn.qihang.ai.assistant.model.ReminderData.Root;
 import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import javax.sql.DataSource;
-import java.nio.file.Path;
 import java.sql.*;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -175,10 +171,6 @@ public class ReminderService {
         return getAllRemindersFromDb();
     }
 
-    public List<Reminder> getAllReminders(String notesDir) {
-        return getAllRemindersFromDb();
-    }
-
     public List<Reminder> getEnabledReminders() {
         return getAllRemindersFromDb().stream()
                 .filter(r -> r.enabled)
@@ -186,11 +178,6 @@ public class ReminderService {
     }
 
     public Reminder addReminder(String name, String message, String type, String time,
-                                 String date, String dayOfWeek, String dayOfMonth, String monthDay) {
-        return addReminderInternal(name, message, type, time, date, dayOfWeek, dayOfMonth, monthDay, null);
-    }
-
-    public Reminder addReminder(String notesDir, String name, String message, String type, String time,
                                  String date, String dayOfWeek, String dayOfMonth, String monthDay) {
         return addReminderInternal(name, message, type, time, date, dayOfWeek, dayOfMonth, monthDay, null);
     }
@@ -231,12 +218,6 @@ public class ReminderService {
     }
 
     public boolean updateReminder(String id, String name, String message, String type,
-                                    String time, String date, String dayOfWeek, String dayOfMonth,
-                                    String monthDay, Boolean enabled) {
-        return updateReminderInternal(id, name, message, type, time, date, dayOfWeek, dayOfMonth, monthDay, enabled, null);
-    }
-
-    public boolean updateReminder(String notesDir, String id, String name, String message, String type,
                                     String time, String date, String dayOfWeek, String dayOfMonth,
                                     String monthDay, Boolean enabled) {
         return updateReminderInternal(id, name, message, type, time, date, dayOfWeek, dayOfMonth, monthDay, enabled, null);
@@ -321,10 +302,6 @@ public class ReminderService {
         return deleteReminderInternal(id, null);
     }
 
-    public boolean deleteReminder(String notesDir, String id) {
-        return deleteReminderInternal(id, null);
-    }
-
     public boolean deleteReminder(String id, Long kbId) {
         return deleteReminderInternal(id, kbId);
     }
@@ -340,10 +317,6 @@ public class ReminderService {
     }
 
     public boolean toggleReminder(String id) {
-        return toggleReminderInternal(id, null);
-    }
-
-    public boolean toggleReminder(String notesDir, String id) {
         return toggleReminderInternal(id, null);
     }
 

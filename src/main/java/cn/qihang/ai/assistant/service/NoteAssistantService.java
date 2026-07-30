@@ -96,8 +96,8 @@ public class NoteAssistantService {
                 fullMessage = baseMessage;
             }
 
-            log.info("[编排] 上下文构建完成，总消息长度={}, 笔记库路径={}, 记忆已注入={}",
-                    fullMessage.length(), context.notesDir() != null ? context.notesDir() : "无",
+            log.info("[编排] 上下文构建完成，总消息长度={}, 记忆已注入={}",
+                    fullMessage.length(),
                     memoryContext != null && !memoryContext.isEmpty());
 
             log.info("[编排] 用户: {} (session={}, kbId={}, model={})", userMessage, sessionId, kbId,
@@ -171,8 +171,8 @@ public class NoteAssistantService {
             fullMessageBuilder.append(baseMessage);
             String fullMessage = fullMessageBuilder.toString();
 
-            log.info("[编排] 上下文构建完成，总消息长度={}, 笔记库路径={}, 记忆已注入={}",
-                    fullMessage.length(), context.notesDir() != null ? context.notesDir() : "无",
+            log.info("[编排] 上下文构建完成，总消息长度={}, 记忆已注入={}",
+                    fullMessage.length(),
                     memoryContext != null && !memoryContext.isEmpty());
 
             log.info("[编排] 用户: {} (session={}, kbId={}, model={})", userMessage, sessionId, kbId,

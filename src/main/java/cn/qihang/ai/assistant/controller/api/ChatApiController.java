@@ -67,7 +67,6 @@ public class ChatApiController {
             Map<String, Object> item = new LinkedHashMap<>();
             item.put("id", kb.getId());
             item.put("name", kb.getName());
-            item.put("notesDir", kb.getNotesDir());
             result.add(item);
         }
         return ResponseEntity.ok(Map.of("ok", true, "data", result));

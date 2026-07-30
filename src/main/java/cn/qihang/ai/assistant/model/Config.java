@@ -10,7 +10,6 @@ import java.util.HashMap;
 @JsonInclude(JsonInclude.Include.ALWAYS)
 public class Config {
     private Map<String, String> keyLabels = new HashMap<>();
-    private String notesDir;
     private String feishuWebhookUrl;
     private String feishuAppId;
     private String feishuAppSecret;
@@ -28,9 +27,8 @@ public class Config {
 
     public Config() {}
 
-    public static Config defaultConfig(String webhookUrl, String notesDir) {
+    public static Config defaultConfig(String webhookUrl) {
         Config c = new Config();
-        c.notesDir = notesDir;
         c.feishuWebhookUrl = webhookUrl;
         c.logFile = "assistant_log.json";
         return c;
@@ -38,8 +36,6 @@ public class Config {
 
     public Map<String, String> getKeyLabels() { return keyLabels; }
     public void setKeyLabels(Map<String, String> keyLabels) { this.keyLabels = keyLabels; }
-    public String getNotesDir() { return notesDir; }
-    public void setNotesDir(String notesDir) { this.notesDir = notesDir; }
     public String getFeishuWebhookUrl() { return feishuWebhookUrl; }
     public void setFeishuWebhookUrl(String feishuWebhookUrl) { this.feishuWebhookUrl = feishuWebhookUrl; }
     public String getFeishuAppId() { return feishuAppId; }

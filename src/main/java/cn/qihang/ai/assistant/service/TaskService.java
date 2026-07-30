@@ -3,14 +3,11 @@ package cn.qihang.ai.assistant.service;
 import cn.qihang.ai.assistant.model.TaskData.*;
 import cn.qihang.ai.assistant.service.db.ActivityLogDbService;
 import cn.qihang.ai.assistant.service.db.NotificationDbService;
-import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import javax.sql.DataSource;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.sql.*;
 import java.util.*;
 
@@ -19,15 +16,13 @@ public class TaskService {
 
     private static final Logger log = LoggerFactory.getLogger(TaskService.class);
 
-    private final ConfigService configService;
     private final DataSource dataSource;
     private final ActivityLogDbService activityLogDbService;
     private final NotificationDbService notificationDbService;
 
-    public TaskService(ConfigService configService, DataSource dataSource,
+    public TaskService(DataSource dataSource,
                        ActivityLogDbService activityLogDbService,
                        NotificationDbService notificationDbService) {
-        this.configService = configService;
         this.dataSource = dataSource;
         this.activityLogDbService = activityLogDbService;
         this.notificationDbService = notificationDbService;
@@ -133,15 +128,7 @@ public class TaskService {
         return getAllTasksFromDb();
     }
 
-    public List<TaskItem> getAllTasks(String notesDir) {
-        return getAllTasksFromDb();
-    }
-
     public TaskItem addTask(String title, String description, String priority, String dueDate) {
-        return addTaskInternal(title, description, priority, dueDate, null);
-    }
-
-    public TaskItem addTask(String notesDir, String title, String description, String priority, String dueDate) {
         return addTaskInternal(title, description, priority, dueDate, null);
     }
 
@@ -171,11 +158,6 @@ public class TaskService {
         return updateTaskInternal(id, title, description, status, priority, dueDate, null);
     }
 
-    public TaskItem updateTask(String notesDir, String id, String title, String description, String status,
-                                String priority, String dueDate) {
-        return updateTaskInternal(id, title, description, status, priority, dueDate, null);
-    }
-
     public TaskItem updateTask(String id, String title, String description, String status,
                                 String priority, String dueDate, Long kbId) {
         return updateTaskInternal(id, title, description, status, priority, dueDate, kbId);
@@ -199,10 +181,6 @@ public class TaskService {
     }
 
     public boolean deleteTask(String id) {
-        return deleteTaskInternal(id, null);
-    }
-
-    public boolean deleteTask(String notesDir, String id) {
         return deleteTaskInternal(id, null);
     }
 

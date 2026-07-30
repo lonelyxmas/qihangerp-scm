@@ -1,9 +1,11 @@
 package cn.qihang.ai.assistant.controller;
 
+import cn.qihang.ai.assistant.entity.KbBaseEntity;
 import cn.qihang.ai.assistant.entity.LlmProfileEntity;
 import cn.qihang.ai.assistant.model.Config;
 import cn.qihang.ai.assistant.service.ConfigService;
 import cn.qihang.ai.assistant.service.FeishuService;
+import cn.qihang.ai.assistant.service.KbBaseService;
 import cn.qihang.ai.assistant.service.LogService;
 import cn.qihang.ai.assistant.service.LlmConfigResolver;
 import cn.qihang.ai.assistant.service.OllamaEmbeddingService;
@@ -24,13 +26,15 @@ public class ApiConfigController {
     private final LlmProfileDbService llmProfileDbService;
     private final LlmConfigResolver llmConfigResolver;
     private final SessionService sessionService;
+    private final KbBaseService kbBaseService;
 
     public ApiConfigController(ConfigService configService, FeishuService feishuService,
                                 LogService logService,
                                 OllamaEmbeddingService ollamaEmbeddingService,
                                 LlmProfileDbService llmProfileDbService,
                                 LlmConfigResolver llmConfigResolver,
-                                SessionService sessionService) {
+                                SessionService sessionService,
+                                KbBaseService kbBaseService) {
         this.configService = configService;
         this.feishuService = feishuService;
         this.logService = logService;
@@ -38,6 +42,7 @@ public class ApiConfigController {
         this.llmProfileDbService = llmProfileDbService;
         this.llmConfigResolver = llmConfigResolver;
         this.sessionService = sessionService;
+        this.kbBaseService = kbBaseService;
     }
 
     @GetMapping("/api/config")
@@ -54,19 +59,6 @@ public class ApiConfigController {
         configService.save(cfg);
         logService.add("配置更新", "成功", "飞书 Webhook URL 已更新");
         return Map.of("ok", true);
-    }
-
-    @PostMapping("/api/config/notesDir")
-    public Map<String, Object> updateNotesDir(@RequestParam String notesDir) {
-        try {
-            Config cfg = configService.load();
-            cfg.setNotesDir(notesDir);
-            configService.save(cfg);
-            logService.add("配置更新", "成功", "笔记库根目录已更新为: " + notesDir);
-            return Map.of("ok", true);
-        } catch (Exception e) {
-            return Map.of("ok", false, "error", e.getMessage());
-        }
     }
 
     @PostMapping("/api/config/feishu")
@@ -344,6 +336,34 @@ public class ApiConfigController {
         result.put("provider", config.getEmbeddingProvider());
         result.put("providerLabel", ollamaEmbeddingService.getProviderLabel());
         return result;
+    }
+
+    // ========== Knowledge Base endpoints ==========
+
+    @GetMapping("/api/config/knowledge-bases")
+    public Map<String, Object> listKnowledgeBases() {
+        List<KbBaseEntity> list = kbBaseService.getAll();
+        return Map.of("ok", true, "data", list);
+    }
+
+    @PostMapping("/api/config/knowledge-bases")
+    public Map<String, Object> saveKnowledgeBase(@RequestBody Map<String, Object> body) {
+        try {
+            kbBaseService.save(body);
+            return Map.of("ok", true);
+        } catch (Exception e) {
+            return Map.of("ok", false, "error", e.getMessage());
+        }
+    }
+
+    @DeleteMapping("/api/config/knowledge-bases/{id}")
+    public Map<String, Object> deleteKnowledgeBase(@PathVariable Long id) {
+        try {
+            kbBaseService.delete(id);
+            return Map.of("ok", true);
+        } catch (Exception e) {
+            return Map.of("ok", false, "error", e.getMessage());
+        }
     }
 
     @GetMapping("/api/logs")

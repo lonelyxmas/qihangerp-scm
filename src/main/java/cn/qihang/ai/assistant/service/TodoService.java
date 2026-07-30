@@ -1,31 +1,14 @@
 package cn.qihang.ai.assistant.service;
 
-import cn.qihang.ai.assistant.config.AppConfig;
-import cn.qihang.ai.assistant.model.Config;
-import cn.qihang.ai.assistant.util.FileUtil;
 import org.springframework.stereotype.Service;
 
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
 
 @Service
 public class TodoService {
 
-    private final AppConfig appConfig;
-    private final ConfigService configService;
-
-    public TodoService(AppConfig appConfig, ConfigService configService) {
-        this.appConfig = appConfig;
-        this.configService = configService;
-    }
-
-    private Path getNotesDir() {
-        return Paths.get(configService.getNotesDir());
-    }
-
-    private Path getRemindFile() {
-        return getNotesDir().resolve("代办.md");
+    public TodoService() {
     }
 
     public static class Todos {
@@ -37,61 +20,9 @@ public class TodoService {
     }
 
     public Todos parse() {
-        Todos todos = new Todos();
-
-        // Read 代办.md
-        Path remindPath = getRemindFile();
-        if (FileUtil.exists(remindPath)) {
-            String content = FileUtil.readText(remindPath);
-            String section = null;
-            for (String line : content.split("\n")) {
-                String lower = line.toLowerCase();
-                if (line.contains("高优先级") || line.contains("🔴") || lower.contains("### 高")) section = "high";
-                else if (line.contains("中优先级") || line.contains("🟡") || lower.contains("### 中")) section = "mid";
-                else if (line.contains("低优先级") || line.contains("随缘") || line.contains("🟢")) section = "low";
-                else if (line.contains("每日循环")) section = "daily";
-                else if (line.contains("临时提醒")) section = "temp";
-
-                if (section != null && line.strip().startsWith("- [ ]")) {
-                    String text = line.strip().replace("- [ ]", "").strip();
-                    if (!text.isEmpty()) {
-                        switch (section) {
-                            case "high" -> todos.high.add(text);
-                            case "mid" -> todos.mid.add(text);
-                            case "low" -> todos.low.add(text);
-                            case "daily" -> todos.daily.add(text);
-                            case "temp" -> todos.temp.add(text);
-                        }
-                    }
-                }
-            }
-        }
-
-        return todos;
+        return new Todos();
     }
 
     public void clearTempReminders() {
-        Path remindPath = getRemindFile();
-        if (!FileUtil.exists(remindPath)) return;
-        String content = FileUtil.readText(remindPath);
-        StringBuilder out = new StringBuilder();
-        boolean inTemp = false;
-        for (String line : content.split("\n", -1)) {
-            if (line.contains("临时提醒")) {
-                inTemp = true;
-                out.append(line).append("\n");
-                continue;
-            }
-            if (inTemp) {
-                if (line.strip().startsWith("- [")) continue;
-                if (line.isBlank() || line.contains("（日报推送后自动清空")) {
-                    out.append(line).append("\n");
-                    continue;
-                }
-                inTemp = false;
-            }
-            out.append(line).append("\n");
-        }
-        FileUtil.writeText(remindPath, out.toString());
     }
 }

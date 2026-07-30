@@ -1,6 +1,7 @@
 package cn.qihang.ai.assistant.controller;
 
 import cn.qihang.ai.assistant.entity.LlmProfileEntity;
+import cn.qihang.ai.assistant.entity.KbBaseEntity;
 import cn.qihang.ai.assistant.service.*;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -17,16 +18,19 @@ public class ConfigController {
     private final FeishuService feishuService;
     private final OllamaEmbeddingService ollamaEmbeddingService;
     private final LlmConfigResolver llmConfigResolver;
+    private final KbBaseService kbBaseService;
 
     public ConfigController(ConfigService configService, LogService logService,
                              FeishuService feishuService,
                              OllamaEmbeddingService ollamaEmbeddingService,
-                             LlmConfigResolver llmConfigResolver) {
+                             LlmConfigResolver llmConfigResolver,
+                             KbBaseService kbBaseService) {
         this.configService = configService;
         this.logService = logService;
         this.feishuService = feishuService;
         this.ollamaEmbeddingService = ollamaEmbeddingService;
         this.llmConfigResolver = llmConfigResolver;
+        this.kbBaseService = kbBaseService;
     }
 
     @GetMapping
@@ -39,6 +43,7 @@ public class ConfigController {
         model.addAttribute("config", configService.load());
         List<LlmProfileEntity> allProfiles = llmConfigResolver.getAllProfiles();
         model.addAttribute("llm_models", allProfiles);
+        model.addAttribute("kbList", kbBaseService.getAll());
         model.addAttribute("currentNav", "config");
         return "3.0/config";
     }

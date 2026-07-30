@@ -12,8 +12,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.List;
 import java.util.Map;
 
@@ -27,7 +25,6 @@ public class ReportService {
     private final FeishuService feishuService;
     private final LogService logService;
     private final AgentAnalysisService agentAnalysisService;
-    private final ConfigService configService;
     private final KbBaseService kbService;
     private final AiAnalysisDbService aiAnalysisDbService;
     private final DataSetService dataSetService;
@@ -40,7 +37,6 @@ public class ReportService {
                           FeishuService feishuService,
                           LogService logService,
                           AgentAnalysisService agentAnalysisService,
-                          ConfigService configService,
                           KbBaseService kbService,
                           AiAnalysisDbService aiAnalysisDbService,
                           DataSetService dataSetService) {
@@ -48,7 +44,6 @@ public class ReportService {
         this.feishuService = feishuService;
         this.logService = logService;
         this.agentAnalysisService = agentAnalysisService;
-        this.configService = configService;
         this.kbService = kbService;
         this.aiAnalysisDbService = aiAnalysisDbService;
         this.dataSetService = dataSetService;
@@ -95,9 +90,6 @@ public class ReportService {
     public ReportResult generate(Long kbId) {
         ReportResult result = new ReportResult();
         try {
-            String notesDir = kbService.getNotesDirById(kbId);
-            Path kbDir = Paths.get(notesDir);
-
             String prompt = readPrompt(kbId);
             prompt = prompt.replace("{date}", TimeUtil.todayStr());
             prompt = prompt.replace("{weekday}", TimeUtil.weekdayCn(TimeUtil.now()));
@@ -110,18 +102,15 @@ public class ReportService {
             }
 
             String systemPrompt = "你是一个日报生成助手。你拥有以下工具：\n"
-                + "1. 文件工具（listDir / searchFiles / readFile）— 读取笔记库中的文件、AGENTS.md、工作日报、记忆文件等\n"
-                + "2. 数据集工具（listDatasets / queryRecords）— 查询结构化数据（任务、Bug、项目管理等）\n\n"
-                + "请先用 listDir 探索目录结构，用 searchFiles 搜索相关文件，"
-                + "用 readFile 读取需要的内容。\n"
-                + "同时用 listDatasets 查看有哪些数据集，用 queryRecords 按条件查询（如{\"状态\":\"待修复\"}、{\"类型\":\"Bug\"}等），"
-                + "将笔记非结构化数据与数据集结构化数据结合，生成更全面的日报。\n"
+                + "1. 数据集工具（listDatasets / queryRecords）— 查询结构化数据（任务、Bug、项目管理等）\n\n"
+                + "用 listDatasets 查看有哪些数据集，用 queryRecords 按条件查询（如{\"状态\":\"待修复\"}、{\"类型\":\"Bug\"}等），"
+                + "将数据集结构化数据结合，生成更全面的日报。\n"
                 + "用中文回复。";
 
             // 主动读取所有数据集内容，注入到对话上下文中，确保日报包含结构化数据
             String datasetContext = buildDatasetContext();
 
-            String report = agentAnalysisService.analyze(kbDir, prompt + "\n\n" + datasetContext, systemPrompt);
+            String report = agentAnalysisService.analyze(prompt + "\n\n" + datasetContext, systemPrompt);
 
             if (report != null && !report.isEmpty()) {
                 result.report = report;

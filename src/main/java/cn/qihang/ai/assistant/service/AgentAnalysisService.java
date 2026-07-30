@@ -9,7 +9,6 @@ import org.springframework.ai.deepseek.DeepSeekChatModel;
 import org.springframework.ai.deepseek.DeepSeekChatOptions;
 import org.springframework.stereotype.Service;
 
-import java.nio.file.Path;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Service
@@ -34,11 +33,11 @@ public class AgentAnalysisService {
         return configResolver.isAvailable();
     }
 
-    public String analyze(Path scopeDir, String prompt, String systemPrompt) {
-        return analyze(scopeDir, prompt, systemPrompt, null);
+    public String analyze(String prompt, String systemPrompt) {
+        return analyze(prompt, systemPrompt, null);
     }
 
-    public String analyze(Path scopeDir, String prompt, String systemPrompt, String modelName) {
+    public String analyze(String prompt, String systemPrompt, String modelName) {
         if (!isAvailable()) {
             throw new IllegalStateException("LLM API Key 未配置，请在配置页填写");
         }
@@ -48,25 +47,20 @@ public class AgentAnalysisService {
             throw new IllegalStateException("ChatClient 初始化失败");
         }
 
-        NoteTools.setScope(scopeDir);
-        try {
-            String userMessage = (prompt != null && !prompt.isBlank())
-                    ? prompt
-                    : "请分析此目录的内容，给出洞察和建议";
+        String userMessage = (prompt != null && !prompt.isBlank())
+                ? prompt
+                : "请分析内容，给出洞察和建议";
 
-            log.info("[AgentAnalysis] scope={}, prompt长度={}", scopeDir, userMessage.length());
+        log.info("[AgentAnalysis] prompt长度={}", userMessage.length());
 
-            String result = client.prompt()
-                    .system(systemPrompt)
-                    .user(userMessage)
-                    .call()
-                    .content();
+        String result = client.prompt()
+                .system(systemPrompt)
+                .user(userMessage)
+                .call()
+                .content();
 
-            log.info("[AgentAnalysis] 分析完成，结果长度={}", result != null ? result.length() : 0);
-            return result != null ? result : "（AI 未返回回复）";
-        } finally {
-            NoteTools.clearScope();
-        }
+        log.info("[AgentAnalysis] 分析完成，结果长度={}", result != null ? result.length() : 0);
+        return result != null ? result : "（AI 未返回回复）";
     }
 
     private ChatClient getOrCreateClient(String modelName) {

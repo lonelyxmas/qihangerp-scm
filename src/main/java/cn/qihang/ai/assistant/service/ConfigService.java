@@ -20,11 +20,9 @@ public class ConfigService {
     private static final Logger log = LoggerFactory.getLogger(ConfigService.class);
     private static final TypeReference<Map<String, Object>> MAP_TYPE = new TypeReference<>() {};
     private final AppConfig appConfig;
-    private final KbBaseService kbService;
 
-    public ConfigService(AppConfig appConfig, KbBaseService kbService) {
+    public ConfigService(AppConfig appConfig) {
         this.appConfig = appConfig;
-        this.kbService = kbService;
     }
 
     private void ensureConfigFile() {
@@ -50,43 +48,18 @@ public class ConfigService {
         if (raw != null) {
             config = new ObjectMapper().convertValue(raw, Config.class);
         } else {
-            config = Config.defaultConfig("", "");
+            config = Config.defaultConfig("");
         }
         mergeDefaultValues(config);
         return config;
     }
 
     private void mergeDefaultValues(Config config) {
-        Config defaultConfig = Config.defaultConfig("", "");
+        Config defaultConfig = Config.defaultConfig("");
         
         if (config.isFeishuPollingEnabled() == null) {
             config.setFeishuPollingEnabled(defaultConfig.isFeishuPollingEnabled());
         }
-    }
-
-    public String getNotesDir() {
-        String dir = kbService.getNotesDir();
-        if (dir == null || dir.isEmpty()) {
-            throw new IllegalStateException("未配置笔记库，请先在「设置」页面添加知识库并配置笔记库路径");
-        }
-        return dir;
-    }
-
-    /** 获取笔记库目录，不存在时返回 null（不抛异常） */
-    public String getNotesDirIfExists() {
-        try {
-            return kbService.getNotesDir();
-        } catch (Exception e) {
-            return null;
-        }
-    }
-
-    public String getNotesDir(Long kbId) {
-        String dir = kbService.getNotesDirById(kbId);
-        if (dir == null || dir.isEmpty()) {
-            throw new IllegalStateException("未配置笔记库，请先在「设置」页面添加知识库并配置笔记库路径");
-        }
-        return dir;
     }
 
     public void save(Config config) {
