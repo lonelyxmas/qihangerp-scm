@@ -10,59 +10,23 @@
         .module-sidebar { width: 240px; background: var(--bg-sidebar); border-right: 1px solid var(--border); display: flex; flex-direction: column; flex-shrink: 0; }
         .module-sidebar-header { padding: 12px 16px; border-bottom: 1px solid var(--border); }
         .module-sidebar-title { font-size: 13px; font-weight: 600; color: var(--text-primary); }
-        .new-module-btn { width: 100%; padding: 6px 12px; border: none; background: var(--primary); color: white; border-radius: var(--radius-sm); font-size: 12px; font-weight: 500; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: 8px; transition: all 0.2s; }
-        .new-module-btn:hover { background: var(--primary-dark); }
         .module-sidebar-list { flex: 1; overflow-y: auto; padding: 4px 0; }
         .module-item { display: flex; align-items: center; gap: 4px; padding: 4px 12px; cursor: pointer; color: #a0a0a0; font-size: 12px; transition: all 0.2s; border-radius: var(--radius-sm); margin: 0 4px; }
         .module-item:hover { background: var(--hover); color: #888; }
-        .module-item .delete-btn { margin-left: auto; opacity: 0; color: var(--text-muted); transition: all 0.2s; background: none; border: none; cursor: pointer; font-size: 12px; padding: 2px; }
-        .module-item:hover .delete-btn { opacity: 1; }
-        .module-item .delete-btn:hover { color: #ef4444; }
-        .module-item .edit-btn { opacity: 0; color: var(--text-muted); transition: all 0.2s; background: none; border: none; cursor: pointer; font-size: 14px; padding: 2px; }
-        .module-item:hover .edit-btn { opacity: 1; }
-        .module-item .edit-btn:hover { color: var(--primary); }
         .ds-sub-item { display: flex; align-items: center; gap: 6px; padding: 8px 12px 8px 44px; cursor: pointer; color: var(--text-primary); font-size: 13px; font-weight: 500; transition: all 0.2s; border-radius: 0; margin: 0; border-bottom: 1px solid var(--border); }
         .ds-sub-item:hover { background: var(--hover); }
         .ds-sub-item.active { background: rgba(99, 102, 241, 0.08); color: var(--primary); font-weight: 600; border-bottom-color: transparent; }
         .ds-sub-item .ds-count { font-size: 11px; color: var(--text-muted); margin-left: auto; font-weight: 400; }
-        
-        .module-item-icon { font-size: 18px; flex-shrink: 0; }
-        .module-item-info { flex: 1; min-width: 0; }
-        .module-item-name { font-size: 13px; font-weight: 500; color: var(--text-primary); }
-        .module-item-meta { font-size: 11px; color: var(--text-muted); margin-top: 1px; }
 
         .detail-panel { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
         .detail-panel .content-body { flex: 1; overflow-y: auto; padding: 24px; }
 
-        .btn { padding: 8px 16px; border: none; border-radius: var(--radius-sm); font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 6px; }
-        .btn-primary { background: var(--primary); color: white; }
-        .btn-primary:hover { background: var(--primary-dark); }
-        .btn-secondary { background: white; color: var(--text-secondary); border: 1px solid var(--border); }
-        .btn-secondary:hover { background: var(--hover); }
-        .btn-danger { background: var(--danger); color: white; }
-        .btn-danger:hover { background: #dc2626; }
-        .btn-sm { padding: 6px 12px; font-size: 12px; }
-
         .badge { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 20px; font-size: 12px; font-weight: 500; }
         .badge-gray { background: #f5f5f7; color: #909296; }
-
-        .form-group { margin-bottom: 12px; }
-        .form-group label { display: block; font-size: 13px; font-weight: 500; color: var(--text-secondary); margin-bottom: 6px; }
-        .form-group input, .form-group textarea, .form-group select { width: 100%; padding: 8px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 13px; outline: none; transition: all 0.2s; background: white; }
-        .form-group input:focus, .form-group textarea:focus, .form-group select:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1); }
 
         .empty-state { text-align: center; padding: 60px 20px; color: var(--text-muted); }
         .empty-state .icon { font-size: 48px; margin-bottom: 16px; opacity: 0.5; }
         .empty-state .title { font-size: 16px; font-weight: 500; margin-bottom: 8px; color: var(--text-secondary); }
-
-        .module-header { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; padding-bottom: 16px; border-bottom: 1px solid var(--border); }
-        .module-header .module-icon { font-size: 32px; }
-        .module-header .module-title { font-size: 20px; font-weight: 600; }
-        .module-header .module-desc { font-size: 13px; color: var(--text-muted); }
-        .module-header .module-stats { display: flex; gap: 16px; margin-left: 8px; }
-        .module-header .stat-value { font-size: 18px; font-weight: 600; color: var(--primary); }
-        .module-header .stat-label { font-size: 11px; color: var(--text-muted); }
-        .module-header .module-actions { margin-left: auto; display: flex; gap: 6px; }
 
         .ds-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px; }
         .ds-card { background: white; border: 1px solid var(--border); border-radius: var(--radius-md); padding: 16px; cursor: pointer; transition: all 0.2s; }
@@ -76,13 +40,17 @@
         .search-box { position: relative; flex: 1; min-width: 200px; max-width: 300px; }
         .search-box input { width: 100%; padding: 8px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 13px; }
 
+        .btn { padding: 8px 16px; border: none; border-radius: var(--radius-sm); font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 6px; }
+        .btn-secondary { background: white; color: var(--text-secondary); border: 1px solid var(--border); }
+        .btn-secondary:hover { background: var(--hover); }
+        .btn-sm { padding: 6px 12px; font-size: 12px; }
+
         .data-table { width: 100%; border-collapse: collapse; font-size: 13px; }
         .data-table th { text-align: left; padding: 10px 12px; background: #f8fafc; border-bottom: 2px solid var(--border); font-weight: 600; color: var(--text-secondary); }
         .data-table td { padding: 10px 12px; border-bottom: 1px solid var(--border); }
         .data-table tr:hover { background: var(--hover); }
         .data-table .action-btn { background: none; border: none; cursor: pointer; font-size: 12px; color: var(--text-muted); padding: 2px 6px; }
         .data-table .action-btn:hover { color: var(--primary); }
-        .data-table .action-btn.danger:hover { color: var(--danger); }
 
         .detail-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border); }
         .detail-row:last-child { border-bottom: none; }
@@ -96,33 +64,20 @@
         .modal-header h3 { font-size: 16px; font-weight: 600; }
         .modal-body { padding: 20px; }
         .modal-footer { padding: 16px 20px; border-top: 1px solid var(--border); display: flex; align-items: center; justify-content: flex-end; gap: 8px; }
-
-        .msg { padding: 10px 16px; border-radius: var(--radius-sm); font-size: 13px; margin-bottom: 8px; }
-        .msg-success { background: #dcfce7; color: #166534; }
-        .msg-error { background: #fee2e2; color: #991b1b; }
-        .msg-info { background: #dbeafe; color: #1e40af; }
-
-        .login-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); justify-content: center; align-items: center; z-index: 9999; }
-        .login-overlay.active { display: flex; }
-        .login-modal { background: white; border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); width: 360px; overflow: hidden; }
-        .login-modal-header { padding: 20px 24px 0; font-size: 18px; font-weight: 600; text-align: center; }
-        .login-modal-body { padding: 20px 24px 24px; }
-
     </style>
 </head>
 <body>
     <th:block th:replace="3.0/fragments/sidebar::sidebar(${currentNav})"></th:block>
-    
+
     <aside class="module-sidebar">
         <div class="module-sidebar-header">
             <div class="module-sidebar-title">数据集</div>
-            <button class="new-module-btn" onclick="showCreateModule()">+ 新建模块</button>
         </div>
         <div class="module-sidebar-list" id="moduleList">
             <div class="empty-state" style="padding:30px 16px;"><div class="icon" style="font-size:32px;">📦</div><div style="font-size:13px;color:var(--text-muted);margin-top:8px;">暂无模块</div></div>
         </div>
     </aside>
-    
+
     <main class="detail-panel">
         <div class="content-body" id="detailPanel">
             <div class="empty-state">
@@ -133,170 +88,29 @@
         </div>
     </main>
 
-    <div id="moduleModal" class="modal-overlay" onclick="closeModal('moduleModal')">
-        <div class="modal-box" style="width:420px;" onclick="event.stopPropagation()">
-            <div class="modal-header">
-                <h3 id="moduleModalTitle">新建模块</h3>
-                <button onclick="closeModal('moduleModal')">✕</button>
-            </div>
-            <div class="modal-body">
-                <div class="form-group">
-                    <label>模块名称 *</label>
-                    <input id="moduleName" type="text" placeholder="如：客户管理">
-                </div>
-                <div class="form-group">
-                    <label>描述</label>
-                    <input id="moduleDesc" type="text" placeholder="模块用途说明">
-                </div>
-                <div class="form-group">
-                    <label>图标</label>
-                    <input id="moduleIcon" type="text" placeholder="📁">
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-secondary" onclick="closeModal('moduleModal')">取消</button>
-                <button class="btn btn-primary" onclick="saveModule()">保存</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="dsModal" class="modal-overlay" onclick="closeModal('dsModal')">
-        <div class="modal-box" style="width:520px;" onclick="event.stopPropagation()">
-            <div class="modal-header">
-                <h3 id="dsModalTitle">新建数据集</h3>
-                <button onclick="closeModal('dsModal')">✕</button>
-            </div>
-            <div class="modal-body">
-                <div class="form-group">
-                    <label>名称 *</label>
-                    <input id="dsName" type="text" placeholder="如：客户信息">
-                </div>
-                <div class="form-group">
-                    <label>描述</label>
-                    <textarea id="dsDesc" rows="2" style="resize:vertical;font-family:inherit;"></textarea>
-                </div>
-                <div class="form-group">
-                    <label>类型</label>
-                    <select id="dsType"><option value="">请选择</option></select>
-                </div>
-                <div class="form-group">
-                    <label>状态</label>
-                    <select id="dsStatus"><option value="">请选择</option></select>
-                </div>
-                <div class="form-group">
-                    <label>Schema 字段（每行一个）</label>
-                    <textarea id="dsSchema" rows="3" style="resize:vertical;font-family:monospace;font-size:12px;" placeholder="编号&#10;项目&#10;负责人"></textarea>
-                </div>
-                <div class="form-group">
-                    <label>类型选项（每行一个）</label>
-                    <textarea id="dsTypeOptions" rows="2" style="resize:vertical;font-family:monospace;font-size:12px;" placeholder="需求&#10;Bug&#10;优化" oninput="syncDsOptions()"></textarea>
-                </div>
-                <div class="form-group">
-                    <label>状态选项（每行一个）</label>
-                    <textarea id="dsStatusOptions" rows="2" style="resize:vertical;font-family:monospace;font-size:12px;" placeholder="待办&#10;进行中&#10;已完成" oninput="syncDsOptions()"></textarea>
-                </div>
-
-                <div style="margin-top:16px;border-top:1px solid var(--border);padding-top:12px;">
-                    <div style="font-size:13px;font-weight:600;color:var(--text-primary);margin-bottom:8px;">🤝 通知配置</div>
-                    <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;">
-                        <input id="dsFeishuNotify" type="checkbox">
-                        飞书通知（数据变更时通过飞书群推送通知）
-                    </label>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-secondary" onclick="closeModal('dsModal')">取消</button>
-                <button class="btn btn-primary" onclick="saveDataset()">保存</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="recordModal" class="modal-overlay" onclick="closeModal('recordModal')">
-        <div class="modal-box" style="width:520px;" onclick="event.stopPropagation()">
-            <div class="modal-header">
-                <h3 id="recordModalTitle">新增记录</h3>
-                <button onclick="closeModal('recordModal')">✕</button>
-            </div>
-            <div class="modal-body" id="recordFormBody">
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-secondary" onclick="closeModal('recordModal')">取消</button>
-                <button class="btn btn-primary" onclick="saveRecord()">保存</button>
-            </div>
-        </div>
-    </div>
-
     <div id="detailModal" class="modal-overlay" onclick="closeModal('detailModal')">
         <div class="modal-box" style="width:540px;" onclick="event.stopPropagation()">
             <div class="modal-header">
                 <h3>记录详情</h3>
-                <button onclick="closeModal('detailModal')">✕</button>
+                <button class="btn btn-secondary" onclick="closeModal('detailModal')">✕</button>
             </div>
-            <div class="modal-body" id="recordDetailBody">
-            </div>
+            <div class="modal-body" id="recordDetailBody"></div>
             <div class="modal-footer">
-                <button class="btn btn-danger" onclick="deleteFromDetail()">🗑️ 删除</button>
-                <button class="btn btn-primary" onclick="editFromDetail()">✏️ 编辑</button>
                 <button class="btn btn-secondary" onclick="closeModal('detailModal')">关闭</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="importModal" class="modal-overlay" onclick="closeModal('importModal')">
-        <div class="modal-box" style="width:520px;" onclick="event.stopPropagation()">
-            <div class="modal-header">
-                <h3>📥 数据导入</h3>
-                <button onclick="closeModal('importModal')">✕</button>
-            </div>
-            <div class="modal-body">
-                <div class="form-group">
-                    <label>导入方式</label>
-                    <div style="display:flex;gap:8px;">
-                        <button class="btn" id="importTypeJson" onclick="setImportType('json')">📝 JSON</button>
-                        <button class="btn" id="importTypeExcel" onclick="setImportType('excel')">📊 Excel</button>
-                        <button class="btn" id="importTypeUrl" onclick="setImportType('url')">🔗 URL</button>
-                    </div>
-                </div>
-                
-                <div id="importJsonSection" class="form-group">
-                    <label>JSON 数据</label>
-                    <textarea id="importJsonData" rows="8" style="resize:vertical;font-family:monospace;font-size:12px;" placeholder="JSON数组格式"></textarea>
-                </div>
-                
-                <div id="importExcelSection" class="form-group" style="display:none;">
-                    <label>Excel 文件</label>
-                    <input type="file" accept=".xlsx,.xls" id="importExcelFile" onchange="handleExcelFile(this)">
-                    <div id="importExcelName" style="font-size:12px;color:var(--primary);margin-top:4px;"></div>
-                </div>
-                
-                <div id="importUrlSection" class="form-group" style="display:none;">
-                    <label>数据 URL</label>
-                    <input id="importUrl" type="text" placeholder="https://example.com/data.json">
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button class="btn btn-secondary" onclick="closeModal('importModal')">取消</button>
-                <button class="btn btn-primary" onclick="doImport()">开始导入</button>
             </div>
         </div>
     </div>
 
     <script th:inline="javascript">
 /*<![CDATA[*/
-const IS_ADMIN = /*[[${isAdmin}]]*/ false;
-/*]]>*/
 const API = '/api/datacenter';
-const USER_API = '/api/sys-api/system/user';
-let modules = [], allDatasets = [], datasets = [], currentModule = null, currentDs = null;
-let users = [];
-let currentDsId = null;
-let allRecords = [], currentPage = 0, pageSize = 20, totalRecords = 0;
-let editingModuleId = null, editingDsId = null, editingRecordId = null, viewingRecord = null;
-let importType = 'json', excelFile = null;
+let modules = [], allDatasets = [], currentModule = null, currentDs = null;
+let currentDsId = null, allRecords = [], currentPage = 0, pageSize = 20, totalRecords = 0;
+let viewingRecord = null;
 
 function toast(msg, type) {
     const d = document.createElement('div');
-    d.className = 'msg msg-' + type;
+    d.className = 'msg msg-' + (type || 'info');
     d.textContent = msg;
     document.body.appendChild(d);
     setTimeout(function(){ d.remove(); }, 2500);
@@ -305,21 +119,32 @@ function toast(msg, type) {
 function closeModal(id) {
     document.getElementById(id).classList.remove('active');
 }
-
 function showModal(id) {
     document.getElementById(id).classList.add('active');
+}
+
+function apiFetch(url, options) {
+    if (!options) options = {};
+    if (!options.headers) options.headers = {};
+    var token = localStorage.getItem('Admin-Token');
+    if (token) options.headers['Authorization'] = 'Bearer ' + token;
+    return fetch(url, options);
+}
+
+function checkAuthError(r) {
+    return r && (r.__401 || (r.code === 500 && r.msg === '认证失败'));
 }
 
 async function loadModules() {
     try {
         const [mRes, dRes] = await Promise.all([
-            fetch(API + '/modules'),
-            fetch(API + '/datasets')
+            apiFetch(API + '/modules'),
+            apiFetch(API + '/datasets')
         ]);
         const md = await mRes.json(), dd = await dRes.json();
+        if (checkAuthError(md) || checkAuthError(dd)) { handleUnauthenticated(); return; }
         modules = md.ok ? (md.data || []) : [];
         allDatasets = dd.ok ? (dd.data || []) : [];
-        datasets = allDatasets;
     } catch (e) {
         console.error('加载数据失败', e);
     }
@@ -328,116 +153,39 @@ async function loadModules() {
 
 function renderModuleList() {
     const list = document.getElementById('moduleList');
-    const dsPool = allDatasets.length ? allDatasets : datasets;
     if (modules.length === 0) {
-        list.innerHTML = '<div class="empty-state" style="padding:30px 16px;"><div class="icon" style="font-size:32px;">📦</div><div style="font-size:13px;color:var(--text-muted);margin-top:8px;">暂无模块</div><button class="btn btn-primary btn-sm" style="margin-top:12px;" onclick="showCreateModule()">+ 新建模块</button></div>';
-    } else {
-        let html = '';
-        for (let i = 0; i < modules.length; i++) {
-            const m = modules[i];
-            const dsList = dsPool.filter(function(d){ return d.moduleId === m.id; });
-            html += '<div class="module-item">';
-            html += '<span>' + m.name + '</span>';
-            if (IS_ADMIN) {
-                html += '<button class="edit-btn" onclick="event.stopPropagation(); showEditModule(\'' + m.id + '\')" title="编辑">✏️</button>';
-                html += '<button class="delete-btn" onclick="event.stopPropagation(); deleteModule(\'' + m.id + '\')" title="删除">🗑️</button>';
-            }
+        list.innerHTML = '<div class="empty-state" style="padding:30px 16px;"><div class="icon" style="font-size:32px;">📦</div><div style="font-size:13px;color:var(--text-muted);margin-top:8px;">暂无模块</div></div>';
+        return;
+    }
+    let html = '';
+    for (let i = 0; i < modules.length; i++) {
+        const m = modules[i];
+        const dsList = allDatasets.filter(function(d){ return d.moduleId === m.id; });
+        html += '<div class="module-item" onclick="showDatasetList(\'' + m.id + '\')">';
+        html += '<span>' + m.name + '</span>';
+        html += '</div>';
+        for (let j = 0; j < dsList.length; j++) {
+            const ds = dsList[j];
+            const dsActive = currentDsId === ds.id ? ' active' : '';
+            html += '<div class="ds-sub-item' + dsActive + '" onclick="openDataset(\'' + ds.id + '\')">';
+            html += '<span>📋</span>';
+            html += '<span>' + ds.name + '</span>';
+            html += '<span class="ds-count">' + (ds.recordCount || 0) + ' 条</span>';
             html += '</div>';
-            for (let j = 0; j < dsList.length; j++) {
-                const ds = dsList[j];
-                const dsActive = currentDsId === ds.id ? ' active' : '';
-                html += '<div class="ds-sub-item' + dsActive + '" onclick="openDataset(\'' + ds.id + '\')">';
-                html += '<span>📋</span>';
-                html += '<span>' + ds.name + '</span>';
-                html += '<span class="ds-count">' + (ds.recordCount || 0) + ' 条</span>';
-                html += '</div>';
-            }
-            if (IS_ADMIN) {
-                html += '<div class="ds-sub-item" onclick="showCreateDataset(\'' + m.id + '\')" style="color:var(--primary);font-size:12px;">+ 新建数据集</div>';
-            }
         }
-        list.innerHTML = html;
     }
-    if (!IS_ADMIN) {
-        document.querySelector('.new-module-btn').style.display = 'none';
-    }
+    list.innerHTML = html;
 }
 
-function showCreateModule() {
-    editingModuleId = null;
-    document.getElementById('moduleModalTitle').textContent = '新建模块';
-    document.getElementById('moduleName').value = '';
-    document.getElementById('moduleDesc').value = '';
-    document.getElementById('moduleIcon').value = '📁';
-    showModal('moduleModal');
-}
-
-function showEditModule(id) {
-    const m = modules.find(function(x){ return x.id === id; });
-    if (!m) return;
-    editingModuleId = id;
-    document.getElementById('moduleModalTitle').textContent = '编辑模块';
-    document.getElementById('moduleName').value = m.name;
-    document.getElementById('moduleDesc').value = m.description || '';
-    document.getElementById('moduleIcon').value = m.icon || '📁';
-    showModal('moduleModal');
-}
-
-async function saveModule() {
-    const data = {
-        name: document.getElementById('moduleName').value,
-        description: document.getElementById('moduleDesc').value,
-        icon: document.getElementById('moduleIcon').value
-    };
-    let url = API + '/modules';
-    let method = 'POST';
-    if (editingModuleId) {
-        url += '/' + editingModuleId;
-        method = 'PUT';
-    }
-    const r = await fetch(url, {
-        method: method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
-    });
-    const d = await r.json();
-    if (d.ok) {
-        closeModal('moduleModal');
-        toast(editingModuleId ? '模块已更新' : '模块已创建', 'success');
-        await loadModules();
-    } else {
-        toast(d.error || '保存失败', 'error');
-    }
-}
-
-async function deleteModule(id) {
-    if (!confirm('确定要删除该模块吗？')) return;
-    const r = await fetch(API + '/modules/' + id, { method: 'DELETE' });
-    const d = await r.json();
-    if (d.ok) {
-        toast('模块已删除', 'success');
-        if (currentDs) {
-            currentDs = null;
-            currentDsId = null;
-            backToList();
-        } else {
-            await loadModules();
-        }
-    } else {
-        toast(d.error || '删除失败', 'error');
-    }
-}
-
-
-
-
-
-function backToList() {
-    currentModule = null;
+function showDatasetList(moduleId) {
+    currentModule = modules.find(function(m){ return m.id === moduleId; });
     currentDs = null;
     currentDsId = null;
-    document.getElementById('detailPanel').innerHTML = '<div class="empty-state"><div class="icon">📦</div><div class="title">选择一个数据集</div><div style="font-size:13px;color:var(--text-muted);margin-top:8px;">在左侧列表中选择一个数据集查看记录</div></div>';
+    allRecords = [];
     renderModuleList();
+    document.getElementById('detailPanel').innerHTML =
+        '<div class="empty-state"><div class="icon">📦</div><div class="title">选择一个数据集</div>' +
+        '<div style="font-size:13px;color:var(--text-muted);margin-top:8px;">在左侧列表中选择一个数据集查看记录</div></div>';
 }
 
 async function openDataset(dsId) {
@@ -450,27 +198,13 @@ async function openDataset(dsId) {
     await loadRecords(0);
 }
 
-function showDatasetList() {
-    currentDs = null;
-    currentDsId = null;
-    allRecords = [];
-    renderModuleList();
-    document.getElementById('detailPanel').innerHTML = '<div class="empty-state"><div class="icon">📦</div><div class="title">选择一个数据集</div><div style="font-size:13px;color:var(--text-muted);margin-top:8px;">在左侧列表中选择一个数据集查看记录</div></div>';
-}
-
 function renderDatasetView() {
     if (!currentDs) return '';
     let html = '<div class="toolbar">';
-    html += '<button class="btn btn-sm btn-primary" onclick="showAddRecord()">+ 新增记录</button>';
     html += '<div class="search-box"><input type="text" id="recordSearch" placeholder="🔍 搜索记录..." onkeyup="handleRecordSearch(event)"></div>';
     html += '<button class="btn btn-sm btn-secondary" onclick="handleRecordSearchBtn()">搜索</button>';
-    if (IS_ADMIN) {
-        html += '<button class="btn btn-sm btn-secondary" onclick="showEditDataset(\'' + currentDs.id + '\')">✏️ 编辑</button>';
-        html += '<button class="btn btn-sm btn-danger" onclick="deleteDataset(\'' + currentDs.id + '\')">🗑️ 删除</button>';
-    }
-    html += '<button class="btn btn-sm btn-secondary" onclick="showImportModal()">📥 导入</button>';
     html += '</div>';
-    
+
     html += '<table class="data-table"><thead><tr><th>编码</th><th>类型</th><th>状态</th>';
     const fields = getFields(currentDs);
     for (let i = 0; i < fields.length; i++) {
@@ -480,7 +214,7 @@ function renderDatasetView() {
         }
     }
     html += '<th>操作</th></tr></thead><tbody>';
-    
+
     for (let i = 0; i < allRecords.length; i++) {
         const rec = allRecords[i];
         html += '<tr><td>' + (rec.recordNum || rec['编号'] || '') + '</td>';
@@ -493,17 +227,14 @@ function renderDatasetView() {
             }
         }
         const rid = rec._id || rec.id;
-        html += '<td><button class="action-btn" onclick="viewRecord(\'' + rid + '\')">👁️</button>';
-        html += '<button class="action-btn" onclick="editRecord(\'' + rid + '\')">✏️</button>';
-        html += '<button class="action-btn danger" onclick="deleteRecord(\'' + rid + '\')">🗑️</button></td></tr>';
+        html += '<td><button class="action-btn" onclick="viewRecord(\'' + rid + '\')">👁️</button></td></tr>';
     }
-    
+
     html += '</tbody></table>';
-    
     if (allRecords.length === 0) {
-        html += '<div class="empty-state"><div class="icon">📝</div><div class="title">暂无记录</div><button class="btn btn-primary" onclick="showAddRecord()">+ 新增记录</button></div>';
+        html += '<div class="empty-state"><div class="icon">📝</div><div class="title">暂无记录</div>' +
+            '<div style="font-size:13px;color:var(--text-muted);margin-top:8px;">该数据集暂无记录</div></div>';
     }
-    
     return html;
 }
 
@@ -518,8 +249,9 @@ async function loadRecords(page) {
     let url = API + '/datasets/' + currentDs.id + '/records?page=' + page + '&size=' + pageSize;
     const keyword = document.getElementById('recordSearch')?.value;
     if (keyword) url += '&keyword=' + encodeURIComponent(keyword);
-    const r = await fetch(url);
+    const r = await apiFetch(url);
     const d = await r.json();
+    if (checkAuthError(d)) { handleUnauthenticated(); return; }
     if (d.ok) {
         allRecords = d.data || [];
         totalRecords = d.total || 0;
@@ -532,406 +264,48 @@ async function loadRecords(page) {
 function handleRecordSearch(e) {
     if (e.key === 'Enter') handleRecordSearchBtn();
 }
-
 function handleRecordSearchBtn() {
     loadRecords(0);
-}
-
-let _creatingDsModuleId = null;
-
-function populateDsSelect(selectId, options) {
-    var sel = document.getElementById(selectId);
-    sel.innerHTML = '<option value="">请选择</option>';
-    options.forEach(function(o){ var opt = document.createElement('option'); opt.value = o; opt.textContent = o; sel.appendChild(opt); });
-}
-
-function syncDsOptions() {
-    var typeOptions = document.getElementById('dsTypeOptions').value.split('\n').map(function(s){ return s.trim(); }).filter(function(s){ return s; });
-    var statusOptions = document.getElementById('dsStatusOptions').value.split('\n').map(function(s){ return s.trim(); }).filter(function(s){ return s; });
-    populateDsSelect('dsType', typeOptions);
-    populateDsSelect('dsStatus', statusOptions);
-}
-
-function showCreateDataset(moduleId) {
-    _creatingDsModuleId = moduleId;
-    editingDsId = null;
-    document.getElementById('dsModalTitle').textContent = '新建数据集';
-    document.getElementById('dsName').value = '';
-    document.getElementById('dsDesc').value = '';
-    populateDsSelect('dsType', []);
-    populateDsSelect('dsStatus', []);
-    document.getElementById('dsSchema').value = '';
-    document.getElementById('dsTypeOptions').value = '';
-    document.getElementById('dsStatusOptions').value = '';
-    document.getElementById('dsFeishuNotify').checked = false;
-    document.getElementById('collabConfigSection').style.display = 'none';
-    document.getElementById('collabToggleIcon').textContent = '▶';
-    showModal('dsModal');
-}
-
-function showEditDataset(id) {
-    const ds = datasets.find(function(d){ return d.id === id; });
-    if (!ds) return;
-    editingDsId = id;
-    document.getElementById('dsModalTitle').textContent = '编辑数据集';
-    document.getElementById('dsName').value = ds.name;
-    document.getElementById('dsDesc').value = ds.description || '';
-    if (ds.schema && ds.schema.typeOptions) {
-        document.getElementById('dsTypeOptions').value = ds.schema.typeOptions.join('\n');
-        populateDsSelect('dsType', ds.schema.typeOptions);
-    } else {
-        document.getElementById('dsTypeOptions').value = '';
-        populateDsSelect('dsType', []);
-    }
-    document.getElementById('dsType').value = ds.type || '';
-    if (ds.schema && ds.schema.statusOptions) {
-        document.getElementById('dsStatusOptions').value = ds.schema.statusOptions.join('\n');
-        populateDsSelect('dsStatus', ds.schema.statusOptions);
-    } else {
-        document.getElementById('dsStatusOptions').value = '';
-        populateDsSelect('dsStatus', []);
-    }
-    document.getElementById('dsStatus').value = ds.status || '';
-    if (ds.schema && ds.schema.fields) {
-        document.getElementById('dsSchema').value = ds.schema.fields.map(function(f){ return f.displayName || f.name; }).join('\n');
-    } else {
-        document.getElementById('dsSchema').value = '';
-    }
-    const cc = ds.collabConfig || {};
-    document.getElementById('dsFeishuNotify').checked = cc.feishuNotify === true;
-    showModal('dsModal');
-}
-
-async function saveDataset() {
-    if (!_creatingDsModuleId && !editingDsId) {
-        toast('请先选择模块', 'error');
-        return;
-    }
-    const fields = document.getElementById('dsSchema').value.split('\n').map(function(s){ return s.trim(); }).filter(function(s){ return s; });
-    const schema = {
-        fields: fields.map(function(name){ return { name: name, displayName: name, type: 'text' }; }),
-        typeOptions: document.getElementById('dsTypeOptions').value.split('\n').map(function(s){ return s.trim(); }).filter(function(s){ return s; }),
-        statusOptions: document.getElementById('dsStatusOptions').value.split('\n').map(function(s){ return s.trim(); }).filter(function(s){ return s; })
-    };
-    const collabConfig = {
-        feishuNotify: document.getElementById('dsFeishuNotify').checked
-    };
-    const data = {
-        moduleId: editingDsId ? undefined : _creatingDsModuleId,
-        name: document.getElementById('dsName').value,
-        description: document.getElementById('dsDesc').value,
-        type: document.getElementById('dsType').value,
-        status: document.getElementById('dsStatus').value,
-        schema: schema,
-        collabConfig: collabConfig
-    };
-    let url = API + '/datasets';
-    let method = 'POST';
-    if (editingDsId) {
-        url += '/' + editingDsId;
-        method = 'PUT';
-    }
-    const r = await fetch(url, {
-        method: method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
-    });
-    const d = await r.json();
-    if (d.ok) {
-        closeModal('dsModal');
-        toast(editingDsId ? '数据集已更新' : '数据集已创建', 'success');
-        await loadModules();
-    } else {
-        toast(d.error || '保存失败', 'error');
-    }
-}
-
-async function deleteDataset(id) {
-    if (!confirm('确定要删除该数据集吗？')) return;
-    const r = await fetch(API + '/datasets/' + id, { method: 'DELETE' });
-    const d = await r.json();
-    if (d.ok) {
-        toast('数据集已删除', 'success');
-        await loadModules();
-        if (currentDs && currentDs.id === id) {
-            currentDs = null;
-            currentDsId = null;
-            allRecords = [];
-            showDatasetList();
-        }
-    } else {
-        toast(d.error || '删除失败', 'error');
-    }
-}
-
-function showAddRecord() {
-    requireLogin(function() {
-        editingRecordId = null;
-        document.getElementById('recordModalTitle').textContent = '新增记录';
-        renderRecordForm();
-        showModal('recordModal');
-    });
-}
-
-function renderRecordForm(record) {
-    const body = document.getElementById('recordFormBody');
-    if (!currentDs || !currentDs.schema || !currentDs.schema.fields) {
-        body.innerHTML = '<div>该数据集没有配置字段</div>';
-        return;
-    }
-    
-    let html = '';
-    
-    const recordNum = record ? (record.recordNum || record['编号'] || '') : '';
-    html += '<div class="form-group"><label>编码</label><input id="recordNum" type="text" value="' + recordNum + '" placeholder="自动生成"></div>';
-    
-    const typeOpts = currentDs.schema.typeOptions || [];
-    const curType = record ? (record.type || record['类型'] || '') : '';
-    html += '<div class="form-group"><label>类型</label><select id="recordType"><option value="">请选择</option>';
-    for (let i = 0; i < typeOpts.length; i++) {
-        const sel = typeOpts[i] === curType ? ' selected' : '';
-        html += '<option value="' + typeOpts[i] + '"' + sel + '>' + typeOpts[i] + '</option>';
-    }
-    html += '</select></div>';
-    
-    const fields = currentDs.schema.fields;
-    for (let i = 0; i < fields.length; i++) {
-        const f = fields[i];
-        if (f.name === 'status' || f.name === 'type') continue;
-        const val = record ? (record[f.name] || record[f.displayName] || '') : '';
-        html += '<div class="form-group"><label>' + (f.displayName || f.name) + '</label><input id="recordField_' + f.name + '" type="text" value="' + val + '"></div>';
-    }
-    
-    const statusOpts = currentDs.schema.statusOptions || [];
-    const curStatus = record ? (record.status || record['状态'] || '') : '';
-    html += '<div class="form-group"><label>状态</label><select id="recordStatus"><option value="">请选择</option>';
-    for (let i = 0; i < statusOpts.length; i++) {
-        const sel = statusOpts[i] === curStatus ? ' selected' : '';
-        html += '<option value="' + statusOpts[i] + '"' + sel + '>' + statusOpts[i] + '</option>';
-    }
-    html += '</select></div>';
-    
-    body.innerHTML = html;
 }
 
 function viewRecord(id) {
     viewingRecord = allRecords.find(function(r){ return (r._id || r.id) === id; });
     if (!viewingRecord) return;
-    
     const body = document.getElementById('recordDetailBody');
-    let html = '<div class="detail-row"><div class="label">编码</div><div class="value">' + (viewingRecord.recordNum || viewingRecord['编号'] || '无') + '</div></div>';
-    html += '<div class="detail-row"><div class="label">类型</div><div class="value"><span class="badge badge-gray">' + (viewingRecord.type || viewingRecord['类型'] || '无') + '</span></div></div>';
-    
+    let html = '<div class="detail-row"><div class="label">编码</div><div class="value">' +
+        (viewingRecord.recordNum || viewingRecord['编号'] || '无') + '</div></div>';
+    html += '<div class="detail-row"><div class="label">类型</div>' +
+        '<div class="value"><span class="badge badge-gray">' + (viewingRecord.type || viewingRecord['类型'] || '无') + '</span></div></div>';
     if (currentDs && currentDs.schema && currentDs.schema.fields) {
         const fields = currentDs.schema.fields;
         for (let i = 0; i < fields.length; i++) {
             const f = fields[i];
             if (f.name === 'status' || f.name === 'type') continue;
-            html += '<div class="detail-row"><div class="label">' + (f.displayName || f.name) + '</div><div class="value">' + (viewingRecord[f.name] || viewingRecord[f.displayName] || '') + '</div></div>';
+            html += '<div class="detail-row"><div class="label">' + (f.displayName || f.name) +
+                '</div><div class="value">' + (viewingRecord[f.name] || viewingRecord[f.displayName] || '') + '</div></div>';
         }
     }
-    
-    html += '<div class="detail-row"><div class="label">状态</div><div class="value"><span class="badge badge-gray">' + (viewingRecord.status || viewingRecord['状态'] || '无') + '</span></div></div>';
-    
+    html += '<div class="detail-row"><div class="label">状态</div>' +
+        '<div class="value"><span class="badge badge-gray">' + (viewingRecord.status || viewingRecord['状态'] || '无') + '</span></div></div>';
     body.innerHTML = html;
     showModal('detailModal');
 }
 
-function editRecord(id) {
-    requireLogin(function() {
-        const record = allRecords.find(function(r){ return (r._id || r.id) === id; });
-        if (!record) return;
-        editingRecordId = id;
-        document.getElementById('recordModalTitle').textContent = '编辑记录';
-        renderRecordForm(record);
-        showModal('recordModal');
-    });
-}
-
-function editFromDetail() {
-    if (!viewingRecord) return;
-    editRecord(viewingRecord._id || viewingRecord.id);
-    closeModal('detailModal');
-}
-
-function deleteFromDetail() {
-    if (!viewingRecord) return;
-    deleteRecord(viewingRecord._id || viewingRecord.id);
-    closeModal('detailModal');
-}
-
-async function saveRecord() {
-    if (!currentDs) return;
-    
-    const record = {
-        type: document.getElementById('recordType').value,
-        status: document.getElementById('recordStatus').value,
-        recordNum: document.getElementById('recordNum').value
-    };
-    
-    if (currentDs.schema && currentDs.schema.fields) {
-        const fields = currentDs.schema.fields;
-        for (let i = 0; i < fields.length; i++) {
-            const f = fields[i];
-            if (f.name !== 'status' && f.name !== 'type') {
-                const el = document.getElementById('recordField_' + f.name);
-                if (el) record[f.name] = el.value;
-            }
-        }
-    }
-    
-    let url = API + '/datasets/' + currentDs.id + '/records';
-    let method = 'POST';
-    if (editingRecordId) {
-        url += '/' + editingRecordId;
-        method = 'PUT';
-    }
-    
-    const r = await apiFetch(url, {
-        method: method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ data: record })
-    });
-    const d = await r.json();
-    if (d.ok) {
-        closeModal('recordModal');
-        toast(editingRecordId ? '记录已更新' : '记录已新增', 'success');
-        await loadRecords(currentPage);
-    } else {
-        toast(d.error || '保存失败', 'error');
-    }
-}
-
-async function deleteRecord(id) {
-    if (!confirm('确定要删除这条记录吗？')) return;
-    requireLogin(async function() {
-        const r = await apiFetch(API + '/datasets/' + currentDs.id + '/records/' + id, { method: 'DELETE' });
-        const d = await r.json();
-        if (d.ok) {
-            toast('记录已删除', 'success');
-            await loadRecords(currentPage);
-        } else {
-            toast(d.error || '删除失败', 'error');
-        }
-    });
-}
-
-function showImportModal() {
-    importType = 'json';
-    setImportType('json');
-    document.getElementById('importJsonData').value = '';
-    document.getElementById('importUrl').value = '';
-    document.getElementById('importExcelFile').value = '';
-    document.getElementById('importExcelName').textContent = '';
-    excelFile = null;
-    showModal('importModal');
-}
-
-function setImportType(type) {
-    importType = type;
-    document.getElementById('importTypeJson').className = 'btn' + (type === 'json' ? ' btn-primary' : ' btn-secondary');
-    document.getElementById('importTypeExcel').className = 'btn' + (type === 'excel' ? ' btn-primary' : ' btn-secondary');
-    document.getElementById('importTypeUrl').className = 'btn' + (type === 'url' ? ' btn-primary' : ' btn-secondary');
-    document.getElementById('importJsonSection').style.display = type === 'json' ? 'block' : 'none';
-    document.getElementById('importExcelSection').style.display = type === 'excel' ? 'block' : 'none';
-    document.getElementById('importUrlSection').style.display = type === 'url' ? 'block' : 'none';
-}
-
-function handleExcelFile(input) {
-    const file = input.files[0];
-    if (file) {
-        excelFile = file;
-        document.getElementById('importExcelName').textContent = '已选择: ' + file.name;
-    }
-}
-
-async function doImport() {
-    if (!currentDs) {
-        toast('请先选择数据集', 'error');
-        return;
-    }
-    
-    let r;
-    if (importType === 'json') {
-        const data = document.getElementById('importJsonData').value;
-        if (!data.trim()) {
-            toast('请输入JSON数据', 'error');
-            return;
-        }
-        try {
-            JSON.parse(data);
-        } catch(e) {
-            toast('JSON格式错误', 'error');
-            return;
-        }
-        r = await fetch(API + '/datasets/' + currentDs.id + '/import/json', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ data: JSON.parse(data), useAi: false })
-        });
-    } else if (importType === 'excel') {
-        if (!excelFile) {
-            toast('请选择Excel文件', 'error');
-            return;
-        }
-        const formData = new FormData();
-        formData.append('file', excelFile);
-        r = await fetch(API + '/datasets/' + currentDs.id + '/import/excel', {
-            method: 'POST',
-            body: formData
-        });
-    } else if (importType === 'url') {
-        const url = document.getElementById('importUrl').value;
-        if (!url.trim()) {
-            toast('请输入URL', 'error');
-            return;
-        }
-        r = await fetch(API + '/datasets/' + currentDs.id + '/import/url', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ url: url.trim() })
-        });
-    }
-    
-    const d = await r.json();
-    if (d.ok) {
-        closeModal('importModal');
-        toast('导入成功，共 ' + (d.count || 0) + ' 条记录', 'success');
-        await loadRecords(0);
-    } else {
-        toast(d.error || '导入失败', 'error');
-    }
-}
-
-function apiFetch(url, options) {
-    if (!options) options = {};
-    if (!options.headers) options.headers = {};
-    var token = localStorage.getItem('Admin-Token');
-    if (token) options.headers['Authorization'] = 'Bearer ' + token;
-    return fetch(url, options);
+function handleUnauthenticated() {
+    localStorage.removeItem('Admin-Token');
+    document.cookie = 'Admin-Token=; path=/; max-age=0; SameSite=Lax';
+    document.getElementById('moduleList').innerHTML = '<div class="empty-state" style="padding:30px 16px;"><div class="icon" style="font-size:32px;">🔐</div><div style="font-size:13px;color:var(--text-muted);margin-top:8px;">需要登录</div></div>';
+    document.getElementById('detailPanel').innerHTML = '<div class="empty-state"><div class="icon">🔐</div><div class="title">需要登录</div><div style="font-size:13px;color:var(--text-muted);margin-top:8px;">登录后即可查看数据中心</div></div>';
+    showLoginModal(function() { window.location.href = window.location.href; });
 }
 
 function checkLogin() {
     return !!localStorage.getItem('Admin-Token');
 }
 
-function requireLogin(action) {
-    if (checkLogin()) {
-        action();
-        return;
-    }
-    showLoginModal(action);
-}
-
-function showLoginOverlay() {
-    localStorage.removeItem('Admin-Token');
-    document.cookie = 'Admin-Token=; path=/; max-age=0; SameSite=Lax';
-    showLoginModal();
-}
-
 async function init() {
+    if (!checkLogin()) { handleUnauthenticated(); return; }
     await loadModules();
-    // 自动选中上次浏览的数据集，否则选第一个
     const lastId = localStorage.getItem('lastDatasetId');
     const target = lastId ? allDatasets.find(function(d){ return d.id === lastId; }) : null;
     if (target) {
@@ -941,6 +315,10 @@ async function init() {
     }
 }
 init();
+
+document.addEventListener('auth-change', function() {
+    if (!checkLogin()) handleUnauthenticated();
+});
 </script>
 
 </body>

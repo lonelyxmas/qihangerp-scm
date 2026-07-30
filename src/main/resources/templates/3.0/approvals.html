@@ -102,6 +102,42 @@
     </main>
     <script>
         const { createApp, ref, onMounted } = Vue;
+
+        function apiFetch(url, options) {
+            if (!options) options = {};
+            if (!options.headers) options.headers = {};
+            var token = localStorage.getItem('Admin-Token');
+            if (token) options.headers['Authorization'] = 'Bearer ' + token;
+            return fetch(url, options);
+        }
+
+        function checkAuthBeforeFetch(url, opts) {
+            return apiFetch(url, opts).then(function(r) {
+                if (r.status === 401 || r.status === 403) return r.json().then(function(d) { d.__401 = true; return d; });
+                if (!r.ok) throw new Error('请求失败');
+                return r.json();
+            });
+        }
+
+        function isAuthError(d) {
+            return d.__401 || (d.code === 500 && d.msg === '认证失败');
+        }
+
+        function handleUnauthenticated() {
+            localStorage.removeItem('Admin-Token');
+            document.cookie = 'Admin-Token=; path=/; max-age=0; SameSite=Lax';
+            document.getElementById('approvalApp').innerHTML = '<div class="content-header"><h1 class="content-title">审批中心</h1></div><div class="content-body"><div class="empty-state"><div class="empty-icon">🔐</div><div class="empty-title">需要登录</div><div class="empty-desc">登录后即可使用审批功能</div></div></div>';
+            showLoginModal(function() { window.location.href = window.location.href; });
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            if (!localStorage.getItem('Admin-Token')) { handleUnauthenticated(); return; }
+        });
+
+        document.addEventListener('auth-change', function() {
+            if (!localStorage.getItem('Admin-Token')) handleUnauthenticated();
+        });
+
         createApp({
             setup() {
                 const userId = 1;
@@ -120,10 +156,10 @@
                 async function loadData() {
                     loading.value = true;
                     try {
-                        const r = await fetch('/api/collab/approval/list?userId=' + userId + '&tab=' + currentTab.value);
-                        const d = await r.json();
-                        if (d.ok) {
-                            items.value = d.data;
+                        const r = await checkAuthBeforeFetch('/api/collab/approval/list?userId=' + userId + '&tab=' + currentTab.value);
+                        if (isAuthError(r)) { handleUnauthenticated(); return; }
+                        if (r.ok) {
+                            items.value = r.data;
                             updateTabCounts();
                         }
                     } catch (e) {
@@ -156,9 +192,9 @@
                         formData.append('id', item.id);
                         formData.append('action', pendingAction.value);
                         formData.append('comment', commentText.value || '');
-                        const r = await fetch('/api/collab/approval/process', { method: 'POST', body: formData });
-                        const d = await r.json();
-                        if (d.ok) {
+                        const r = await checkAuthBeforeFetch('/api/collab/approval/process', { method: 'POST', body: formData });
+                        if (isAuthError(r)) { handleUnauthenticated(); return; }
+                        if (r.ok) {
                             showCommentBox.value = null;
                             await loadData();
                         }

@@ -263,6 +263,44 @@
     <script>
         const { createApp, ref, computed, onMounted } = Vue;
 
+        const API_BASE = '/api';
+
+        function apiFetch(url, options) {
+            if (!options) options = {};
+            if (!options.headers) options.headers = {};
+            var token = localStorage.getItem('Admin-Token');
+            if (token) options.headers['Authorization'] = 'Bearer ' + token;
+            return fetch(url, options);
+        }
+
+        function isAuthError(d) {
+            return d.__401 || (d.code === 500 && d.msg === '认证失败');
+        }
+
+        function handleUnauthenticated() {
+            localStorage.removeItem('Admin-Token');
+            document.cookie = 'Admin-Token=; path=/; max-age=0; SameSite=Lax';
+            document.getElementById('app').innerHTML = '<div class="empty-state"><div class="empty-icon">🔐</div><div class="empty-title">需要登录</div><div class="empty-desc">登录后即可使用任务管理功能</div></div>';
+            showLoginModal(function() { window.location.href = window.location.href; });
+        }
+
+        function checkAuthBeforeFetch(url, opts) {
+            return apiFetch(url, opts).then(function(r) {
+                if (r.status === 401 || r.status === 403) return r.json().then(function(d) { d.__401 = true; return d; });
+                if (!r.ok) throw new Error('请求失败');
+                return r.json();
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            var token = localStorage.getItem('Admin-Token');
+            if (!token) { handleUnauthenticated(); return; }
+        });
+
+        document.addEventListener('auth-change', function() {
+            if (!localStorage.getItem('Admin-Token')) handleUnauthenticated();
+        });
+
         createApp({
             setup() {
                 const currentKbId = ref(/*[[${selectedKb != null ? selectedKb.id : null}]]*/ null);
@@ -309,10 +347,10 @@
                     let url = '/api/tasks';
                     if (currentKbId.value) url += '?kbId=' + currentKbId.value;
                     
-                    const r = await fetch(url);
-                    const d = await r.json();
-                    if (d.ok && d.tasks) {
-                        tasks.value = d.tasks;
+                    const r = await checkAuthBeforeFetch(url);
+                    if (isAuthError(r)) { handleUnauthenticated(); return; }
+                    if (r.ok && r.tasks) {
+                        tasks.value = r.tasks;
                     }
                 }
 
@@ -320,9 +358,9 @@
                     let url = '/api/reminders';
                     if (currentKbId.value) url += '?kbId=' + currentKbId.value;
                     
-                    const r = await fetch(url);
-                    const d = await r.json();
-                    reminders.value = d;
+                    const r = await checkAuthBeforeFetch(url);
+                    if (isAuthError(r)) { handleUnauthenticated(); return; }
+                    reminders.value = r;
                 }
 
                 function showAddTaskModal() {
@@ -357,9 +395,9 @@
                         formData.append('kbId', currentKbId.value);
                     }
                     
-                    const r = await fetch(url, { method: 'POST', body: formData });
-                    const d = await r.json();
-                    if (d.ok) {
+                    const r = await checkAuthBeforeFetch(url, { method: 'POST', body: formData });
+                    if (isAuthError(r)) { handleUnauthenticated(); return; }
+                    if (r.ok) {
                         showTaskModal.value = false;
                         await loadTasks();
                     }
@@ -419,9 +457,9 @@
                         formData.append('kbId', currentKbId.value);
                     }
                     
-                    const r = await fetch(url, { method: 'POST', body: formData });
-                    const d = await r.json();
-                    if (d.ok) {
+                    const r = await checkAuthBeforeFetch(url, { method: 'POST', body: formData });
+                    if (isAuthError(r)) { handleUnauthenticated(); return; }
+                    if (r.ok) {
                         showReminderModal.value = false;
                         await loadReminders();
                     }
@@ -431,9 +469,9 @@
                     let url = '/api/reminders/toggle?id=' + id;
                     if (currentKbId.value) url += '&kbId=' + currentKbId.value;
                     
-                    const r = await fetch(url, { method: 'POST' });
-                    const d = await r.json();
-                    if (d.ok) {
+                    const r = await checkAuthBeforeFetch(url, { method: 'POST' });
+                    if (isAuthError(r)) { handleUnauthenticated(); return; }
+                    if (r.ok) {
                         await loadReminders();
                     }
                 }
@@ -451,9 +489,9 @@
                     url += '?id=' + deleteId.value;
                     if (currentKbId.value) url += '&kbId=' + currentKbId.value;
                     
-                    const r = await fetch(url, { method: 'POST' });
-                    const d = await r.json();
-                    if (d.ok) {
+                    const r = await checkAuthBeforeFetch(url, { method: 'POST' });
+                    if (isAuthError(r)) { handleUnauthenticated(); return; }
+                    if (r.ok) {
                         showDeleteModal.value = false;
                         if (deleteType.value === 'reminder') await loadReminders();
                         else await loadTasks();

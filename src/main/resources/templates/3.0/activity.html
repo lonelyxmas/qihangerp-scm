@@ -87,6 +87,42 @@
     </style>
     <script>
         const { createApp, ref, onMounted } = Vue;
+
+        function apiFetch(url, options) {
+            if (!options) options = {};
+            if (!options.headers) options.headers = {};
+            var token = localStorage.getItem('Admin-Token');
+            if (token) options.headers['Authorization'] = 'Bearer ' + token;
+            return fetch(url, options);
+        }
+
+        function checkAuthBeforeFetch(url, opts) {
+            return apiFetch(url, opts).then(function(r) {
+                if (r.status === 401 || r.status === 403) return r.json().then(function(d) { d.__401 = true; return d; });
+                if (!r.ok) throw new Error('请求失败');
+                return r.json();
+            });
+        }
+
+        function isAuthError(d) {
+            return d.__401 || (d.code === 500 && d.msg === '认证失败');
+        }
+
+        function handleUnauthenticated() {
+            localStorage.removeItem('Admin-Token');
+            document.cookie = 'Admin-Token=; path=/; max-age=0; SameSite=Lax';
+            document.getElementById('activityApp').innerHTML = '<div class="content-header"><h1 class="content-title">动态流</h1></div><div class="content-body"><div class="empty-state"><div class="empty-icon">🔐</div><div class="empty-title">需要登录</div><div class="empty-desc">登录后即可查看动态流</div></div></div>';
+            showLoginModal(function() { window.location.href = window.location.href; });
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            if (!localStorage.getItem('Admin-Token')) { handleUnauthenticated(); return; }
+        });
+
+        document.addEventListener('auth-change', function() {
+            if (!localStorage.getItem('Admin-Token')) handleUnauthenticated();
+        });
+
         createApp({
             setup() {
                 const items = ref([]);
@@ -107,9 +143,9 @@
                         if (currentFilter.value !== 'all') {
                             url += '&type=' + currentFilter.value;
                         }
-                        const r = await fetch(url);
-                        const d = await r.json();
-                        items.value = d.ok ? d.data : [];
+                        const r = await checkAuthBeforeFetch(url);
+                        if (isAuthError(r)) { handleUnauthenticated(); return; }
+                        items.value = r.ok ? r.data : [];
                     } catch (e) {
                         console.error(e);
                     } finally {

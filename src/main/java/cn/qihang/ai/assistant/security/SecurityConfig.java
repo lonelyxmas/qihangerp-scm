@@ -63,11 +63,10 @@ public class SecurityConfig {
                         // 公开页面
                         .requestMatchers("/", "/login", "/login.html", "/config", "/config/**").permitAll()
                         .requestMatchers("/chat", "/help", "/log", "/notes").permitAll()
-                        .requestMatchers("/ai-guide", "/insights", "/health", "/automation").permitAll()
-                        .requestMatchers("/kb/**", "/image/**", "/coding/**", "/v1/**", "/v3/**", "/admin/**").permitAll()
-                        // 需要登录的页面
                         .requestMatchers("/data/**", "/planner", "/planner/**", "/activity", "/activity/**",
-                                "/notifications", "/notifications/**", "/approvals", "/approvals/**").authenticated()
+                                "/notifications", "/notifications/**", "/approvals", "/approvals/**").permitAll()
+                        .requestMatchers("/ai-guide", "/insights", "/health", "/automation", "/so").permitAll()
+                        .requestMatchers("/kb/**", "/image/**", "/coding/**", "/v1/**", "/v3/**", "/admin/**").permitAll()
                         // 需要登录的 API
                         .requestMatchers("/api/datacenter/**", "/api/tasks/**", "/api/reminders/**",
                                 "/api/collab/**").authenticated()
