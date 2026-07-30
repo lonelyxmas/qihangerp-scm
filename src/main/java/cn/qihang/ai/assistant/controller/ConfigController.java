@@ -2,7 +2,11 @@ package cn.qihang.ai.assistant.controller;
 
 import cn.qihang.ai.assistant.entity.LlmProfileEntity;
 import cn.qihang.ai.assistant.entity.KbBaseEntity;
-import cn.qihang.ai.assistant.service.*;
+import cn.qihang.ai.assistant.service.EmbeddingService;
+import cn.qihang.ai.assistant.service.FeishuService;
+import cn.qihang.ai.assistant.service.KbBaseService;
+import cn.qihang.ai.assistant.service.LlmConfigResolver;
+import cn.qihang.ai.assistant.service.LogService;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
@@ -13,19 +17,17 @@ import java.util.*;
 @RequestMapping("/config")
 public class ConfigController {
 
-    private final ConfigService configService;
     private final LogService logService;
     private final FeishuService feishuService;
     private final EmbeddingService embeddingService;
     private final LlmConfigResolver llmConfigResolver;
     private final KbBaseService kbBaseService;
 
-    public ConfigController(ConfigService configService, LogService logService,
+    public ConfigController(LogService logService,
                              FeishuService feishuService,
                              EmbeddingService embeddingService,
                              LlmConfigResolver llmConfigResolver,
                              KbBaseService kbBaseService) {
-        this.configService = configService;
         this.logService = logService;
         this.feishuService = feishuService;
         this.embeddingService = embeddingService;
@@ -40,7 +42,6 @@ public class ConfigController {
         ));
         model.addAttribute("ollama_available", embeddingService.isAvailable());
         model.addAttribute("ollama_provider", embeddingService.getProviderLabel());
-        model.addAttribute("config", configService.load());
         List<LlmProfileEntity> allProfiles = llmConfigResolver.getAllProfiles();
         model.addAttribute("llm_models", allProfiles);
         model.addAttribute("kbList", kbBaseService.getAll());

@@ -1,19 +1,17 @@
 package cn.qihang.ai.assistant.service;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import cn.qihang.ai.assistant.config.AppConfig;
-import cn.qihang.ai.assistant.model.Config;
+import cn.qihang.ai.assistant.entity.ActivityLogEntity;
 import cn.qihang.ai.assistant.model.LogEntry;
-import cn.qihang.ai.assistant.util.FileUtil;
-import cn.qihang.ai.assistant.util.TimeUtil;
+import cn.qihang.ai.assistant.service.db.ActivityLogDbService;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.ArrayList;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class LogService {
@@ -21,28 +19,46 @@ public class LogService {
     private static final Logger log = LoggerFactory.getLogger(LogService.class);
     private static final int MAX_LOG = 100;
 
-    private final AppConfig appConfig;
-    private final ConfigService configService;
-    private final TypeReference<List<LogEntry>> logType = new TypeReference<List<LogEntry>>() {};
+    private final ActivityLogDbService activityLogDbService;
 
-    public LogService(AppConfig appConfig, ConfigService configService) {
-        this.appConfig = appConfig;
-        this.configService = configService;
-    }
-
-    private Path getLogFile() {
-        return appConfig.getConfigDirPath().resolve("assistant_log.json");
+    public LogService(ActivityLogDbService activityLogDbService) {
+        this.activityLogDbService = activityLogDbService;
     }
 
     public List<LogEntry> load() {
-        return FileUtil.readJson(getLogFile(), logType, new ArrayList<>());
+        List<ActivityLogEntity> entities = activityLogDbService.lambdaQuery()
+                .orderByDesc(ActivityLogEntity::getId)
+                .last("LIMIT " + MAX_LOG)
+                .list();
+        return entities.stream().map(e -> {
+            String raw = e.getActionType();
+            String action = raw;
+            String status = "";
+            int sep = raw.lastIndexOf(" - ");
+            if (sep > 0) {
+                status = raw.substring(sep + 3);
+                action = raw.substring(0, sep);
+            }
+            return new LogEntry(e.getCreatedAt(), action, status, e.getActionDesc());
+        }).collect(Collectors.toList());
     }
 
     public synchronized void add(String action, String status, String detail) {
-        List<LogEntry> logs = load();
-        logs.add(0, new LogEntry(TimeUtil.nowStr(), action, status, detail));
-        if (logs.size() > MAX_LOG) logs = logs.subList(0, MAX_LOG);
-        FileUtil.writeJson(getLogFile(), logs);
+        ActivityLogEntity entity = new ActivityLogEntity();
+        entity.setActionType(action + " - " + status);
+        entity.setActionDesc(detail != null ? detail : "");
+        entity.setCreatedAt(LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
+        activityLogDbService.save(entity);
+        long count = activityLogDbService.count();
+        if (count > MAX_LOG) {
+            List<ActivityLogEntity> oldest = activityLogDbService.lambdaQuery()
+                    .orderByAsc(ActivityLogEntity::getId)
+                    .last("LIMIT " + (count - MAX_LOG))
+                    .list();
+            if (!oldest.isEmpty()) {
+                activityLogDbService.removeByIds(oldest.stream().map(ActivityLogEntity::getId).collect(Collectors.toList()));
+            }
+        }
     }
 
     public void add(String action, String status) {

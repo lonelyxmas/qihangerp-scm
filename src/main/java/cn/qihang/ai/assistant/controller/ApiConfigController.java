@@ -3,7 +3,6 @@ package cn.qihang.ai.assistant.controller;
 import cn.qihang.ai.assistant.entity.KbBaseEntity;
 import cn.qihang.ai.assistant.entity.LlmProfileEntity;
 import cn.qihang.ai.assistant.model.Config;
-import cn.qihang.ai.assistant.service.ConfigService;
 import cn.qihang.ai.assistant.service.FeishuConfigResolver;
 import cn.qihang.ai.assistant.service.FeishuService;
 import cn.qihang.ai.assistant.service.KbBaseService;
@@ -20,7 +19,6 @@ import java.util.stream.Collectors;
 @RestController
 public class ApiConfigController {
 
-    private final ConfigService configService;
     private final FeishuConfigResolver feishuConfigResolver;
     private final FeishuService feishuService;
     private final LogService logService;
@@ -30,14 +28,13 @@ public class ApiConfigController {
     private final SessionService sessionService;
     private final KbBaseService kbBaseService;
 
-    public ApiConfigController(ConfigService configService, FeishuConfigResolver feishuConfigResolver, FeishuService feishuService,
+    public ApiConfigController(FeishuConfigResolver feishuConfigResolver, FeishuService feishuService,
                                 LogService logService,
                                 EmbeddingService embeddingService,
                                 LlmProfileDbService llmProfileDbService,
                                 LlmConfigResolver llmConfigResolver,
                                 SessionService sessionService,
                                 KbBaseService kbBaseService) {
-        this.configService = configService;
         this.feishuConfigResolver = feishuConfigResolver;
         this.feishuService = feishuService;
         this.logService = logService;
@@ -50,12 +47,11 @@ public class ApiConfigController {
 
     @GetMapping("/api/config")
     public Config getConfig() {
-        Config cfg = configService.load();
+        Config cfg = new Config();
         cfg.setFeishuWebhookUrl(feishuConfigResolver.getWebhookUrl());
         cfg.setFeishuAppId(feishuConfigResolver.getAppId());
         cfg.setFeishuAppSecret(feishuConfigResolver.getAppSecret());
         cfg.setFeishuChatId(feishuConfigResolver.getChatId());
-
         return cfg;
     }
 
@@ -118,18 +114,6 @@ public class ApiConfigController {
     @PostMapping("/api/config/collector-dir")
     public Map<String, Object> updateCollectorDir(@RequestParam String dir) {
         return Map.of("ok", false, "error", "该功能已废弃，采集器数据现保存至数据中心");
-    }
-
-    @PostMapping("/api/config/ai-provider")
-    public Map<String, Object> updateAiProvider(@RequestParam String provider) {
-        if (!"direct".equals(provider)) {
-            return Map.of("ok", false, "error", "v0.4.0 仅支持 direct 模式（opencode 已移除）");
-        }
-        Config cfg = configService.load();
-        cfg.setAiProvider(provider);
-        configService.save(cfg);
-        logService.add("配置更新", "成功", "AI 引擎已固定为 direct");
-        return Map.of("ok", true, "provider", provider);
     }
 
     @PostMapping("/api/config/llm")

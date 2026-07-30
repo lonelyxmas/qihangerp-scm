@@ -2,7 +2,6 @@ package cn.qihang.ai.assistant.controller;
 
 import cn.qihang.ai.assistant.service.LlmService;
 import cn.qihang.ai.assistant.service.LogService;
-import cn.qihang.ai.assistant.service.ConfigService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -25,13 +24,10 @@ public class AiProxyController {
     });
 
     private final LlmService llmService;
-    private final ConfigService configService;
     private final LogService logService;
 
-    public AiProxyController(LlmService llmService,
-                             ConfigService configService, LogService logService) {
+    public AiProxyController(LlmService llmService, LogService logService) {
         this.llmService = llmService;
-        this.configService = configService;
         this.logService = logService;
     }
 

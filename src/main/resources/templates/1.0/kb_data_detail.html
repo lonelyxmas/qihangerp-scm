@@ -102,7 +102,7 @@ var CURRENT_DIR = [[${dir}]];
 var CURRENT_FILE = ([[${file}]] || '').replace(/\.json$/i, '');
 var DISPLAY_FILE = [[${file}]];
 var allGroupData = {};
-var columnSettings = {};
+
 
 /* ====== 加载数据 ====== */
 document.addEventListener('DOMContentLoaded', function() {
@@ -146,7 +146,7 @@ function loadData() {
             if (Array.isArray(data)) {
                 allGroupData = {};
                 allGroupData['数据'] = data;
-                loadColumnSettings().then(function() { renderAllTables(); });
+                renderAllTables();
                 return;
             }
 
@@ -166,7 +166,7 @@ function loadData() {
                     arrayKeys.forEach(function(k) {
                         allGroupData[k] = data[k];
                     });
-                    loadColumnSettings().then(function() { renderAllTables(); });
+                    renderAllTables();
                     return;
                 }
 
@@ -196,7 +196,7 @@ function loadData() {
 
 function loadGroupsSequentially(groups, idx) {
     if (idx >= groups.length) {
-        loadColumnSettings().then(function() { renderAllTables(); });
+        renderAllTables();
         return;
     }
     var g = groups[idx];
@@ -211,16 +211,6 @@ function loadGroupsSequentially(groups, idx) {
             loadGroupsSequentially(groups, idx + 1);
         })
         .catch(function() { loadGroupsSequentially(groups, idx + 1); });
-}
-
-function loadColumnSettings() {
-    var typeKey = KB_ID + '_' + CURRENT_DIR;
-    return fetch('/api/data/column-settings?type=' + encodeURIComponent(typeKey))
-        .then(function(r) { return r.json(); })
-        .then(function(res) {
-            if (res.ok && res.settings) columnSettings = res.settings;
-        })
-        .catch(function() {});
 }
 
 /* ====== 渲染表格 ====== */
@@ -251,18 +241,14 @@ function renderAllTables() {
             }
         });
         var allColumns = Array.from(colSet);
-        var tableId = CURRENT_FILE + '_' + groupName;
-        var savedCols = columnSettings[tableId];
-        var columns = (savedCols && savedCols.length > 0)
-            ? allColumns.filter(function(c) { return savedCols.indexOf(c) !== -1; })
-            : allColumns;
+        var columns = allColumns;
 
         if (filtered.length === 0 && searchTerm) return;
 
         html += '<div class="card" style="margin-bottom:16px;padding:16px 20px;">';
         html += '<div class="group-header">';
         html += '<h3>' + esc(groupName) + ' <span style="font-weight:400;color:#5c5f66;">(' + records.length + '条)</span>';
-        html += '<button class="col-settings-btn" onclick="showColumnSettings(\'' + esc(tableId) + '\')" title="列设置">⚙️</button></h3>';
+        html += '</h3>';
         html += '<button class="btn btn-primary" style="font-size:12px;" onclick="showAddModal(\'' + esc(groupName) + '\')">➕ 添加</button>';
         html += '</div>';
         html += '<div class="data-table-container"><table class="data-table">';
@@ -525,56 +511,6 @@ function getAllColumnsForTable(tableId) {
         }
     }
     return [];
-}
-
-function showColumnSettings(tableId) {
-    var allColumns = getAllColumnsForTable(tableId);
-    if (allColumns.length === 0) return;
-
-    var savedCols = columnSettings[tableId];
-    var selected = savedCols && savedCols.length > 0 ? savedCols.slice() : allColumns.slice();
-
-    var popup = document.createElement('div');
-    popup.className = 'col-settings-overlay';
-    popup.onclick = function(e) { if (e.target === popup) popup.remove(); };
-
-    var html = '<div class="col-settings-popup" onclick="event.stopPropagation();">';
-    html += '<h3>选择要显示的列</h3>';
-    html += '<div style="max-height:50vh;overflow-y:auto;">';
-    for (var i = 0; i < allColumns.length; i++) {
-        var col = allColumns[i];
-        var checked = selected.indexOf(col) !== -1;
-        html += '<label class="col-settings-item">';
-        html += '<input type="checkbox" value="' + col.replace(/"/g, '&quot;') + '" ' + (checked ? 'checked' : '') + '>';
-        html += col;
-        html += '</label>';
-    }
-    html += '</div>';
-    html += '<div class="col-settings-actions">';
-    html += '<button class="btn" onclick="this.closest(\'.col-settings-overlay\').remove()">取消</button>';
-    html += '<button class="btn btn-primary" onclick="saveColumnSettings(\'' + tableId + '\', this)">确认</button>';
-    html += '</div></div>';
-
-    popup.innerHTML = html;
-    document.body.appendChild(popup);
-}
-
-function saveColumnSettings(tableId, btn) {
-    var popup = btn.closest('.col-settings-overlay');
-    var checkboxes = popup.querySelectorAll('input[type="checkbox"]');
-    var selected = [];
-    for (var i = 0; i < checkboxes.length; i++) {
-        if (checkboxes[i].checked) selected.push(checkboxes[i].value);
-    }
-    columnSettings[tableId] = selected;
-    var typeKey = KB_ID + '_' + CURRENT_DIR;
-
-    fetch('/api/data/column-settings?type=' + encodeURIComponent(typeKey), {
-        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(columnSettings)
-    }).then(function(r) { return r.json(); }).then(function(res) {
-        if (res.ok) { renderAllTables(); popup.remove(); }
-        else { toast('保存失败: ' + (res.error || '未知错误'), 'error'); }
-    }).catch(function(e) { toast('保存失败: ' + e.message, 'error'); });
 }
 
 /* ====== 工具函数 ====== */

@@ -22,15 +22,13 @@ public class LlmConfigResolver {
 
     private static final Logger log = LoggerFactory.getLogger(LlmConfigResolver.class);
 
-    private final ConfigService configService;
     private final RestClient.Builder restClientBuilder;
     private final LlmProfileDbService llmProfileDbService;
     private final int defaultTimeoutSec;
 
-    public LlmConfigResolver(ConfigService configService, RestClient.Builder restClientBuilder,
+    public LlmConfigResolver(RestClient.Builder restClientBuilder,
                              LlmProfileDbService llmProfileDbService,
                              @Value("${app.llm-timeout:600}") int defaultTimeoutSec) {
-        this.configService = configService;
         this.restClientBuilder = restClientBuilder;
         this.llmProfileDbService = llmProfileDbService;
         this.defaultTimeoutSec = defaultTimeoutSec;

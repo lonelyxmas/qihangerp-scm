@@ -2,9 +2,6 @@ package cn.qihang.ai.assistant.model;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-import java.util.List;
-import java.util.Map;
-import java.util.HashMap;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonInclude(JsonInclude.Include.ALWAYS)
@@ -15,19 +12,7 @@ public class Config {
     private String feishuAppSecret;
     private String feishuChatId;
 
-    
-    private String logFile;
-    private Map<String, Map<String, List<String>>> columnSettings = new HashMap<>();
-
     public Config() {}
-
-    public static Config defaultConfig(String webhookUrl) {
-        Config c = new Config();
-        c.feishuWebhookUrl = webhookUrl;
-        c.logFile = "assistant_log.json";
-        return c;
-    }
-
 
     public String getFeishuWebhookUrl() { return feishuWebhookUrl; }
     public void setFeishuWebhookUrl(String feishuWebhookUrl) { this.feishuWebhookUrl = feishuWebhookUrl; }
@@ -37,12 +22,5 @@ public class Config {
     public void setFeishuAppSecret(String feishuAppSecret) { this.feishuAppSecret = feishuAppSecret; }
     public String getFeishuChatId() { return feishuChatId; }
     public void setFeishuChatId(String feishuChatId) { this.feishuChatId = feishuChatId; }
-
-    public String getLogFile() { return logFile; }
-    public void setLogFile(String logFile) { this.logFile = logFile; }
-    public String getAiProvider() { return "direct"; }
-    public void setAiProvider(String aiProvider) { /* 废弃 v0.4.0 */ }
-    public Map<String, Map<String, List<String>>> getColumnSettings() { return columnSettings; }
-    public void setColumnSettings(Map<String, Map<String, List<String>>> columnSettings) { this.columnSettings = columnSettings; }
 
 }

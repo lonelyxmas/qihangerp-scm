@@ -5,7 +5,6 @@ import cn.qihang.ai.assistant.config.AppConfig;
 import cn.qihang.ai.assistant.datacenter.DataModuleService;
 import cn.qihang.ai.assistant.entity.KbBaseEntity;
 import cn.qihang.ai.assistant.security.common.SecurityUtils;
-import cn.qihang.ai.assistant.service.ConfigService;
 import cn.qihang.ai.assistant.service.KbBaseService;
 import cn.qihang.ai.assistant.service.EmbeddingService;
 import cn.qihang.ai.assistant.util.FileUtil;
@@ -24,17 +23,15 @@ public class GlobalModelAdvice {
     private static final TypeReference<Map<String, String>> LABELS_TYPE = new TypeReference<>() {};
 
     private final AppConfig appConfig;
-    private final ConfigService configService;
     private final KbBaseService kbService;
     private final EmbeddingService embeddingService;
     private final DataModuleService moduleService;
 
-    public GlobalModelAdvice(AppConfig appConfig, ConfigService configService,
+    public GlobalModelAdvice(AppConfig appConfig,
                              KbBaseService kbService,
                              EmbeddingService embeddingService,
                              DataModuleService moduleService) {
         this.appConfig = appConfig;
-        this.configService = configService;
         this.kbService = kbService;
         this.embeddingService = embeddingService;
         this.moduleService = moduleService;
