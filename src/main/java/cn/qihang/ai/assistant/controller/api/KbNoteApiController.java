@@ -7,6 +7,7 @@ import cn.qihang.ai.assistant.entity.KbEmbeddingEntity;
 import cn.qihang.ai.assistant.entity.KbCategoryEntity;
 import cn.qihang.ai.assistant.service.DocumentParserService;
 import cn.qihang.ai.assistant.service.KbBaseService;
+import cn.qihang.ai.assistant.service.KbIndexingService;
 import cn.qihang.ai.assistant.service.LogService;
 import cn.qihang.ai.assistant.service.storage.QiniuStorageService;
 import cn.qihang.ai.assistant.service.db.KbNoteDbService;
@@ -39,6 +40,7 @@ public class KbNoteApiController extends BaseController {
     private final DocumentParserService documentParserService;
     private final QiniuStorageService qiniuStorageService;
     private final ActivityLogDbService activityLogDbService;
+    private final KbIndexingService kbIndexingService;
 
     public KbNoteApiController(KbBaseService kbService,
                                KbNoteDbService kbNoteDbService,
@@ -47,7 +49,8 @@ public class KbNoteApiController extends BaseController {
                                LogService logService,
                                DocumentParserService documentParserService,
                                QiniuStorageService qiniuStorageService,
-                               ActivityLogDbService activityLogDbService) {
+                               ActivityLogDbService activityLogDbService,
+                               KbIndexingService kbIndexingService) {
         this.kbService = kbService;
         this.kbNoteDbService = kbNoteDbService;
         this.kbEmbeddingDbService = kbEmbeddingDbService;
@@ -56,6 +59,7 @@ public class KbNoteApiController extends BaseController {
         this.documentParserService = documentParserService;
         this.qiniuStorageService = qiniuStorageService;
         this.activityLogDbService = activityLogDbService;
+        this.kbIndexingService = kbIndexingService;
     }
 
     // ── Access check for guest users ──
@@ -238,6 +242,7 @@ public class KbNoteApiController extends BaseController {
             ensureParentDirs(id, path);
         }
         addActivityLog("kb_save", "保存文档: " + path);
+        kbIndexingService.indexNote(id, note.getId());
         return Map.of("ok", true);
     }
 
@@ -274,6 +279,7 @@ public class KbNoteApiController extends BaseController {
 
         ensureParentDirs(id, path);
         addActivityLog("kb_create", "新建文档: " + path);
+        kbIndexingService.indexNote(id, note.getId());
         return Map.of("ok", true, "path", path);
     }
 
@@ -294,9 +300,11 @@ public class KbNoteApiController extends BaseController {
                     .filter(n -> n.getPath().startsWith(prefix))
                     .collect(Collectors.toList());
             for (KbNoteEntity child : children) {
+                kbIndexingService.removeNoteIndex(child.getId());
                 kbNoteDbService.removeById(child.getId());
             }
         }
+        kbIndexingService.removeNoteIndex(note.getId());
         kbNoteDbService.removeById(note.getId());
         addActivityLog("kb_delete", "删除文档: " + path);
         return Map.of("ok", true);
@@ -345,6 +353,8 @@ public class KbNoteApiController extends BaseController {
 
         ensureParentDirs(id, newPath);
         addActivityLog("kb_rename", "重命名文档: " + oldPath + " -> " + newPath);
+        kbIndexingService.removeNoteIndex(note.getId());
+        kbIndexingService.indexNote(id, note.getId());
         return Map.of("ok", true);
     }
 
@@ -416,6 +426,7 @@ public class KbNoteApiController extends BaseController {
 
             ensureParentDirs(id, path);
             addActivityLog("kb_upload", "上传文档: " + path);
+            kbIndexingService.indexNote(id, note.getId());
             return Map.of("ok", true, "path", path);
         } catch (IOException e) {
             return Map.of("ok", false, "error", "上传失败: " + e.getMessage());

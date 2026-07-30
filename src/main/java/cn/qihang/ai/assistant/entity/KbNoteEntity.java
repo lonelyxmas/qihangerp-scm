@@ -23,6 +23,8 @@ public class KbNoteEntity {
     private Long categoryId;
     private String createdAt;
     private String updatedAt;
+    private String contentHash;
+    private String indexedAt;
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -54,4 +56,8 @@ public class KbNoteEntity {
     public void setCreatedAt(String createdAt) { this.createdAt = createdAt; }
     public String getUpdatedAt() { return updatedAt; }
     public void setUpdatedAt(String updatedAt) { this.updatedAt = updatedAt; }
+    public String getContentHash() { return contentHash; }
+    public void setContentHash(String contentHash) { this.contentHash = contentHash; }
+    public String getIndexedAt() { return indexedAt; }
+    public void setIndexedAt(String indexedAt) { this.indexedAt = indexedAt; }
 }

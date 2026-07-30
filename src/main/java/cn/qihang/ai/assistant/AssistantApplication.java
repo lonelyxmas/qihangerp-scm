@@ -2,6 +2,7 @@ package cn.qihang.ai.assistant;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
 @SpringBootApplication(exclude = {
@@ -12,6 +13,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
     org.springframework.ai.model.openai.autoconfigure.OpenAiImageAutoConfiguration.class,
     org.springframework.ai.model.openai.autoconfigure.OpenAiModerationAutoConfiguration.class
 })
+@EnableAsync
 @EnableScheduling
 public class AssistantApplication {
 

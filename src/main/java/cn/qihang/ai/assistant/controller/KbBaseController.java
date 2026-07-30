@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import cn.qihang.ai.assistant.entity.AiAnalysisEntity;
 import cn.qihang.ai.assistant.entity.KbBaseEntity;
 import cn.qihang.ai.assistant.service.NoteIndexService;
+import cn.qihang.ai.assistant.service.KbIndexingService;
 import cn.qihang.ai.assistant.service.db.MessageDbService;
 import cn.qihang.ai.assistant.service.KbBaseService;
 import cn.qihang.ai.assistant.service.LogService;
@@ -31,19 +32,22 @@ public class KbBaseController {
     private final AiAnalysisDbService aiAnalysisDbService;
     private final NoteIndexService noteIndexService;
     private final MessageDbService messageDbService;
+    private final KbIndexingService kbIndexingService;
 
     public KbBaseController(KbBaseService kbService,
                                    LogService logService,
                                    ReportService reportService,
                                    AiAnalysisDbService aiAnalysisDbService,
                                    NoteIndexService noteIndexService,
-                                   MessageDbService messageDbService) {
+                                   MessageDbService messageDbService,
+                                   KbIndexingService kbIndexingService) {
         this.kbService = kbService;
         this.logService = logService;
         this.reportService = reportService;
         this.aiAnalysisDbService = aiAnalysisDbService;
         this.noteIndexService = noteIndexService;
         this.messageDbService = messageDbService;
+        this.kbIndexingService = kbIndexingService;
     }
 
     // ========== 页面路由 ==========
@@ -335,6 +339,44 @@ public class KbBaseController {
         kbService.reorder(ids);
         logService.add("知识库", "排序", "知识库排序已更新");
         return Map.of("ok", true);
+    }
+
+    @ResponseBody
+    @PostMapping("/api/kb/{id}/reindex")
+    public Map<String, Object> reindex(@PathVariable Long id) {
+        KbBaseEntity kb = kbService.getById(id);
+        if (kb == null) return Map.of("ok", false, "error", "知识库不存在");
+        if (!kbIndexingService.isAvailable()) {
+            return Map.of("ok", false, "error", "Embedding 服务不可用，请先在配置页配置向量模型");
+        }
+        try {
+            kbIndexingService.reindexKb(id);
+            logService.add("知识库", "重索引", "知识库已全量重索引: " + kb.getName());
+            return Map.of("ok", true);
+        } catch (Exception e) {
+            log.error("重索引失败", e);
+            return Map.of("ok", false, "error", e.getMessage() != null ? e.getMessage() : "重索引失败");
+        }
+    }
+
+    @ResponseBody
+    @GetMapping("/api/kb/{id}/index-status")
+    public Map<String, Object> indexStatus(@PathVariable Long id) {
+        KbBaseEntity kb = kbService.getById(id);
+        if (kb == null) return Map.of("ok", false, "error", "知识库不存在");
+        var stats = noteIndexService.getIndexStats(kb.getId());
+        var status = kbIndexingService.getKbStatus(kb.getId());
+        return Map.of(
+            "ok", true,
+            "available", status.available(),
+            "pendingCount", status.pendingCount(),
+            "totalIndexed", status.totalIndexed(),
+            "lastIndexTime", status.lastIndexTime() != null ? status.lastIndexTime() : "",
+            "fileCount", stats.fileCount(),
+            "chunkCount", stats.chunkCount(),
+            "running", status.running(),
+            "progress", status.progress()
+        );
     }
 
     private Map<String, Object> toMap(KbBaseEntity e) {

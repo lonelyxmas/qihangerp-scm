@@ -735,19 +735,80 @@
             status.textContent = '共 0 个知识库';
             return;
         }
-        var html = '<table><thead><tr><th>名称</th><th>日报</th><th>飞书推送</th><th>操作</th></tr></thead><tbody>';
+        var html = '<table><thead><tr><th>名称</th><th>可见性</th><th>索引状态</th><th>日报</th><th>飞书推送</th><th>操作</th></tr></thead><tbody>';
         for (var i = 0; i < kbList.length; i++) {
             var kb = kbList[i];
-            html += '<tr>';
+            var vis = kb.visibility === 'public' ? '<span style="color:#16a34a;">公开</span>' : '<span style="color:#f59e0b;">私有</span>';
+            html += '<tr id="kb-row-' + kb.id + '">';
             html += '<td><strong>' + escapeHtml(kb.name) + '</strong></td>';
+            html += '<td>' + vis + '</td>';
+            html += '<td id="kb-index-status-' + kb.id + '"><span class="text-muted">加载中...</span></td>';
             html += '<td>' + (kb.autoReport ? '✅' : '—') + '</td>';
             html += '<td>' + (kb.feishuPush ? '✅' : '—') + '</td>';
-            html += '<td><button class="btn btn-secondary btn-sm" onclick="editKb(' + kb.id + ')" style="margin-right:4px;">编辑</button><button class="btn btn-danger btn-sm" onclick="deleteKb(' + kb.id + ')">删除</button></td>';
+            html += '<td><button class="btn btn-secondary btn-sm" onclick="editKb(' + kb.id + ')" style="margin-right:4px;">编辑</button><button class="btn btn-secondary btn-sm" onclick="reindexKb(' + kb.id + ')" style="margin-right:4px;">🔄 重索引</button><button class="btn btn-danger btn-sm" onclick="deleteKb(' + kb.id + ')">删除</button></td>';
             html += '</tr>';
         }
         html += '</tbody></table>';
         container.innerHTML = html;
         status.textContent = '共 ' + kbList.length + ' 个知识库';
+        for (var i = 0; i < kbList.length; i++) {
+            loadKbIndexStatus(kbList[i].id);
+        }
+    }
+
+    var reindexPollTimers = {};
+
+    function loadKbIndexStatus(kbId) {
+        apiFetch('/api/kb/' + kbId + '/index-status').then(function(r){ return r.json(); }).then(function(data){
+            var cell = document.getElementById('kb-index-status-' + kbId);
+            if (!cell) return;
+            if (!data.ok) { cell.innerHTML = '<span class="text-muted">—</span>'; return; }
+            var html = '';
+            if (data.running) {
+                var pct = data.progress || 0;
+                html += '<div style="display:flex;align-items:center;gap:6px;">';
+                html += '<div style="flex:1;height:6px;background:#e5e7eb;border-radius:3px;overflow:hidden;">';
+                html += '<div style="height:100%;width:' + pct + '%;background:var(--primary);border-radius:3px;transition:width 0.5s;"></div>';
+                html += '</div>';
+                html += '<span style="font-size:12px;color:var(--text-secondary);white-space:nowrap;">' + pct + '%</span>';
+                html += '</div>';
+                if (data.lastIndexTime) {
+                    html += '<div class="text-muted" style="font-size:11px;margin-top:2px;">' + data.lastIndexTime + '</div>';
+                }
+                cell.innerHTML = html;
+                reindexPollTimers[kbId] = setTimeout(function(){ loadKbIndexStatus(kbId); }, 2000);
+            } else {
+                if (reindexPollTimers[kbId]) { clearTimeout(reindexPollTimers[kbId]); delete reindexPollTimers[kbId]; }
+                if (data.available && data.chunkCount > 0) {
+                    html += '<span style="color:#16a34a;">✅ ' + data.chunkCount + ' 块</span>';
+                } else if (data.available && data.chunkCount === 0) {
+                    html += '<span class="text-muted">未索引</span>';
+                } else {
+                    html += '<span style="color:#dc2626;">⚠️ 未配置</span>';
+                }
+                if (data.lastIndexTime) {
+                    html += '<div class="text-muted" style="font-size:11px;margin-top:2px;">' + data.lastIndexTime + '</div>';
+                }
+                cell.innerHTML = html;
+            }
+        }).catch(function(){ /* ignore */ });
+    }
+
+    function reindexKb(kbId) {
+        var cell = document.getElementById('kb-index-status-' + kbId);
+        if (cell) cell.innerHTML = '<span style="color:#f59e0b;">⏳ 正在启动...</span>';
+        apiFetch('/api/kb/' + kbId + '/reindex', { method: 'POST' }).then(function(r){ return r.json(); }).then(function(data){
+            if (data.ok) {
+                toast('✅ 重索引已启动', 'success');
+                loadKbIndexStatus(kbId);
+            } else {
+                toast('❌ ' + (data.error || '重索引失败'), 'error');
+                loadKbIndexStatus(kbId);
+            }
+        }).catch(function(){
+            toast('❌ 请求失败', 'error');
+            loadKbIndexStatus(kbId);
+        });
     }
 
     function showKbModal() {
@@ -791,12 +852,16 @@
     }
 
     function deleteKb(id) {
-        if (!confirm('确定删除该知识库？')) return;
+        var kb = kbList.find(function(x){ return x.id === id; });
+        var name = kb ? kb.name : '该知识库';
+        if (!confirm('确定删除「' + name + '」？\n\n删除后该知识库的所有笔记、向量索引、对话记录将被一并删除，此操作不可恢复。')) return;
         apiFetch('/api/config/knowledge-bases/' + id, { method: 'DELETE' }).then(function(r){ return r.json(); }).then(function(d){
             if (d.ok) { toast('✅ 知识库已删除', 'success'); loadKbList(); }
             else { toast('❌ ' + (d.error || '删除失败'), 'error'); }
         });
     }
+
+    function escapeHtml(str) { return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 
     function toast(msg, type) {
         const t = document.createElement('div');

@@ -24,11 +24,25 @@ public class KbNoteDbServiceImpl extends ServiceImpl<KbNoteMapper, KbNoteEntity>
     }
 
     @Override
+    public List<KbNoteEntity> listByKbIdWithoutContent(Long kbId) {
+        return lambdaQuery()
+                .select(KbNoteEntity.class, info -> !info.getColumn().equals("content"))
+                .eq(KbNoteEntity::getKbId, kbId)
+                .orderByAsc(KbNoteEntity::getPath)
+                .list();
+    }
+
+    @Override
     public KbNoteEntity getByKbIdAndPath(Long kbId, String path) {
         return lambdaQuery()
                 .eq(KbNoteEntity::getKbId, kbId)
                 .eq(KbNoteEntity::getPath, path)
                 .one();
+    }
+
+    @Override
+    public KbNoteEntity getContentSnippet(Long noteId, int maxChars) {
+        return baseMapper.getContentSnippet(noteId, maxChars);
     }
 
     @Override

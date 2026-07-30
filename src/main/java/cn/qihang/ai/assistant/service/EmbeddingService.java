@@ -110,6 +110,17 @@ public class EmbeddingService {
                 this.available = false;
                 return;
             }
+
+            // 检查 Ollama 版本是否支持 /api/embed (Ollama >= 0.3.0)
+            try {
+                String versionBody = checkClient.get()
+                        .uri(baseUrl + "/api/version")
+                        .retrieve()
+                        .body(String.class);
+                log.debug("Ollama version response: {}", versionBody);
+            } catch (Exception ve) {
+                log.warn("⚠️ Ollama 版本检测失败: {}", ve.getMessage());
+            }
         } catch (Exception e) {
             log.warn("⚠️ Ollama 连接失败 ({}): {}, 语义检索不可用", baseUrl, e.getMessage());
             this.available = false;
@@ -164,8 +175,14 @@ public class EmbeddingService {
         if (!available || embeddingModel == null) return null;
         try {
             return embeddingModel.embed(text);
+        } catch (org.springframework.web.client.HttpClientErrorException e) {
+            String resp = e.getResponseBodyAsString();
+            log.warn("Embedding API 返回 {} ({}): {} — 请检查向量模型配置是否正确",
+                    e.getStatusCode(), e.getStatusText(), resp != null ? resp : e.getMessage());
+            log.warn("  常见原因: baseUrl 缺少 /v1 (如 https://api.siliconflow.cn → https://api.siliconflow.cn/v1)，或模型名不对，或 API Key 无效");
+            return null;
         } catch (Exception e) {
-            log.warn("Embedding 生成失败: {}", e.getMessage());
+            log.warn("Embedding 生成失败: {} — 请检查向量模型配置", e.getMessage());
             return null;
         }
     }

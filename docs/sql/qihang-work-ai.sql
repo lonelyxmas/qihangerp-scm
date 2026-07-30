@@ -11,7 +11,7 @@
  Target Server Version : 80036 (8.0.36)
  File Encoding         : 65001
 
- Date: 30/07/2026 19:31:10
+ Date: 30/07/2026 22:02:02
 */
 
 SET NAMES utf8mb4;
@@ -354,6 +354,7 @@ CREATE TABLE `kb_bases`  (
   `auto_report` int NULL DEFAULT 0 COMMENT '是否自动生成日报 0/1',
   `feishu_push` int NULL DEFAULT 0 COMMENT '是否飞书推送 0/1',
   `visibility` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT 'private' COMMENT '可见性: public=公开, private=私有',
+  `deleted` int NULL DEFAULT 0 COMMENT '0=正常 1=已删除',
   PRIMARY KEY (`id`) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 2 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '知识库' ROW_FORMAT = Dynamic;
 
@@ -378,19 +379,22 @@ DROP TABLE IF EXISTS `kb_embeddings`;
 CREATE TABLE `kb_embeddings`  (
   `id` bigint NOT NULL AUTO_INCREMENT,
   `kb_id` bigint NOT NULL COMMENT '知识库 ID',
+  `note_id` bigint NULL DEFAULT 0 COMMENT '关联 kb_notes.id',
   `file_path` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '文件相对路径',
   `chunk_index` int NULL DEFAULT NULL COMMENT '块序号',
+  `chunk_size` int NULL DEFAULT 0 COMMENT '块大小(字符数)',
   `path_context` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '路径上下文',
   `content` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '文本内容',
-  `embedding` json NULL COMMENT '向量数据（JSON 数组）',
+  `embedding` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL COMMENT '向量数据（Base64 编码的浮点数组）',
   `content_hash` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '内容 MD5',
   `created_at` varchar(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '创建时间',
   `updated_at` varchar(30) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '更新时间',
   PRIMARY KEY (`id`) USING BTREE,
   INDEX `idx_kb_id`(`kb_id` ASC) USING BTREE,
   INDEX `idx_file_path`(`file_path`(255) ASC) USING BTREE,
-  INDEX `idx_content_hash`(`content_hash` ASC) USING BTREE
-) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '笔记文件向量' ROW_FORMAT = Dynamic;
+  INDEX `idx_content_hash`(`content_hash` ASC) USING BTREE,
+  UNIQUE INDEX `uk_note_chunk`(`note_id` ASC, `chunk_index` ASC) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '笔记文件向量' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Table structure for kb_notes
@@ -405,6 +409,8 @@ CREATE TABLE `kb_notes`  (
   `content` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL COMMENT '文件内容（仅文件类型有效）',
   `created_at` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '创建时间',
   `updated_at` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '更新时间',
+  `content_hash` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '内容 MD5，用于增量索引变更检测',
+  `indexed_at` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '最近索引时间',
   `file_type` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT '',
   `file_size` bigint NULL DEFAULT 0,
   `tags` varchar(2000) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT '[]',
@@ -567,7 +573,7 @@ CREATE TABLE `system_log`  (
   `created_at` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '创建时间',
   PRIMARY KEY (`id`) USING BTREE,
   INDEX `idx_created_at`(`created_at` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 2 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '系统操作日志表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 26 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '系统操作日志表' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Table structure for tasks

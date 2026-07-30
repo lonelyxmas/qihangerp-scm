@@ -64,4 +64,17 @@ public class KbEmbeddingDbService extends ServiceImpl<KbEmbeddingMapper, KbEmbed
                 .count();
         return (int) count;
     }
+
+    public void deleteByNoteId(Long noteId) {
+        lambdaUpdate()
+                .eq(KbEmbeddingEntity::getNoteId, noteId)
+                .remove();
+    }
+
+    public List<KbEmbeddingEntity> listByNoteId(Long noteId) {
+        return lambdaQuery()
+                .eq(KbEmbeddingEntity::getNoteId, noteId)
+                .orderByAsc(KbEmbeddingEntity::getChunkIndex)
+                .list();
+    }
 }

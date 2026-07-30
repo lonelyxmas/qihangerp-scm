@@ -16,6 +16,7 @@ public class KbBaseEntity {
     private Integer autoReport;
     private Integer feishuPush;
     private String visibility;
+    private Integer deleted;
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -33,4 +34,6 @@ public class KbBaseEntity {
     public void setFeishuPush(Integer feishuPush) { this.feishuPush = feishuPush; }
     public String getVisibility() { return visibility; }
     public void setVisibility(String visibility) { this.visibility = visibility; }
+    public Integer getDeleted() { return deleted; }
+    public void setDeleted(Integer deleted) { this.deleted = deleted; }
 }

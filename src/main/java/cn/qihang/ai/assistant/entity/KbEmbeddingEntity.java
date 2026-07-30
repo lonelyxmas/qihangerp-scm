@@ -10,8 +10,10 @@ public class KbEmbeddingEntity {
     @TableId(type = IdType.AUTO)
     private Long id;
     private Long kbId;
+    private Long noteId;
     private String filePath;
     private Integer chunkIndex;
+    private Integer chunkSize;
     private String pathContext;
     private String content;
     private String embedding;
@@ -23,10 +25,14 @@ public class KbEmbeddingEntity {
     public void setId(Long id) { this.id = id; }
     public Long getKbId() { return kbId; }
     public void setKbId(Long kbId) { this.kbId = kbId; }
+    public Long getNoteId() { return noteId; }
+    public void setNoteId(Long noteId) { this.noteId = noteId; }
     public String getFilePath() { return filePath; }
     public void setFilePath(String filePath) { this.filePath = filePath; }
     public Integer getChunkIndex() { return chunkIndex; }
     public void setChunkIndex(Integer chunkIndex) { this.chunkIndex = chunkIndex; }
+    public Integer getChunkSize() { return chunkSize; }
+    public void setChunkSize(Integer chunkSize) { this.chunkSize = chunkSize; }
     public String getPathContext() { return pathContext; }
     public void setPathContext(String pathContext) { this.pathContext = pathContext; }
     public String getContent() { return content; }

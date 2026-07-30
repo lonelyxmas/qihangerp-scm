@@ -25,16 +25,20 @@ public class KbBaseService {
 
     public List<KbBaseEntity> getAll() {
         return kbBaseDbService.lambdaQuery()
+                .eq(KbBaseEntity::getDeleted, 0)
                 .orderByAsc(KbBaseEntity::getSortOrder)
                 .list();
     }
 
     public KbBaseEntity getById(Long id) {
-        return kbBaseDbService.getById(id);
+        KbBaseEntity e = kbBaseDbService.getById(id);
+        if (e != null && e.getDeleted() != null && e.getDeleted() == 1) return null;
+        return e;
     }
 
     public KbBaseEntity getFirst() {
         return kbBaseDbService.lambdaQuery()
+                .eq(KbBaseEntity::getDeleted, 0)
                 .orderByAsc(KbBaseEntity::getSortOrder)
                 .last("LIMIT 1")
                 .one();
@@ -76,6 +80,7 @@ public class KbBaseService {
 
         if (isNew) {
             int maxOrder = kbBaseDbService.lambdaQuery()
+                    .eq(KbBaseEntity::getDeleted, 0)
                     .orderByDesc(KbBaseEntity::getSortOrder)
                     .list().stream()
                     .findFirst()
@@ -83,6 +88,7 @@ public class KbBaseService {
                     .orElse(0);
             e.setSortOrder(maxOrder);
             e.setLabels("{}");
+            e.setDeleted(0);
             e.setCreatedAt(TimeUtil.nowStr());
             kbBaseDbService.save(e);
         } else {
@@ -94,7 +100,8 @@ public class KbBaseService {
         KbBaseEntity e = kbBaseDbService.getById(id);
         if (e == null) return;
 
-        kbBaseDbService.removeById(id);
+        e.setDeleted(1);
+        kbBaseDbService.updateById(e);
     }
 
     public void setActive(Long id) {
