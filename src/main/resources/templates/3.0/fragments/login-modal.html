@@ -52,13 +52,11 @@
                     var token = data.token || data.data;
                     localStorage.setItem('Admin-Token', token);
                     document.cookie = 'Admin-Token=' + token + '; path=/; max-age=86400; SameSite=Lax';
+                    var cb = _loginCallback;
+                    _loginCallback = null;
                     closeLoginModal();
                     btn.disabled = false; btn.textContent = '登 录';
-                    if (_loginCallback) {
-                        var cb = _loginCallback;
-                        _loginCallback = null;
-                        cb();
-                    }
+                    if (cb) cb();
                     if (typeof updateSidebar === 'function') updateSidebar();
                 } else {
                     err.textContent = data.msg || '登录失败';

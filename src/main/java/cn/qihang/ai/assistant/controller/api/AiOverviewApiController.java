@@ -3,6 +3,7 @@ package cn.qihang.ai.assistant.controller.api;
 import cn.qihang.ai.assistant.datacenter.AiAnalysisCache;
 import cn.qihang.ai.assistant.entity.KbBaseEntity;
 import cn.qihang.ai.assistant.entity.KbEmbeddingEntity;
+import cn.qihang.ai.assistant.security.common.SecurityUtils;
 import cn.qihang.ai.assistant.service.KbBaseService;
 import cn.qihang.ai.assistant.service.LlmService;
 import cn.qihang.ai.assistant.service.NoteIndexService;
@@ -100,8 +101,13 @@ public class AiOverviewApiController {
 
     @GetMapping("/global-search")
     public ResponseEntity<Map<String, Object>> globalSearch(@RequestParam String query,
-                                                            @RequestParam(defaultValue = "15") int limit) {
+                                                             @RequestParam(defaultValue = "15") int limit) {
         Map<String, Object> result = new HashMap<>();
+        if (!SecurityUtils.isLoggedIn()) {
+            result.put("ok", false);
+            result.put("error", "请先登录");
+            return ResponseEntity.ok(result);
+        }
         try {
             List<NoteIndexService.GlobalSearchResult> searchResults = noteIndexService.globalSearch(query, limit);
 

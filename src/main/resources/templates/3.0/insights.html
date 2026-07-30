@@ -53,6 +53,14 @@
     <script>
         const API_BASE = '/api/ai';
 
+        function handleUnauthenticated() {
+            localStorage.removeItem('Admin-Token');
+            document.cookie = 'Admin-Token=; path=/; max-age=0; SameSite=Lax';
+            document.getElementById('searchInput').disabled = true;
+            document.getElementById('resultsSection').innerHTML = '<div class="empty-state"><div class="empty-icon">🔐</div><div class="empty-title">需要登录</div><div class="empty-desc">登录后即可搜索所有知识库</div></div>';
+            showLoginModal(function() { window.location.href = window.location.href; });
+        }
+
         function doSearch() {
             const q = document.getElementById('searchInput').value.trim();
             if (!q) return;
@@ -61,8 +69,18 @@
             section.innerHTML = '<div class="loading"><span class="loading-dot"></span><span class="loading-dot"></span><span class="loading-dot"></span>搜索中...</div>';
 
             fetch(API_BASE + '/global-search?query=' + encodeURIComponent(q) + '&limit=15')
-                .then(r => r.json())
+                .then(r => {
+                    if (r.status === 401) return r.json().then(d => { d.__401 = true; return d; });
+                    if (!r.ok) throw new Error('请求失败');
+                    return r.json();
+                })
                 .then(d => {
+                    if (d && d.__401) { handleUnauthenticated(); return; }
+                    if (!d.ok) {
+                        if (d.error === '请先登录') { handleUnauthenticated(); return; }
+                        section.innerHTML = '<div class="empty-state"><div class="empty-icon">⚠️</div><div class="empty-title">搜索失败</div><div class="empty-desc">' + escapeHtml(d.error || '未知错误') + '</div></div>';
+                        return;
+                    }
                     if (d.ok && d.results && d.results.length > 0) {
                         section.innerHTML = '<div class="search-results">' + renderResults(d.results) + '</div>';
                     } else {
@@ -108,9 +126,20 @@
         document.addEventListener('DOMContentLoaded', function() {
             var token = localStorage.getItem('Admin-Token');
             if (!token) {
-                document.getElementById('searchInput').disabled = true;
-                document.getElementById('resultsSection').innerHTML = '<div class="empty-state"><div class="empty-icon">🔐</div><div class="empty-title">需要登录</div><div class="empty-desc">登录后即可搜索所有知识库</div></div>';
-                showLoginModal(function() { location.reload(); });
+                handleUnauthenticated();
+                return;
+            }
+            fetch('/api/sys-api/getInfo', { credentials: 'same-origin' }).then(function(r) {
+                if (r.status === 401 || r.status === 403) {
+                    handleUnauthenticated();
+                }
+            }).catch(function() {});
+        });
+
+        document.addEventListener('auth-change', function() {
+            var token = localStorage.getItem('Admin-Token');
+            if (!token) {
+                handleUnauthenticated();
             }
         });
     </script>
