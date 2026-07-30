@@ -7,11 +7,11 @@ import org.springframework.web.bind.annotation.RequestMapping;
 
 @Controller
 @RequestMapping("/")
-public class AiController {
+public class SoController {
 
     @GetMapping("/so")
     public String insightsPage(Model model) {
         model.addAttribute("currentNav", "so");
-        return "3.0/insights";
+        return "3.0/so";
     }
 }
