@@ -17,16 +17,29 @@ public class AgentAnalysisService {
     private static final Logger log = LoggerFactory.getLogger(AgentAnalysisService.class);
 
     private final LlmConfigResolver configResolver;
-    private final ToolRegistry toolRegistry;
+    private final NoteTools noteTools;
+    private final DataTools dataTools;
+    private final TaskTools taskTools;
+    private final ReminderTools reminderTools;
+    private final KbTools kbTools;
+    private final WebTools webTools;
 
     private volatile ChatClient defaultClient;
     private volatile String cachedConfigKey = "";
     private final ConcurrentHashMap<String, ChatClient> modelClients = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, String> modelConfigKeys = new ConcurrentHashMap<>();
 
-    public AgentAnalysisService(LlmConfigResolver configResolver, ToolRegistry toolRegistry) {
+    public AgentAnalysisService(LlmConfigResolver configResolver,
+                                NoteTools noteTools, DataTools dataTools,
+                                TaskTools taskTools, ReminderTools reminderTools,
+                                KbTools kbTools, WebTools webTools) {
         this.configResolver = configResolver;
-        this.toolRegistry = toolRegistry;
+        this.noteTools = noteTools;
+        this.dataTools = dataTools;
+        this.taskTools = taskTools;
+        this.reminderTools = reminderTools;
+        this.kbTools = kbTools;
+        this.webTools = webTools;
     }
 
     public boolean isAvailable() {
@@ -129,7 +142,7 @@ public class AgentAnalysisService {
                 .build();
 
         return ChatClient.builder(chatModel)
-                .defaultTools(toolRegistry.getToolArray())
+                .defaultTools(noteTools, dataTools, taskTools, reminderTools, kbTools, webTools)
                 .build();
     }
 
@@ -158,7 +171,7 @@ public class AgentAnalysisService {
                 .build();
 
         return ChatClient.builder(chatModel)
-                .defaultTools(toolRegistry.getToolArray())
+                .defaultTools(noteTools, dataTools, taskTools, reminderTools, kbTools, webTools)
                 .build();
     }
 }
