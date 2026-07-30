@@ -334,12 +334,13 @@
         <a th:classappend="${requestURI == '/'} ? 'active' : ''" href="/">🏠 首页</a>
         <a th:classappend="${requestURI == '/chat'} ? 'active' : ''" href="/chat">💬 对话</a>
         <div class="dropdown">
-            <a th:classappend="${#strings.startsWith(requestURI, '/image') or requestURI == '/tools' or #strings.startsWith(requestURI, '/data')} ? 'active' : ''"
-               href="/tools" class="dropdown-toggle" style="display:inline-flex;align-items:center;text-decoration:none;">
-                🧰 工具箱<span class="arrow">▾</span>
+            <a th:classappend="${#strings.startsWith(requestURI, '/image') or #strings.startsWith(requestURI, '/data')} ? 'active' : ''"
+               href="/image/generate" class="dropdown-toggle" style="display:inline-flex;align-items:center;text-decoration:none;">
+                🎨 AI 绘图<span class="arrow">▾</span>
             </a>
             <div class="dropdown-content">
                 <a href="/image/general" th:classappend="${requestURI == '/image/general' ? 'active' : ''}">🖼️ 通用识别</a>
+                <a href="/data" th:classappend="${requestURI == '/data' ? 'active' : ''}">📊 数据中心</a>
             </div>
         </div>
         <a th:classappend="${#strings.startsWith(requestURI, '/planner')} ? 'active' : ''" href="/planner">📋 计划</a>

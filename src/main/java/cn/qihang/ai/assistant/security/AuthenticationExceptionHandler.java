@@ -21,7 +21,12 @@ public class AuthenticationExceptionHandler implements AuthenticationEntryPoint 
 
     @Override
     public void commence(HttpServletRequest request, HttpServletResponse response, AuthenticationException authException) throws IOException {
-        fallback(authException.getMessage(), response);
+        String accept = request.getHeader("Accept");
+        if (accept != null && accept.contains("text/html")) {
+            response.sendRedirect("/login?redirect=" + request.getRequestURI());
+        } else {
+            fallback(authException.getMessage(), response);
+        }
     }
 
     private void fallback(String message, HttpServletResponse response) {

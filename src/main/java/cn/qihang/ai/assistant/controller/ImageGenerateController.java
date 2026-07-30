@@ -19,7 +19,7 @@ public class ImageGenerateController {
     @GetMapping("/image/generate")
     public String page(Model model) {
         model.addAttribute("imageProfiles", imageGenerateService.getImageProfiles());
-        model.addAttribute("currentNav", "tools");
+        model.addAttribute("currentNav", "generate");
         return "3.0/image_generate";
     }
 

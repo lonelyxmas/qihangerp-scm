@@ -12,4 +12,9 @@ public class IndexController {
         model.addAttribute("currentNav", "home");
         return "3.0/index";
     }
+
+    @GetMapping("/login")
+    public String login() {
+        return "login";
+    }
 }

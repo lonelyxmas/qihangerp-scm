@@ -76,7 +76,7 @@ public class ImageRecognitionController {
                 .collect(Collectors.toList());
         model.addAttribute("visionModels", visionModels);
         model.addAttribute("kbList", kbService.getAll());
-        model.addAttribute("currentNav", "tools");
+        model.addAttribute("currentNav", "general");
         return "3.0/image";
     }
 

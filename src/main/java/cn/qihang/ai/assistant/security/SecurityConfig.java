@@ -60,12 +60,17 @@ public class SecurityConfig {
                         // 公开 API（登录、注册、公开沙箱）
                         .requestMatchers("/api/sys-api/login", "/api/sys-api/captchaImage", "/api/sys-api/register").permitAll()
                         .requestMatchers("/api/public/**").permitAll()
-                        // 页面路由（所有页面均可访问，数据层根据登录状态控制可见性）
+                        // 公开页面
                         .requestMatchers("/", "/login", "/login.html", "/config", "/config/**").permitAll()
-                        .requestMatchers("/chat", "/help", "/log", "/tools", "/planner", "/notes").permitAll()
-                        .requestMatchers("/ai-guide", "/insights", "/health", "/activity", "/notifications", "/approvals", "/automation").permitAll()
-                        .requestMatchers("/data/**", "/kb/**", "/image/**", "/coding/**", "/v1/**", "/v3/**", "/admin/**").permitAll()
-                        // API 路由：除公开 API 外需要登录（未登录时返回受限数据而非 401）
+                        .requestMatchers("/chat", "/help", "/log", "/notes").permitAll()
+                        .requestMatchers("/ai-guide", "/insights", "/health", "/automation").permitAll()
+                        .requestMatchers("/kb/**", "/image/**", "/coding/**", "/v1/**", "/v3/**", "/admin/**").permitAll()
+                        // 需要登录的页面
+                        .requestMatchers("/data/**", "/planner", "/planner/**", "/activity", "/activity/**",
+                                "/notifications", "/notifications/**", "/approvals", "/approvals/**").authenticated()
+                        // 需要登录的 API
+                        .requestMatchers("/api/datacenter/**", "/api/tasks/**", "/api/reminders/**",
+                                "/api/collab/**").authenticated()
                         .requestMatchers("/api/system/**").authenticated()
                         .anyRequest().permitAll())
                 .authenticationProvider(authenticationProvider())

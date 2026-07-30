@@ -8,7 +8,7 @@
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+background: #fff;
             height: 100vh; display: flex; align-items: center; justify-content: center;
         }
         .login-container {
@@ -59,6 +59,11 @@
         </form>
     </div>
     <script>
+        function getRedirectUrl() {
+            var params = new URLSearchParams(window.location.search);
+            return params.get('redirect') || '/chat';
+        }
+
         async function handleLogin(e) {
             e.preventDefault();
             const username = document.getElementById('username').value;
@@ -75,7 +80,7 @@
                     localStorage.setItem('Admin-Token', result.token);
                     document.cookie = 'Admin-Token=' + result.token + '; path=/; max-age=86400; SameSite=Lax';
                     errorMsg.className = 'error-msg';
-                    window.location.href = '/chat';
+                    window.location.href = getRedirectUrl();
                 } else {
                     errorMsg.textContent = result.msg || '登录失败';
                     errorMsg.className = 'error-msg show';
