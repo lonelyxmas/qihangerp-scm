@@ -57,16 +57,17 @@ public class SecurityConfig {
                         .dispatcherTypeMatchers(DispatcherType.ASYNC).permitAll()
                         // 静态资源
                         .requestMatchers("/css/**", "/js/**", "/favicon.ico", "/error").permitAll()
-                        // 公开 API（登录、验证码等）
+                        // 公开 API（登录、注册、公开沙箱）
                         .requestMatchers("/api/sys-api/login", "/api/sys-api/captchaImage", "/api/sys-api/register").permitAll()
-                        // 页面路由（公开，HTML 可正常加载；数据需前端携带 Token）
+                        .requestMatchers("/api/public/**").permitAll()
+                        // 页面路由（所有页面均可访问，数据层根据登录状态控制可见性）
                         .requestMatchers("/", "/login", "/login.html", "/config").permitAll()
                         .requestMatchers("/chat", "/help", "/log", "/tools", "/planner", "/notes").permitAll()
                         .requestMatchers("/ai-guide", "/insights", "/health", "/activity", "/notifications", "/approvals", "/automation").permitAll()
                         .requestMatchers("/data/**", "/kb/**", "/image/**", "/coding/**", "/v1/**", "/v3/**", "/admin/**").permitAll()
-                        // API 路由临时开放（后续逐步收紧）
-                        .requestMatchers("/api/**").permitAll()
-                        .anyRequest().authenticated())
+                        // API 路由：除公开 API 外需要登录（未登录时返回受限数据而非 401）
+                        .requestMatchers("/api/system/**").authenticated()
+                        .anyRequest().permitAll())
                 .authenticationProvider(authenticationProvider())
                 .addFilterBefore(new JwtAuthenticationTokenFilter(tokenService), UsernamePasswordAuthenticationFilter.class);
         http.logout(logout -> logout.logoutUrl("/api/sys-api/logout").logoutSuccessHandler(logoutSuccessHandler));

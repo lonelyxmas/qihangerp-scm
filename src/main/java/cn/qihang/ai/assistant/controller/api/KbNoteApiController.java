@@ -13,6 +13,7 @@ import cn.qihang.ai.assistant.service.db.KbNoteDbService;
 import cn.qihang.ai.assistant.service.db.KbEmbeddingDbService;
 import cn.qihang.ai.assistant.service.db.KbCategoryDbService;
 import cn.qihang.ai.assistant.service.db.ActivityLogDbService;
+import cn.qihang.ai.assistant.util.DataMaskUtil;
 import cn.qihang.ai.assistant.util.TimeUtil;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.web.bind.annotation.*;
@@ -57,12 +58,23 @@ public class KbNoteApiController extends BaseController {
         this.activityLogDbService = activityLogDbService;
     }
 
+    // ── Access check for guest users ──
+
+    private Map<String, Object> checkKbAccess(Long id) {
+        if (!kbService.isKbAccessible(id)) {
+            return Map.of("ok", false, "error", "知识库不可访问，请登录后查看");
+        }
+        return null;
+    }
+
     // ── Tree ──
 
     @GetMapping("/{id}/notes/tree")
     public Map<String, Object> getTree(@PathVariable Long id) {
         KbBaseEntity kb = kbService.getById(id);
         if (kb == null) return Map.of("ok", false, "error", "知识库不存在");
+        Map<String, Object> accessErr = checkKbAccess(id);
+        if (accessErr != null) return accessErr;
         try {
             List<KbNoteEntity> all = kbNoteDbService.listByKbId(id);
             Map<String, Object> tree = buildTree(all);
@@ -78,6 +90,8 @@ public class KbNoteApiController extends BaseController {
     public Map<String, Object> listNotes(@PathVariable Long id) {
         KbBaseEntity kb = kbService.getById(id);
         if (kb == null) return Map.of("ok", false, "error", "知识库不存在");
+        Map<String, Object> accessErr = checkKbAccess(id);
+        if (accessErr != null) return accessErr;
         try {
             List<KbNoteEntity> all = kbNoteDbService.listByKbId(id);
             List<Map<String, Object>> docs = new ArrayList<>();
@@ -100,6 +114,9 @@ public class KbNoteApiController extends BaseController {
                 doc.put("originalFile", note.getOriginalFile() != null ? note.getOriginalFile() : "");
                 docs.add(doc);
             }
+            for (Map<String, Object> doc : docs) {
+                DataMaskUtil.apply(doc, "content", "createdBy", "originalFile");
+            }
             docs.sort(Comparator.comparing(m -> (String) m.get("updatedAt"), Comparator.nullsLast(Comparator.reverseOrder())));
             return Map.of("ok", true, "documents", docs);
         } catch (Exception e) {
@@ -113,6 +130,8 @@ public class KbNoteApiController extends BaseController {
     public Map<String, Object> getChunks(@PathVariable Long id, @RequestParam String path) {
         KbBaseEntity kb = kbService.getById(id);
         if (kb == null) return Map.of("ok", false, "error", "知识库不存在");
+        Map<String, Object> accessErr = checkKbAccess(id);
+        if (accessErr != null) return accessErr;
         try {
             List<KbEmbeddingEntity> chunks = kbEmbeddingDbService.listByKbAndPath(id, path);
             List<Map<String, Object>> list = new ArrayList<>();
@@ -154,6 +173,8 @@ public class KbNoteApiController extends BaseController {
     public Map<String, Object> getAllTags(@PathVariable Long id) {
         KbBaseEntity kb = kbService.getById(id);
         if (kb == null) return Map.of("ok", false, "error", "知识库不存在");
+        Map<String, Object> accessErr = checkKbAccess(id);
+        if (accessErr != null) return accessErr;
         try {
             List<KbNoteEntity> all = kbNoteDbService.listByKbId(id);
             Set<String> tagSet = new LinkedHashSet<>();
@@ -175,6 +196,8 @@ public class KbNoteApiController extends BaseController {
     public Map<String, Object> readNote(@PathVariable Long id, @RequestParam String path) {
         KbBaseEntity kb = kbService.getById(id);
         if (kb == null) return Map.of("ok", false, "error", "知识库不存在");
+        Map<String, Object> accessErr = checkKbAccess(id);
+        if (accessErr != null) return accessErr;
         KbNoteEntity note = kbNoteDbService.getByKbIdAndPath(id, path);
         if (note == null) return Map.of("ok", false, "error", "文件不存在");
         if (note.getIsDir() == 1) return Map.of("ok", false, "error", "不能读取目录");

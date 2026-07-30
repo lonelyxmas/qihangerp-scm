@@ -369,32 +369,6 @@
         </div>
     </div>
 
-    <div id="loginOverlay" class="login-overlay">
-        <div class="login-modal">
-            <div class="login-modal-header">🔐 登录</div>
-            <div class="login-modal-body">
-                <div class="form-group">
-                    <label>用户名</label>
-                    <input type="text" id="loginUsername" value="admin" placeholder="请输入用户名">
-                </div>
-                <div class="form-group">
-                    <label>密码</label>
-                    <input type="password" id="loginPassword" value="admin123" placeholder="请输入密码">
-                </div>
-                <div id="loginError" class="text-muted" style="color:#dc2626;font-size:13px;margin-bottom:8px;display:none;"></div>
-                <button class="btn btn-primary" style="width:100%;justify-content:center;" onclick="doLogin()" id="loginBtn">登 录</button>
-            </div>
-        </div>
-    </div>
-
-    <style>
-        .login-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.6); justify-content: center; align-items: center; z-index: 9999; }
-        .login-overlay.active { display: flex; }
-        .login-modal { background: white; border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); width: 360px; overflow: hidden; }
-        .login-modal-header { padding: 20px 24px 0; font-size: 18px; font-weight: 600; text-align: center; }
-        .login-modal-body { padding: 20px 24px 24px; }
-    </style>
-
     <script>
     // 带认证的 fetch 包装：自动注入 Admin-Token
     function apiFetch(url, options) {
@@ -405,39 +379,11 @@
         return fetch(url, options);
     }
 
-    // 登录弹窗控制
+    // 登录弹窗控制（使用通用弹窗）
     function showLoginOverlay() {
         localStorage.removeItem('Admin-Token');
-        document.getElementById('loginOverlay').classList.add('active');
-        document.getElementById('loginUsername').focus();
-    }
-
-    function doLogin() {
-        const username = document.getElementById('loginUsername').value.trim();
-        const password = document.getElementById('loginPassword').value;
-        const btn = document.getElementById('loginBtn');
-        const err = document.getElementById('loginError');
-        if (!username || !password) { err.textContent = '请输入用户名和密码'; err.style.display = 'block'; return; }
-        btn.disabled = true; btn.textContent = '登录中...'; err.style.display = 'none';
-        fetch('/api/sys-api/login', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username: username, password: password })
-        }).then(r => r.json()).then(data => {
-            if (data.code === 200 || data.token) {
-                const token = data.token || data.data;
-                localStorage.setItem('Admin-Token', token);
-                location.reload();
-            } else {
-                err.textContent = data.msg || '登录失败';
-                err.style.display = 'block';
-                btn.disabled = false; btn.textContent = '登 录';
-            }
-        }).catch(() => {
-            err.textContent = '请求失败，请检查网络';
-            err.style.display = 'block';
-            btn.disabled = false; btn.textContent = '登 录';
-        });
+        document.cookie = 'Admin-Token=; path=/; max-age=0; SameSite=Lax';
+        showLoginModal(function() { location.reload(); });
     }
     // ====== 初始加载 ======
     document.addEventListener('DOMContentLoaded', function() {
@@ -446,14 +392,11 @@
             showLoginOverlay();
             return;
         }
-        // 验证 token 是否真正有效（后端会校验 Redis 中是否存在）
         apiFetch('/api/sys-api/getInfo').then(function(r) {
             if (r.status === 401) throw new Error('unauthorized');
             return r.json();
         }).then(function(data) {
             if (data.code === 200 || data.ok) {
-                document.getElementById('loginOverlay').classList.remove('active');
-                // 登录有效，开始加载数据
                 loadLabels();
                 loadLlmModels();
                 loadEmbeddingModel();

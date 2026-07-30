@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import cn.qihang.ai.assistant.config.AppConfig;
 import cn.qihang.ai.assistant.datacenter.DataModuleService;
 import cn.qihang.ai.assistant.entity.KbBaseEntity;
+import cn.qihang.ai.assistant.security.common.SecurityUtils;
 import cn.qihang.ai.assistant.service.ConfigService;
 import cn.qihang.ai.assistant.service.KbBaseService;
 import cn.qihang.ai.assistant.service.OllamaEmbeddingService;
@@ -49,9 +50,19 @@ public class GlobalModelAdvice {
         return configService.load().getKeyLabels();
     }
 
+    @ModelAttribute("isLoggedIn")
+    public boolean isLoggedIn() {
+        return SecurityUtils.isLoggedIn();
+    }
+
+    @ModelAttribute("isGuest")
+    public boolean isGuest() {
+        return SecurityUtils.isGuest();
+    }
+
     @ModelAttribute("kbList")
     public List<KbNavItem> kbList() {
-        List<KbBaseEntity> all = kbService.getAll();
+        List<KbBaseEntity> all = kbService.getAccessibleKbs();
         List<KbNavItem> result = new ArrayList<>();
         for (KbBaseEntity kb : all) {
             KbNavItem item = new KbNavItem();

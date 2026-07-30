@@ -8,6 +8,8 @@ import cn.qihang.ai.assistant.security.common.Constants;
 import cn.qihang.ai.assistant.security.common.SecurityUtils;
 import cn.qihang.ai.assistant.security.service.SysLoginService;
 import cn.qihang.ai.assistant.service.SysPermissionService;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -23,11 +25,17 @@ public class SysLoginController extends BaseController {
     private SysPermissionService permissionService;
 
     @PostMapping("/api/sys-api/login")
-    public AjaxResult login(@RequestBody LoginBody loginBody) {
+    public AjaxResult login(@RequestBody LoginBody loginBody, HttpServletResponse response) {
         try {
             AjaxResult ajax = AjaxResult.success();
             String token = loginService.login(loginBody.getUsername(), loginBody.getPassword(), loginBody.getCode(), loginBody.getUuid());
             ajax.put(Constants.TOKEN, token);
+            Cookie cookie = new Cookie("Admin-Token", token);
+            cookie.setPath("/");
+            cookie.setMaxAge(86400);
+            cookie.setSecure(false);
+            cookie.setHttpOnly(false);
+            response.addCookie(cookie);
             return ajax;
         } catch (Exception e) {
             return AjaxResult.error(500, e.getMessage());

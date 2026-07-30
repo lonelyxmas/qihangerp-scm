@@ -73,6 +73,7 @@
                 const result = await response.json();
                 if (result.code === 200) {
                     localStorage.setItem('Admin-Token', result.token);
+                    document.cookie = 'Admin-Token=' + result.token + '; path=/; max-age=86400; SameSite=Lax';
                     errorMsg.className = 'error-msg';
                     window.location.href = '/chat';
                 } else {

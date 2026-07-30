@@ -1,6 +1,7 @@
 package cn.qihang.ai.assistant.service;
 
 import cn.qihang.ai.assistant.entity.KbBaseEntity;
+import cn.qihang.ai.assistant.security.common.SecurityUtils;
 import cn.qihang.ai.assistant.service.db.KbBaseDbService;
 import cn.qihang.ai.assistant.util.TimeUtil;
 import org.slf4j.Logger;
@@ -9,6 +10,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 public class KbBaseService {
@@ -68,6 +70,9 @@ public class KbBaseService {
             Object v = body.get("feishuPush");
             e.setFeishuPush(Boolean.TRUE.equals(v) ? 1 : 0);
         }
+        if (body.containsKey("visibility")) {
+            e.setVisibility(str(body.get("visibility")));
+        }
 
         if (isNew) {
             int maxOrder = kbBaseDbService.lambdaQuery()
@@ -93,6 +98,23 @@ public class KbBaseService {
     }
 
     public void setActive(Long id) {
+    }
+
+    public List<KbBaseEntity> getAccessibleKbs() {
+        List<KbBaseEntity> all = getAll();
+        if (SecurityUtils.isLoggedIn()) {
+            return all;
+        }
+        return all.stream()
+                .filter(kb -> "public".equals(kb.getVisibility()))
+                .collect(Collectors.toList());
+    }
+
+    public boolean isKbAccessible(Long kbId) {
+        KbBaseEntity kb = getById(kbId);
+        if (kb == null) return false;
+        if (SecurityUtils.isLoggedIn()) return true;
+        return "public".equals(kb.getVisibility());
     }
 
     public void reorder(List<Long> ids) {

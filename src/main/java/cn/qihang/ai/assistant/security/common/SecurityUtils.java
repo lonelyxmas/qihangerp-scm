@@ -60,4 +60,18 @@ public class SecurityUtils {
     public static boolean isAdmin(Long userId) {
         return userId != null && 1L == userId;
     }
+
+    public static boolean isLoggedIn() {
+        try {
+            Authentication auth = getAuthentication();
+            return auth != null && auth.isAuthenticated()
+                    && !"anonymousUser".equals(auth.getPrincipal());
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    public static boolean isGuest() {
+        return !isLoggedIn();
+    }
 }

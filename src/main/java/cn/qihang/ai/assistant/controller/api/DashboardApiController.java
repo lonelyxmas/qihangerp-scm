@@ -7,6 +7,7 @@ import cn.qihang.ai.assistant.entity.DataSetEntity;
 import cn.qihang.ai.assistant.entity.KbBaseEntity;
 import cn.qihang.ai.assistant.entity.NotificationEntity;
 import cn.qihang.ai.assistant.model.TaskData.TaskItem;
+import cn.qihang.ai.assistant.security.common.SecurityUtils;
 import cn.qihang.ai.assistant.service.KbBaseService;
 import cn.qihang.ai.assistant.service.TaskService;
 import cn.qihang.ai.assistant.service.ReminderService;
@@ -79,6 +80,10 @@ public class DashboardApiController extends BaseController {
 
     @GetMapping("/stats")
     public Map<String, Object> getDashboardStats() {
+        if (SecurityUtils.isGuest()) {
+            return Map.of("ok", true, "businessStats", Map.of(), "guest", true,
+                    "message", "登录后可查看完整看板数据");
+        }
         Map<String, Object> result = new LinkedHashMap<>();
         try {
             // 1. 业务数据概览

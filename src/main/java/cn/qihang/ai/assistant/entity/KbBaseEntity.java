@@ -15,6 +15,7 @@ public class KbBaseEntity {
     private String createdAt;
     private Integer autoReport;
     private Integer feishuPush;
+    private String visibility;
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -30,4 +31,6 @@ public class KbBaseEntity {
     public void setAutoReport(Integer autoReport) { this.autoReport = autoReport; }
     public Integer getFeishuPush() { return feishuPush; }
     public void setFeishuPush(Integer feishuPush) { this.feishuPush = feishuPush; }
+    public String getVisibility() { return visibility; }
+    public void setVisibility(String visibility) { this.visibility = visibility; }
 }

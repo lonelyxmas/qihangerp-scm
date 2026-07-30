@@ -1,0 +1,79 @@
+<th:block th:fragment="loginModal">
+    <div id="loginOverlay" class="login-overlay" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:10000;align-items:center;justify-content:center;">
+        <div style="background:white;border-radius:12px;padding:32px;width:380px;box-shadow:0 20px 60px rgba(0,0,0,0.3);">
+            <div style="text-align:center;margin-bottom:24px;">
+                <div style="font-size:20px;font-weight:700;color:var(--text-primary);margin-bottom:4px;">🔐 登录启航AI</div>
+                <div style="font-size:13px;color:var(--text-muted);">登录后使用完整功能</div>
+            </div>
+            <div style="margin-bottom:16px;">
+                <label style="display:block;font-size:13px;color:var(--text-secondary);margin-bottom:4px;font-weight:500;">用户名</label>
+                <input type="text" id="loginUsername" value="admin" placeholder="请输入用户名" style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:8px;font-size:14px;outline:none;box-sizing:border-box;" onfocus="this.style.borderColor='var(--primary)'" onblur="this.style.borderColor=''">
+            </div>
+            <div style="margin-bottom:20px;">
+                <label style="display:block;font-size:13px;color:var(--text-secondary);margin-bottom:4px;font-weight:500;">密码</label>
+                <input type="password" id="loginPassword" value="admin123" placeholder="请输入密码" style="width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:8px;font-size:14px;outline:none;box-sizing:border-box;" onfocus="this.style.borderColor='var(--primary)'" onblur="this.style.borderColor=''">
+            </div>
+            <div id="loginError" style="color:#dc2626;font-size:13px;margin-bottom:12px;display:none;"></div>
+            <button id="loginBtn" onclick="doLogin()" style="width:100%;padding:10px;background:var(--primary);color:white;border:none;border-radius:8px;font-size:15px;font-weight:600;cursor:pointer;transition:opacity 0.2s;" onmouseover="this.style.opacity='0.9'" onmouseout="this.style.opacity='1'">登 录</button>
+            <div style="margin-top:12px;text-align:center;">
+                <a href="#" onclick="closeLoginModal();return false;" style="font-size:13px;color:var(--text-muted);text-decoration:none;">稍后再说</a>
+            </div>
+        </div>
+    </div>
+    <script>
+        var _loginCallback = null;
+
+        function showLoginModal(callback) {
+            _loginCallback = callback || null;
+            var overlay = document.getElementById('loginOverlay');
+            overlay.style.display = 'flex';
+            document.getElementById('loginUsername').focus();
+            document.getElementById('loginError').style.display = 'none';
+        }
+
+        function closeLoginModal() {
+            document.getElementById('loginOverlay').style.display = 'none';
+            _loginCallback = null;
+        }
+
+        function doLogin() {
+            var username = document.getElementById('loginUsername').value.trim();
+            var password = document.getElementById('loginPassword').value;
+            var btn = document.getElementById('loginBtn');
+            var err = document.getElementById('loginError');
+            if (!username || !password) { err.textContent = '请输入用户名和密码'; err.style.display = 'block'; return; }
+            btn.disabled = true; btn.textContent = '登录中...'; err.style.display = 'none';
+            fetch('/api/sys-api/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username: username, password: password })
+            }).then(function(r) { return r.json(); }).then(function(data) {
+                if (data.code === 200 || data.token) {
+                    var token = data.token || data.data;
+                    localStorage.setItem('Admin-Token', token);
+                    document.cookie = 'Admin-Token=' + token + '; path=/; max-age=86400; SameSite=Lax';
+                    closeLoginModal();
+                    btn.disabled = false; btn.textContent = '登 录';
+                    if (_loginCallback) {
+                        var cb = _loginCallback;
+                        _loginCallback = null;
+                        cb();
+                    }
+                    if (typeof updateSidebar === 'function') updateSidebar();
+                } else {
+                    err.textContent = data.msg || '登录失败';
+                    err.style.display = 'block';
+                    btn.disabled = false; btn.textContent = '登 录';
+                }
+            }).catch(function() {
+                err.textContent = '请求失败，请检查网络';
+                err.style.display = 'block';
+                btn.disabled = false; btn.textContent = '登 录';
+            });
+        }
+
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') closeLoginModal();
+        });
+    </script>
+</th:block>

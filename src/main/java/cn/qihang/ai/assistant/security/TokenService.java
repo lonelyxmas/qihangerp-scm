@@ -11,6 +11,7 @@ import eu.bitwalker.useragentutils.UserAgent;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -129,6 +130,17 @@ public class TokenService {
         String token = request.getHeader("Authorization");
         if (org.springframework.util.StringUtils.isEmpty(token)) {
             token = request.getParameter("token");
+        }
+        if (org.springframework.util.StringUtils.isEmpty(token)) {
+            Cookie[] cookies = request.getCookies();
+            if (cookies != null) {
+                for (Cookie c : cookies) {
+                    if ("Admin-Token".equals(c.getName())) {
+                        token = c.getValue();
+                        break;
+                    }
+                }
+            }
         }
         if (StringUtils.isNotEmpty(token) && token.startsWith(Constants.TOKEN_PREFIX)) {
             token = token.replace(Constants.TOKEN_PREFIX, "");
