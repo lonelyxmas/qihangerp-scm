@@ -9,7 +9,7 @@ import java.util.HashMap;
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonInclude(JsonInclude.Include.ALWAYS)
 public class Config {
-    private Map<String, String> keyLabels = new HashMap<>();
+
     private String feishuWebhookUrl;
     private String feishuAppId;
     private String feishuAppSecret;
@@ -28,8 +28,7 @@ public class Config {
         return c;
     }
 
-    public Map<String, String> getKeyLabels() { return keyLabels; }
-    public void setKeyLabels(Map<String, String> keyLabels) { this.keyLabels = keyLabels; }
+
     public String getFeishuWebhookUrl() { return feishuWebhookUrl; }
     public void setFeishuWebhookUrl(String feishuWebhookUrl) { this.feishuWebhookUrl = feishuWebhookUrl; }
     public String getFeishuAppId() { return feishuAppId; }

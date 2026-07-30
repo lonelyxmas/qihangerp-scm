@@ -45,11 +45,6 @@ public class GlobalModelAdvice {
         return request.getRequestURI();
     }
 
-    @ModelAttribute("keyLabels")
-    public Map<String, String> keyLabels() {
-        return configService.load().getKeyLabels();
-    }
-
     @ModelAttribute("isLoggedIn")
     public boolean isLoggedIn() {
         return SecurityUtils.isLoggedIn();

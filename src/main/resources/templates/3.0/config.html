@@ -106,7 +106,6 @@
         <div class="config-nav-list">
             <div class="config-nav-item active" data-tab="ai" onclick="switchTab('ai')">🧠 AI 模型</div>
             <div class="config-nav-item" data-tab="feishu" onclick="switchTab('feishu')">🔗 飞书集成</div>
-            <div class="config-nav-item" data-tab="labels" onclick="switchTab('labels')">🏷️ 字段标签</div>
             <div class="config-nav-item" data-tab="system" onclick="switchTab('system')">ℹ️ 系统信息</div>
             <div class="config-nav-item" data-tab="scheduler" onclick="switchTab('scheduler')">⚙️ 定时任务</div>
             <div class="config-nav-item" data-tab="kb" onclick="switchTab('kb')">📚 知识库</div>
@@ -213,19 +212,7 @@
             </div>
         </div>
 
-        <div class="config-tab" id="tab-labels">
-            <div class="card">
-                <div class="card-title">🏷️ 字段标签配置</div>
-                <div class="card-desc">自定义数据表格中英文 key 显示为中文标签。未配置的 key 保持原始英文显示。</div>
-                <div id="labels-container" style="margin-bottom:12px;"></div>
-                <div class="form-row" style="gap:8px;margin-bottom:12px;align-items:end;">
-                    <div class="form-group" style="flex:1;"><label>Key</label><input type="text" id="new-label-key" placeholder="如 fans"></div>
-                    <div class="form-group" style="flex:1;"><label>标签</label><input type="text" id="new-label-value" placeholder="如 粉丝数"></div>
-                    <button class="btn btn-secondary" onclick="addLabelRow()" style="margin-bottom:12px;">+ 添加</button>
-                </div>
-                <div class="flex" style="gap:8px;"><button class="btn btn-primary" onclick="saveLabels()">保存标签</button><span id="labelsStatus" class="text-muted"></span></div>
-            </div>
-        </div>
+
 
         <div class="config-tab" id="tab-system">
             <div class="card">
@@ -394,7 +381,6 @@
             return r.json();
         }).then(function(data) {
             if (data.code === 200 || data.ok) {
-                loadLabels();
                 loadLlmModels();
                 loadEmbeddingModel();
             } else {
@@ -689,26 +675,7 @@
         if (data.ok) { status.textContent = '✅ 测试消息已发送到群，请查看飞书！'; toast('✅ 测试消息发送成功！', 'success'); } else { status.textContent = '❌ ' + (data.error || '发送失败'); toast('❌ ' + (data.error || '发送失败'), 'error'); }
     }
 
-    var labelData = {};
-    function loadLabels() { apiFetch('/api/config/labels').then(r => r.json()).then(data => { if (data.ok) { labelData = data.labels || {}; renderLabels(); } }).catch(function(){ /* ignore */ }); }
-    function renderLabels() {
-        var container = document.getElementById('labels-container');
-        var keys = Object.keys(labelData);
-        if (keys.length === 0) { container.innerHTML = '<div class="text-muted" style="font-size:13px;padding:12px 0;">暂无自定义标签，请在下方添加。</div>'; return; }
-        var html = '<table><thead><tr><th style="width:40%;">Key</th><th style="width:40%;">标签</th><th style="width:20%;">操作</th></tr></thead><tbody>';
-        keys.forEach(function(k) { html += '<tr><td><code>' + escapeHtml(k) + '</code></td><td><input type="text" class="label-value-input" data-key="' + escapeHtml(k) + '" value="' + escapeHtml(labelData[k] || '') + '" style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:4px;font-size:13px;"></td><td><button class="btn btn-secondary btn-sm" onclick="deleteLabelRow(\'' + escapeHtml(k) + '\')">删除</button></td></tr>'; });
-        html += '</tbody></table>'; container.innerHTML = html;
-    }
-    function addLabelRow() { var key = document.getElementById('new-label-key').value.trim(); var value = document.getElementById('new-label-value').value.trim(); if (!key) { toast('请输入 Key', 'error'); return; } labelData[key] = value || key; renderLabels(); document.getElementById('new-label-key').value = ''; document.getElementById('new-label-value').value = ''; toast('已添加：' + key + ' → ' + (value || key), 'success'); }
-    function deleteLabelRow(key) { delete labelData[key]; renderLabels(); }
-    function saveLabels() {
-        document.querySelectorAll('.label-value-input').forEach(function(input) { labelData[input.dataset.key] = input.value.trim(); });
-        apiFetch('/api/config/labels', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(labelData) }).then(r => r.json()).then(data => {
-            var status = document.getElementById('labelsStatus');
-            if (data.ok) { status.textContent = '✅ 已保存'; toast('✅ 标签已保存', 'success'); setTimeout(function() { status.textContent = ''; }, 3000); } else { status.textContent = '❌ ' + (data.error || '保存失败'); toast('❌ 保存失败', 'error'); }
-        }).catch(function() { document.getElementById('labelsStatus').textContent = '❌ 请求失败'; });
-    }
-    function escapeHtml(str) { return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
 
     let llmModels = []; let llmEditingId = null;
     function loadLlmModels() { apiFetch('/api/config/llm-profiles').then(r => r.json()).then(data => { if (data.ok) { llmModels = data.profiles || []; renderLlmModels(); } }).catch(function(){ /* ignore */ }); }

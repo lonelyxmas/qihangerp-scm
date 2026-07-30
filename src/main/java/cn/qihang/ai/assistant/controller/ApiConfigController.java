@@ -115,20 +115,6 @@ public class ApiConfigController {
         }
     }
 
-    @GetMapping("/api/config/labels")
-    public Map<String, Object> getLabels() {
-        return Map.of("ok", true, "labels", configService.load().getKeyLabels());
-    }
-
-    @PostMapping("/api/config/labels")
-    public Map<String, Object> updateLabels(@RequestBody Map<String, String> labels) {
-        Config cfg = configService.load();
-        cfg.setKeyLabels(labels);
-        configService.save(cfg);
-        logService.add("配置更新", "成功", "字段标签映射已更新");
-        return Map.of("ok", true);
-    }
-
     @PostMapping("/api/config/collector-dir")
     public Map<String, Object> updateCollectorDir(@RequestParam String dir) {
         return Map.of("ok", false, "error", "该功能已废弃，采集器数据现保存至数据中心");
