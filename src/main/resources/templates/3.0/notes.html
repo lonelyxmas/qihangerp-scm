@@ -292,7 +292,7 @@
 
                                 <!-- Download button -->
                                 <div style="margin-bottom:12px;display:flex;gap:8px;" v-if="selectedDoc">
-                                    <button class="kb-btn kb-btn-outline kb-btn-sm" @click="downloadDoc(selectedDoc)" v-if="selectedDoc.createdBy">&#x2B07; 下载原始文件</button>
+                                    <button class="kb-btn kb-btn-outline kb-btn-sm" @click="downloadDoc(selectedDoc)" v-if="selectedDoc.originalFile">&#x2B07; 下载原始文件</button>
                                 </div>
 
                                 <!-- Tabs -->
@@ -529,9 +529,28 @@
                 return fetch(url, options);
             }
 
-            function expandAll() {
+            function expandDefault() {
                 var map = {};
-                categoryTree.value.forEach(function(g) { map[g.id] = true; });
+                // 优先展开"未分类"(id=-1)如果有文件
+                var found = false;
+                for (var i = 0; i < categoryTree.value.length; i++) {
+                    var g = categoryTree.value[i];
+                    if (g.id === -1 && g.docs.length > 0) {
+                        map[g.id] = true;
+                        found = true;
+                        break;
+                    }
+                }
+                // 未分类无文件则展开第一个有文件的分类
+                if (!found) {
+                    for (var i = 0; i < categoryTree.value.length; i++) {
+                        var g = categoryTree.value[i];
+                        if (g.docs.length > 0) {
+                            map[g.id] = true;
+                            break;
+                        }
+                    }
+                }
                 expandedCategories.value = map;
             }
 
@@ -566,6 +585,7 @@
                     var d = await r.json();
                     if (d.ok) documents.value = d.documents || [];
                 } catch(e) {}
+                nextTick(expandDefault);
             }
 
             async function loadCategories() {
@@ -575,7 +595,7 @@
                     var d = await r.json();
                     if (d.ok) categories.value = d.categories || [];
                 } catch(e) {}
-                nextTick(expandAll);
+                nextTick(expandDefault);
             }
 
             function doSearch() {

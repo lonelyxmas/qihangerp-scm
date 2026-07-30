@@ -12,12 +12,16 @@ import cn.qihang.ai.assistant.service.storage.QiniuStorageService;
 import cn.qihang.ai.assistant.service.db.KbNoteDbService;
 import cn.qihang.ai.assistant.service.db.KbEmbeddingDbService;
 import cn.qihang.ai.assistant.service.db.KbCategoryDbService;
+import cn.qihang.ai.assistant.service.db.ActivityLogDbService;
 import cn.qihang.ai.assistant.util.TimeUtil;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -33,6 +37,7 @@ public class KbNoteApiController extends BaseController {
     private final LogService logService;
     private final DocumentParserService documentParserService;
     private final QiniuStorageService qiniuStorageService;
+    private final ActivityLogDbService activityLogDbService;
 
     public KbNoteApiController(KbBaseService kbService,
                                KbNoteDbService kbNoteDbService,
@@ -40,7 +45,8 @@ public class KbNoteApiController extends BaseController {
                                KbCategoryDbService kbCategoryDbService,
                                LogService logService,
                                DocumentParserService documentParserService,
-                               QiniuStorageService qiniuStorageService) {
+                               QiniuStorageService qiniuStorageService,
+                               ActivityLogDbService activityLogDbService) {
         this.kbService = kbService;
         this.kbNoteDbService = kbNoteDbService;
         this.kbEmbeddingDbService = kbEmbeddingDbService;
@@ -48,6 +54,7 @@ public class KbNoteApiController extends BaseController {
         this.logService = logService;
         this.documentParserService = documentParserService;
         this.qiniuStorageService = qiniuStorageService;
+        this.activityLogDbService = activityLogDbService;
     }
 
     // ── Tree ──
@@ -90,6 +97,7 @@ public class KbNoteApiController extends BaseController {
                 doc.put("categoryId", note.getCategoryId());
                 doc.put("createdAt", note.getCreatedAt());
                 doc.put("updatedAt", note.getUpdatedAt());
+                doc.put("originalFile", note.getOriginalFile() != null ? note.getOriginalFile() : "");
                 docs.add(doc);
             }
             docs.sort(Comparator.comparing(m -> (String) m.get("updatedAt"), Comparator.nullsLast(Comparator.reverseOrder())));
@@ -138,6 +146,7 @@ public class KbNoteApiController extends BaseController {
         note.setTags(toJsonArray(tags));
         note.setUpdatedAt(TimeUtil.nowStr());
         kbNoteDbService.updateById(note);
+        addActivityLog("kb_tag", "更新标签: " + path + " → " + String.join(", ", tags));
         return Map.of("ok", true, "tags", tags);
     }
 
@@ -205,7 +214,7 @@ public class KbNoteApiController extends BaseController {
             kbNoteDbService.save(note);
             ensureParentDirs(id, path);
         }
-        logService.add("保存笔记", "成功", path);
+        addActivityLog("kb_save", "保存文档: " + path);
         return Map.of("ok", true);
     }
 
@@ -241,7 +250,7 @@ public class KbNoteApiController extends BaseController {
         kbNoteDbService.save(note);
 
         ensureParentDirs(id, path);
-        logService.add("新建笔记", "成功", path);
+        addActivityLog("kb_create", "新建文档: " + path);
         return Map.of("ok", true, "path", path);
     }
 
@@ -266,7 +275,7 @@ public class KbNoteApiController extends BaseController {
             }
         }
         kbNoteDbService.removeById(note.getId());
-        logService.add("删除文件", "成功", path);
+        addActivityLog("kb_delete", "删除文档: " + path);
         return Map.of("ok", true);
     }
 
@@ -312,7 +321,7 @@ public class KbNoteApiController extends BaseController {
         kbNoteDbService.updateById(note);
 
         ensureParentDirs(id, newPath);
-        logService.add("重命名", "成功", oldPath + " -> " + newPath);
+        addActivityLog("kb_rename", "重命名文档: " + oldPath + " -> " + newPath);
         return Map.of("ok", true);
     }
 
@@ -383,7 +392,7 @@ public class KbNoteApiController extends BaseController {
             }
 
             ensureParentDirs(id, path);
-            logService.add("上传文件", "成功", path);
+            addActivityLog("kb_upload", "上传文档: " + path);
             return Map.of("ok", true, "path", path);
         } catch (IOException e) {
             return Map.of("ok", false, "error", "上传失败: " + e.getMessage());
@@ -395,24 +404,39 @@ public class KbNoteApiController extends BaseController {
     @GetMapping("/{id}/notes/download")
     public void downloadFile(@PathVariable Long id, @RequestParam String path, HttpServletResponse response) {
         KbBaseEntity kb = kbService.getById(id);
-        if (kb == null) {
-            response.setStatus(404);
-            return;
-        }
+        if (kb == null) { response.setStatus(404); return; }
+
         KbNoteEntity note = kbNoteDbService.getByKbIdAndPath(id, path);
         if (note == null || note.getOriginalFile() == null || note.getOriginalFile().isBlank()) {
-            response.setStatus(404);
-            return;
+            response.setStatus(404); return;
         }
-        String url = qiniuStorageService.downloadUrl(note.getOriginalFile());
-        if (url.isEmpty()) {
-            response.setStatus(404);
-            return;
-        }
+        String signedUrl = qiniuStorageService.downloadUrl(note.getOriginalFile());
+        if (signedUrl.isEmpty()) { response.setStatus(404); return; }
+
         try {
-            response.sendRedirect(url);
+            URL url = new URL(signedUrl);
+            java.net.HttpURLConnection conn = (java.net.HttpURLConnection) url.openConnection();
+            conn.setConnectTimeout(10000);
+            conn.setReadTimeout(30000);
+
+            String contentType = conn.getContentType();
+            long contentLength = conn.getContentLengthLong();
+
+            response.setContentType(contentType != null ? contentType : "application/octet-stream");
+            response.setHeader("Content-Disposition", "attachment; filename=\"" + note.getName() + "\"");
+            if (contentLength > 0) response.setContentLengthLong(contentLength);
+
+            try (InputStream in = conn.getInputStream();
+                 OutputStream out = response.getOutputStream()) {
+                byte[] buf = new byte[8192];
+                int n;
+                while ((n = in.read(buf)) != -1) {
+                    out.write(buf, 0, n);
+                }
+                out.flush();
+            }
         } catch (IOException e) {
-            log.error("下载重定向失败", e);
+            log.error("下载代理失败: path={}, error={}", path, e.getMessage());
             response.setStatus(500);
         }
     }
@@ -509,8 +533,18 @@ public class KbNoteApiController extends BaseController {
         kbNoteDbService.save(dir);
 
         ensureParentDirs(id, path);
-        logService.add("新建目录", "成功", path);
+        addActivityLog("kb_mkdir", "新建目录: " + path);
         return Map.of("ok", true);
+    }
+
+    // ── Activity log helper ──
+
+    private void addActivityLog(String actionType, String actionDesc) {
+        try {
+            String username = getUsername();
+            Long userId = getUserId();
+            activityLogDbService.addLog(actionType, actionDesc, "user", userId, username);
+        } catch (Exception ignored) {}
     }
 
     // ── Permission helpers ──

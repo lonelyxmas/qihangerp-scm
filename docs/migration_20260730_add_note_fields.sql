@@ -11,6 +11,6 @@ CREATE TABLE IF NOT EXISTS kb_categories (
   kb_id BIGINT NOT NULL DEFAULT 0,
   name VARCHAR(100) NOT NULL DEFAULT '',
   sort_order INT NOT NULL DEFAULT 0,
-  created_at VARCHAR(30) DEFAULT '',
+  created_at VARCHAR(30) DEFAULT ''
   updated_at VARCHAR(30) DEFAULT ''
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
