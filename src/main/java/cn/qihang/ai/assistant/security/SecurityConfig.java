@@ -61,7 +61,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/sys-api/login", "/api/sys-api/captchaImage", "/api/sys-api/register").permitAll()
                         .requestMatchers("/api/public/**").permitAll()
                         // 页面路由（所有页面均可访问，数据层根据登录状态控制可见性）
-                        .requestMatchers("/", "/login", "/login.html", "/config").permitAll()
+                        .requestMatchers("/", "/login", "/login.html", "/config", "/config/**").permitAll()
                         .requestMatchers("/chat", "/help", "/log", "/tools", "/planner", "/notes").permitAll()
                         .requestMatchers("/ai-guide", "/insights", "/health", "/activity", "/notifications", "/approvals", "/automation").permitAll()
                         .requestMatchers("/data/**", "/kb/**", "/image/**", "/coding/**", "/v1/**", "/v3/**", "/admin/**").permitAll()

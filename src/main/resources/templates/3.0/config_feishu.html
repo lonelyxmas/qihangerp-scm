@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="/css/app.css">
+    <title>启航 AI 协作平台 - 飞书集成</title>
+    <style>
+        .config-sidebar { width: 180px; background: var(--bg-sidebar); border-right: 1px solid var(--border); display: flex; flex-direction: column; flex-shrink: 0; }
+        .config-sidebar-header { padding: 16px; border-bottom: 1px solid var(--border); }
+        .config-sidebar-title { font-size: 14px; font-weight: 600; color: var(--text-primary); }
+        .config-nav-list { flex: 1; overflow-y: auto; padding: 8px 0; }
+        .config-nav-item { display: flex; align-items: center; gap: 8px; padding: 10px 16px; cursor: pointer; color: var(--text-secondary); font-size: 13px; transition: all 0.2s; margin: 0 4px; border-radius: var(--radius-sm); text-decoration: none; }
+        .config-nav-item:hover { background: var(--hover); color: var(--text-primary); }
+        .config-nav-item.active { background: rgba(99, 102, 241, 0.1); color: var(--primary); font-weight: 500; }
+
+        .config-content { flex: 1; overflow-y: auto; padding: 24px; }
+
+        .card { background: white; border-radius: var(--radius-lg); border: 1px solid var(--border); box-shadow: var(--shadow-sm); padding: 24px; margin-bottom: 16px; }
+        .card-title { font-size: 16px; font-weight: 600; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+        .card-desc { font-size: 13px; color: var(--text-secondary); line-height: 1.6; margin-bottom: 12px; }
+
+        .form-group { margin-bottom: 12px; }
+        .form-group label { display: block; font-size: 13px; font-weight: 500; color: var(--text-secondary); margin-bottom: 4px; }
+        .form-group input[type="text"], .form-group input[type="password"] { width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 14px; outline: none; font-family: inherit; }
+        .form-group input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(99,102,241,0.1); }
+
+        .btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border: none; border-radius: var(--radius-sm); font-size: 13px; font-weight: 500; cursor: pointer; transition: all .15s; text-decoration: none; }
+        .btn-primary { background: var(--primary); color: #fff; }
+        .btn-primary:hover { background: var(--primary-dark); }
+        .btn-secondary { background: #fff; color: var(--text-secondary); border: 1px solid var(--border); }
+        .btn-secondary:hover { background: var(--hover); }
+
+        .flex { display: flex; align-items: center; gap: 8px; }
+        .text-muted { color: var(--text-secondary); font-size: 13px; }
+        .mt-2 { margin-top: 8px; }
+
+        .chat-option { padding: 8px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); margin-bottom: 4px; cursor: pointer; font-size: 13px; }
+        .chat-option:hover { background: var(--hover); }
+    </style>
+</head>
+<body>
+    <th:block th:replace="3.0/fragments/sidebar::sidebar(${currentNav})"></th:block>
+
+    <aside class="config-sidebar">
+        <div class="config-sidebar-header">
+            <div class="config-sidebar-title">配置</div>
+        </div>
+        <div class="config-nav-list">
+            <a href="/config/ai" class="config-nav-item">🧠 AI 模型</a>
+            <a href="/config/feishu" class="config-nav-item active">🔗 飞书集成</a>
+            <a href="/config/system" class="config-nav-item">ℹ️ 系统信息</a>
+            <a href="/config/scheduler" class="config-nav-item">⚙️ 定时任务</a>
+            <a href="/config/kb" class="config-nav-item">📚 知识库</a>
+            <a href="/config/datacenter" class="config-nav-item">📦 数据中心</a>
+        </div>
+    </aside>
+
+    <main class="config-content">
+        <div class="card">
+            <div class="card-title">🔗 飞书 Webhook 配置</div>
+            <div class="card-desc">修改后自动保存到数据库，下次推送生效。</div>
+            <div class="flex" style="flex-wrap:wrap;gap:8px;">
+                <input type="text" id="webhookUrl" style="flex:1;min-width:300px;padding:10px 14px;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:14px;outline:none;" placeholder="https://open.feishu.cn/open-apis/bot/v2/hook/...">
+                <button class="btn btn-primary" onclick="saveWebhook()">保存</button>
+            </div>
+            <div id="webhookStatus" class="text-muted mt-2"></div>
+        </div>
+        <div class="card">
+            <div class="card-title">📩 飞书消息接收</div>
+            <div class="card-desc">配置飞书自建应用的凭据，AI助理将轮询指定群的未读消息并自动回复。</div>
+            <form id="feishuForm" onsubmit="return saveFeishu(event)">
+                <div class="form-group"><label>App ID</label><input type="text" id="feishuAppId" placeholder="飞书自建应用的 App ID"></div>
+                <div class="form-group"><label>App Secret</label><input type="password" id="feishuAppSecret" placeholder="飞书自建应用的 App Secret"></div>
+                <div class="form-group">
+                    <label>群 Chat ID</label>
+                    <div class="flex" style="gap:8px;"><input type="text" id="feishuChatId" placeholder="群聊的 chat_id" style="flex:1;"><button type="button" class="btn btn-secondary" onclick="fetchChats()" id="fetchChatsBtn" style="white-space:nowrap;">获取群列表</button></div>
+                    <div id="chatList" class="mt-2" style="display:none;"></div>
+                    <div class="text-muted" style="font-size:12px;margin-top:4px;">先填入 App ID 和 Secret，点击"获取群列表"选择你要监听的群</div>
+                </div>
+                <div class="flex" style="gap:8px;">
+                    <button type="submit" class="btn btn-primary">保存飞书配置</button>
+                    <button type="button" class="btn btn-secondary" onclick="testFeishu()" id="testFeishuBtn">发送测试消息</button>
+                    <span id="feishuStatus" class="text-muted"></span>
+                </div>
+            </form>
+        </div>
+    </main>
+
+    <script>
+    function apiFetch(url, options) {
+        if (!options) options = {};
+        if (!options.headers) options.headers = {};
+        var token = localStorage.getItem('Admin-Token');
+        if (token) options.headers['Authorization'] = 'Bearer ' + token;
+        return fetch(url, options);
+    }
+
+    function showLoginOverlay() {
+        localStorage.removeItem('Admin-Token');
+        document.cookie = 'Admin-Token=; path=/; max-age=0; SameSite=Lax';
+        showLoginModal(function() { location.reload(); });
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        var token = localStorage.getItem('Admin-Token');
+        if (!token) { showLoginOverlay(); return; }
+        apiFetch('/api/sys-api/getInfo').then(function(r) {
+            if (r.status === 401) throw new Error('unauthorized');
+            return r.json();
+        }).then(function(data) {
+            if (data.code === 200 || data.ok) {
+                apiFetch('/api/config').then(r => r.json()).then(cfg => {
+                    const input = document.getElementById('webhookUrl');
+                    if (cfg.feishuWebhookUrl) input.value = cfg.feishuWebhookUrl;
+                    if (cfg.feishuAppId) document.getElementById('feishuAppId').value = cfg.feishuAppId;
+                    if (cfg.feishuAppSecret) document.getElementById('feishuAppSecret').value = cfg.feishuAppSecret;
+                    if (cfg.feishuChatId) document.getElementById('feishuChatId').value = cfg.feishuChatId;
+                }).catch(function(){});
+            } else { showLoginOverlay(); }
+        }).catch(function() { showLoginOverlay(); });
+    });
+
+    function saveWebhook() {
+        const url = document.getElementById('webhookUrl').value.trim();
+        if (!url.startsWith('https://')) { document.getElementById('webhookStatus').textContent = '❌ URL 必须以 https:// 开头'; return; }
+        const form = new FormData(); form.append('url', url);
+        apiFetch('/api/config/webhook', { method: 'POST', body: form }).then(r => r.json()).then(data => {
+            const status = document.getElementById('webhookStatus');
+            if (data.ok) { status.textContent = '✅ 已保存'; setTimeout(() => status.textContent = '', 3000); } else { status.textContent = '❌ ' + (data.error || '保存失败'); }
+        }).catch(() => { document.getElementById('webhookStatus').textContent = '❌ 请求失败'; });
+    }
+
+    async function saveFeishu(e) {
+        e.preventDefault();
+        const form = new FormData();
+        form.append('appId', document.getElementById('feishuAppId').value.trim());
+        form.append('appSecret', document.getElementById('feishuAppSecret').value.trim());
+        form.append('chatId', document.getElementById('feishuChatId').value.trim());
+        const res = await apiFetch('/api/config/feishu', { method: 'POST', body: form });
+        const data = await res.json();
+        const status = document.getElementById('feishuStatus');
+        if (data.ok) { status.textContent = '✅ 已保存'; setTimeout(() => status.textContent = '', 3000); } else { status.textContent = '❌ ' + (data.error || '保存失败'); }
+        return false;
+    }
+
+    async function fetchChats() {
+        const btn = document.getElementById('fetchChatsBtn');
+        const list = document.getElementById('chatList');
+        const appId = document.getElementById('feishuAppId').value.trim();
+        const appSecret = document.getElementById('feishuAppSecret').value.trim();
+        if (!appId || !appSecret) { toast('请先填写 App ID 和 App Secret', 'error'); return; }
+        btn.disabled = true; btn.textContent = '⏳ 查询中...'; list.style.display = 'none';
+        const form = new FormData(); form.append('appId', appId); form.append('appSecret', appSecret);
+        const res = await apiFetch('/api/config/feishu/chats', { method: 'POST', body: form });
+        const data = await res.json();
+        btn.disabled = false; btn.textContent = '获取群列表';
+        if (!data.ok) { list.innerHTML = '<div style="color:#dc2626;font-size:13px;">❌ ' + (data.error || '查询失败') + '</div>'; list.style.display = 'block'; return; }
+        const chats = data.chats || [];
+        if (!chats.length) { list.innerHTML = '<div class="text-muted" style="font-size:13px;">没有找到群聊，请确认应用已添加到目标群</div>'; list.style.display = 'block'; return; }
+        let html = '<div style="font-size:13px;font-weight:500;margin-bottom:6px;">选择群聊：</div>';
+        chats.forEach(c => { html += '<div class="chat-option" data-id="' + c.chat_id + '" onclick="selectChat(this)"><strong>' + c.name + '</strong> <span style="color:#909296;font-size:11px;">' + c.type + '</span><div style="font-size:11px;color:var(--primary);word-break:break-all;">' + c.chat_id + '</div></div>'; });
+        list.innerHTML = html; list.style.display = 'block';
+    }
+
+    function selectChat(el) { document.getElementById('feishuChatId').value = el.dataset.id; document.getElementById('chatList').style.display = 'none'; toast('已选择群聊，点击保存即可', 'success'); }
+
+    async function testFeishu() {
+        const btn = document.getElementById('testFeishuBtn'); const status = document.getElementById('feishuStatus');
+        const appId = document.getElementById('feishuAppId').value.trim(); const appSecret = document.getElementById('feishuAppSecret').value.trim(); const chatId = document.getElementById('feishuChatId').value.trim();
+        if (!appId || !appSecret || !chatId) { toast('请先填完 App ID、App Secret 和 Chat ID', 'error'); return; }
+        btn.disabled = true; btn.textContent = '⏳ 发送中...'; status.textContent = '';
+        const form = new FormData(); form.append('appId', appId); form.append('appSecret', appSecret); form.append('chatId', chatId);
+        const res = await apiFetch('/api/config/feishu/test', { method: 'POST', body: form });
+        const data = await res.json();
+        btn.disabled = false; btn.textContent = '发送测试消息';
+        if (data.ok) { status.textContent = '✅ 测试消息已发送到群，请查看飞书！'; toast('✅ 测试消息发送成功！', 'success'); } else { status.textContent = '❌ ' + (data.error || '发送失败'); toast('❌ ' + (data.error || '发送失败'), 'error'); }
+    }
+
+    function escapeHtml(str) { return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+    function toast(msg, type) {
+        const t = document.createElement('div');
+        t.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);padding:10px 24px;border-radius:8px;font-size:14px;z-index:999;background:' + (type === 'error' ? '#dc2626' : '#16a34a') + ';color:#fff;box-shadow:0 4px 12px rgba(0,0,0,0.15);';
+        t.textContent = msg; document.body.appendChild(t); setTimeout(() => t.remove(), 2500);
+    }
+    </script>
+</body>
+</html>

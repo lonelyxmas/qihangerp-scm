@@ -11,7 +11,7 @@
  Target Server Version : 80036 (8.0.36)
  File Encoding         : 65001
 
- Date: 30/07/2026 22:02:02
+ Date: 30/07/2026 22:53:12
 */
 
 SET NAMES utf8mb4;
@@ -394,7 +394,7 @@ CREATE TABLE `kb_embeddings`  (
   INDEX `idx_file_path`(`file_path`(255) ASC) USING BTREE,
   INDEX `idx_content_hash`(`content_hash` ASC) USING BTREE,
   UNIQUE INDEX `uk_note_chunk`(`note_id` ASC, `chunk_index` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '笔记文件向量' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 10 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '笔记文件向量' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Table structure for kb_notes
@@ -573,7 +573,7 @@ CREATE TABLE `system_log`  (
   `created_at` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci NULL DEFAULT NULL COMMENT '创建时间',
   PRIMARY KEY (`id`) USING BTREE,
   INDEX `idx_created_at`(`created_at` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 26 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '系统操作日志表' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 39 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '系统操作日志表' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Table structure for tasks

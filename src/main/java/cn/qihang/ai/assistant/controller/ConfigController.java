@@ -36,16 +36,57 @@ public class ConfigController {
     }
 
     @GetMapping
-    public String configPage(Model model) {
-        model.addAttribute("scheduler_jobs", List.of(
+    public String configPage() {
+        return "redirect:/config/ai";
+    }
+
+    @GetMapping("/ai")
+    public String configAi(Model model) {
+        model.addAttribute("currentNav", "config");
+        model.addAttribute("currentNavSub", "ai");
+        return "3.0/config_ai";
+    }
+
+    @GetMapping("/feishu")
+    public String configFeishu(Model model) {
+        model.addAttribute("currentNav", "config");
+        model.addAttribute("currentNavSub", "feishu");
+        return "3.0/config_feishu";
+    }
+
+    @GetMapping("/system")
+    public String configSystem(Model model) {
+        model.addAttribute("kbCount", kbBaseService.getAll().size());
+        model.addAttribute("ollamaAvailable", embeddingService.isAvailable());
+        model.addAttribute("ollamaProvider", embeddingService.getProviderLabel());
+        List<LlmProfileEntity> allProfiles = llmConfigResolver.getAllProfiles();
+        model.addAttribute("currentModel", allProfiles.isEmpty() ? null : allProfiles.get(0).getName());
+        model.addAttribute("currentNav", "config");
+        model.addAttribute("currentNavSub", "system");
+        return "3.0/config_system";
+    }
+
+    @GetMapping("/scheduler")
+    public String configScheduler(Model model) {
+        model.addAttribute("schedulerJobs", List.of(
                 Map.of("id", "morning_report", "time", "每天 09:00", "desc", "生成综合日报")
         ));
-        model.addAttribute("ollama_available", embeddingService.isAvailable());
-        model.addAttribute("ollama_provider", embeddingService.getProviderLabel());
-        List<LlmProfileEntity> allProfiles = llmConfigResolver.getAllProfiles();
-        model.addAttribute("llm_models", allProfiles);
-        model.addAttribute("kbList", kbBaseService.getAll());
         model.addAttribute("currentNav", "config");
-        return "3.0/config";
+        model.addAttribute("currentNavSub", "scheduler");
+        return "3.0/config_scheduler";
+    }
+
+    @GetMapping("/kb")
+    public String configKb(Model model) {
+        model.addAttribute("currentNav", "config");
+        model.addAttribute("currentNavSub", "kb");
+        return "3.0/config_kb";
+    }
+
+    @GetMapping("/datacenter")
+    public String configDatacenter(Model model) {
+        model.addAttribute("currentNav", "config");
+        model.addAttribute("currentNavSub", "datacenter");
+        return "3.0/config_datacenter";
     }
 }

@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="/css/app.css">
+    <title>启航 AI 协作平台 - 系统信息</title>
+    <style>
+        .config-sidebar { width: 180px; background: var(--bg-sidebar); border-right: 1px solid var(--border); display: flex; flex-direction: column; flex-shrink: 0; }
+        .config-sidebar-header { padding: 16px; border-bottom: 1px solid var(--border); }
+        .config-sidebar-title { font-size: 14px; font-weight: 600; color: var(--text-primary); }
+        .config-nav-list { flex: 1; overflow-y: auto; padding: 8px 0; }
+        .config-nav-item { display: flex; align-items: center; gap: 8px; padding: 10px 16px; cursor: pointer; color: var(--text-secondary); font-size: 13px; transition: all 0.2s; margin: 0 4px; border-radius: var(--radius-sm); text-decoration: none; }
+        .config-nav-item:hover { background: var(--hover); color: var(--text-primary); }
+        .config-nav-item.active { background: rgba(99, 102, 241, 0.1); color: var(--primary); font-weight: 500; }
+
+        .config-content { flex: 1; overflow-y: auto; padding: 24px; }
+
+        .card { background: white; border-radius: var(--radius-lg); border: 1px solid var(--border); box-shadow: var(--shadow-sm); padding: 24px; margin-bottom: 16px; }
+        .card-title { font-size: 16px; font-weight: 600; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+
+        .text-muted { color: var(--text-secondary); font-size: 13px; }
+    </style>
+</head>
+<body>
+    <th:block th:replace="3.0/fragments/sidebar::sidebar(${currentNav})"></th:block>
+
+    <aside class="config-sidebar">
+        <div class="config-sidebar-header">
+            <div class="config-sidebar-title">配置</div>
+        </div>
+        <div class="config-nav-list">
+            <a href="/config/ai" class="config-nav-item">🧠 AI 模型</a>
+            <a href="/config/feishu" class="config-nav-item">🔗 飞书集成</a>
+            <a href="/config/system" class="config-nav-item active">ℹ️ 系统信息</a>
+            <a href="/config/scheduler" class="config-nav-item">⚙️ 定时任务</a>
+            <a href="/config/kb" class="config-nav-item">📚 知识库</a>
+            <a href="/config/datacenter" class="config-nav-item">📦 数据中心</a>
+        </div>
+    </aside>
+
+    <main class="config-content">
+        <div class="card">
+            <div class="card-title">ℹ️ 系统信息</div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;font-size:13px;">
+                <div><span class="text-muted">版本：</span>v3.0</div>
+                <div><span class="text-muted">知识库：</span><span th:text="${kbCount}">0</span> 个</div>
+                <div th:if="${currentModel != null}"><span class="text-muted">当前模型：</span><span th:text="${currentModel}">DeepSeek</span></div>
+                <div th:unless="${currentModel != null}"><span class="text-muted">当前模型：</span><span style="color:#dc2626;">未配置</span></div>
+                <div><span class="text-muted">语义检索：</span><span th:if="${ollamaAvailable}" style="color:#16a34a;">● 在线</span><span th:unless="${ollamaAvailable}" style="color:#dc2626;">● 离线</span></div>
+                <div><span class="text-muted">语义检索供应商：</span><span th:text="${ollamaProvider}">硅基流动</span></div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+    function apiFetch(url, options) {
+        if (!options) options = {};
+        if (!options.headers) options.headers = {};
+        var token = localStorage.getItem('Admin-Token');
+        if (token) options.headers['Authorization'] = 'Bearer ' + token;
+        return fetch(url, options);
+    }
+
+    function showLoginOverlay() {
+        localStorage.removeItem('Admin-Token');
+        document.cookie = 'Admin-Token=; path=/; max-age=0; SameSite=Lax';
+        showLoginModal(function() { location.reload(); });
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        var token = localStorage.getItem('Admin-Token');
+        if (!token) { showLoginOverlay(); return; }
+        apiFetch('/api/sys-api/getInfo').then(function(r) {
+            if (r.status === 401) throw new Error('unauthorized');
+            return r.json();
+        }).then(function(data) {
+            if (!(data.code === 200 || data.ok)) { showLoginOverlay(); }
+        }).catch(function() { showLoginOverlay(); });
+    });
+    </script>
+</body>
+</html>

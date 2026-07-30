@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="/css/app.css">
+    <title>启航 AI 协作平台 - AI 模型</title>
+    <style>
+        .config-sidebar { width: 180px; background: var(--bg-sidebar); border-right: 1px solid var(--border); display: flex; flex-direction: column; flex-shrink: 0; }
+        .config-sidebar-header { padding: 16px; border-bottom: 1px solid var(--border); }
+        .config-sidebar-title { font-size: 14px; font-weight: 600; color: var(--text-primary); }
+        .config-nav-list { flex: 1; overflow-y: auto; padding: 8px 0; }
+        .config-nav-item { display: flex; align-items: center; gap: 8px; padding: 10px 16px; cursor: pointer; color: var(--text-secondary); font-size: 13px; transition: all 0.2s; margin: 0 4px; border-radius: var(--radius-sm); text-decoration: none; }
+        .config-nav-item:hover { background: var(--hover); color: var(--text-primary); }
+        .config-nav-item.active { background: rgba(99, 102, 241, 0.1); color: var(--primary); font-weight: 500; }
+
+        .config-content { flex: 1; overflow-y: auto; padding: 24px; }
+
+        .card { background: white; border-radius: var(--radius-lg); border: 1px solid var(--border); box-shadow: var(--shadow-sm); padding: 24px; margin-bottom: 16px; }
+        .card-title { font-size: 16px; font-weight: 600; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+        .card-desc { font-size: 13px; color: var(--text-secondary); line-height: 1.6; margin-bottom: 12px; }
+        .sub-title { font-size: 13px; font-weight: 600; color: var(--text-secondary); margin: 16px 0 8px; }
+        .sub-title:first-child { margin-top: 0; }
+
+        .form-group { margin-bottom: 12px; }
+        .form-group label { display: block; font-size: 13px; font-weight: 500; color: var(--text-secondary); margin-bottom: 4px; }
+        .form-group input[type="text"], .form-group input[type="password"], .form-group input[type="number"], .form-group select, .form-group textarea { width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 14px; outline: none; font-family: inherit; }
+        .form-group input:focus, .form-group select:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(99,102,241,0.1); }
+
+        .form-row { display: flex; gap: 12px; flex-wrap: wrap; }
+        .form-row .form-group { flex: 1; }
+
+        .btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border: none; border-radius: var(--radius-sm); font-size: 13px; font-weight: 500; cursor: pointer; transition: all .15s; text-decoration: none; }
+        .btn-primary { background: var(--primary); color: #fff; }
+        .btn-primary:hover { background: var(--primary-dark); }
+        .btn-secondary { background: #fff; color: var(--text-secondary); border: 1px solid var(--border); }
+        .btn-secondary:hover { background: var(--hover); }
+        .btn-danger { color: #dc2626; background: #fff; border: 1px solid var(--border); }
+        .btn-danger:hover { background: #fef2f2; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-sm { padding: 4px 10px; font-size: 12px; }
+
+        table { width: 100%; border-collapse: collapse; font-size: 13px; margin: 8px 0; }
+        th, td { padding: 8px 12px; border: 1px solid var(--border); text-align: left; }
+        th { background: #f8f7ff; font-weight: 600; color: var(--primary-dark); white-space: nowrap; }
+        td { color: var(--text-primary); line-height: 1.6; }
+        tr:hover td { background: #fafafa; }
+
+        .flex { display: flex; align-items: center; gap: 8px; }
+        .flex-wrap { flex-wrap: wrap; }
+        .text-muted { color: var(--text-secondary); font-size: 13px; }
+        .mt-2 { margin-top: 8px; }
+
+        .type-badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; color: #fff; }
+        code { background: #f0edff; padding: 2px 6px; border-radius: 4px; font-size: 12px; color: #5c3dcf; font-family: "SF Mono", "Fira Code", monospace; }
+    </style>
+</head>
+<body>
+    <th:block th:replace="3.0/fragments/sidebar::sidebar(${currentNav})"></th:block>
+
+    <aside class="config-sidebar">
+        <div class="config-sidebar-header">
+            <div class="config-sidebar-title">配置</div>
+        </div>
+        <div class="config-nav-list">
+            <a href="/config/ai" class="config-nav-item active">🧠 AI 模型</a>
+            <a href="/config/feishu" class="config-nav-item">🔗 飞书集成</a>
+            <a href="/config/system" class="config-nav-item">ℹ️ 系统信息</a>
+            <a href="/config/scheduler" class="config-nav-item">⚙️ 定时任务</a>
+            <a href="/config/kb" class="config-nav-item">📚 知识库</a>
+            <a href="/config/datacenter" class="config-nav-item">📦 数据中心</a>
+        </div>
+    </aside>
+
+    <main class="config-content">
+        <div class="card" id="ai-model-section">
+            <div class="card-title">🧠 AI 模型</div>
+            <div class="card-desc">配置 LLM 模型列表。第一个模型将自动设为默认，可在对话页面切换模型。</div>
+            <div id="llmModelsContainer" style="margin-bottom:16px;">
+                <div class="text-muted" style="font-size:13px;padding:12px 0;" id="llmModelsEmpty">暂无模型，请点击下方"添加模型"。</div>
+                <div id="llmModelsList"></div>
+            </div>
+            <div style="border-top:1px solid var(--border);padding-top:16px;">
+                <div class="sub-title" id="llmFormTitle">添加模型</div>
+                <div class="form-row" style="gap:8px;">
+                    <div class="form-group" style="flex:1;min-width:120px;"><label>名称</label><input type="text" id="newModelName" placeholder="如 DeepSeek"></div>
+                    <div class="form-group" style="flex:2;min-width:200px;"><label>API Key</label><input type="password" id="newModelApiKey" placeholder="sk-xxxxxxxxxxxx"></div>
+                    <div class="form-group" style="flex:1;min-width:160px;"><label>API 地址</label><input type="text" id="newModelBaseUrl" value="https://api.deepseek.com"></div>
+                    <div class="form-group" style="flex:0 0 100px;"><label>模型名</label><input type="text" id="newModelModel" placeholder="deepseek-chat"></div>
+                    <div class="form-group" style="flex:0 0 80px;"><label>超时(秒)</label><input type="number" id="newModelTimeout" value="600" min="10" max="900"></div>
+                    <div class="form-group" style="flex:0 0 130px;"><label>模型类型</label><select id="newModelType"><option value="text">文本模型</option><option value="multimodal">多模态</option><option value="embedding">向量模型</option><option value="image">生成图片</option></select></div>
+                </div>
+                <div class="flex" style="gap:8px;margin-top:8px;">
+                    <button class="btn btn-primary" id="llmSubmitBtn" onclick="submitLlmModel()">添加模型</button>
+                    <button class="btn btn-secondary" id="llmCancelBtn" onclick="cancelEditLlmModel()" style="display:none;">取消</button>
+                    <span id="llmModelsStatus" class="text-muted" style="margin-left:4px;"></span>
+                </div>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-title">🔤 语义向量模型</div>
+            <div class="card-desc">配置用于语义检索的向量模型。填入 API Key 则使用 API 模式（如硅基流动），留空则使用 Ollama 本地模式。保存后立即生效。</div>
+            <div class="form-row" style="gap:8px;">
+                <div class="form-group" style="flex:1;min-width:160px;"><label>API 地址</label><input type="text" id="embeddingBaseUrl" value="http://127.0.0.1:11434"></div>
+                <div class="form-group" style="flex:0 0 200px;"><label>模型名</label><input type="text" id="embeddingModel" value="bge-m3"></div>
+                <div class="form-group" style="flex:1;min-width:200px;"><label>API Key <span class="text-muted" style="font-weight:400;">(留空=Ollama)</span></label><input type="password" id="embeddingApiKey" value="" placeholder="sk-..."></div>
+                <div class="form-group" style="flex:0 0 160px;"><label>供应商名称</label><input type="text" id="embeddingProvider" value="" placeholder="如 硅基流动"></div>
+            </div>
+            <div class="flex" style="gap:8px;"><button class="btn btn-primary" onclick="saveEmbeddingModel()">保存</button><span id="embeddingModelStatus" class="text-muted"></span></div>
+        </div>
+    </main>
+
+    <script>
+    function apiFetch(url, options) {
+        if (!options) options = {};
+        if (!options.headers) options.headers = {};
+        var token = localStorage.getItem('Admin-Token');
+        if (token) options.headers['Authorization'] = 'Bearer ' + token;
+        return fetch(url, options);
+    }
+
+    function showLoginOverlay() {
+        localStorage.removeItem('Admin-Token');
+        document.cookie = 'Admin-Token=; path=/; max-age=0; SameSite=Lax';
+        showLoginModal(function() { location.reload(); });
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        var token = localStorage.getItem('Admin-Token');
+        if (!token) { showLoginOverlay(); return; }
+        apiFetch('/api/sys-api/getInfo').then(function(r) {
+            if (r.status === 401) throw new Error('unauthorized');
+            return r.json();
+        }).then(function(data) {
+            if (data.code === 200 || data.ok) {
+                loadLlmModels();
+                loadEmbeddingModel();
+            } else { showLoginOverlay(); }
+        }).catch(function() { showLoginOverlay(); });
+    });
+
+    let llmModels = []; let llmEditingId = null;
+    function loadLlmModels() { apiFetch('/api/config/llm-profiles').then(r => r.json()).then(data => { if (data.ok) { llmModels = data.profiles || []; renderLlmModels(); } }).catch(function(){}); }
+    function renderLlmModels() {
+        const container = document.getElementById('llmModelsList'); const empty = document.getElementById('llmModelsEmpty');
+        if (!llmModels.length) { container.innerHTML = ''; empty.style.display = 'block'; return; }
+        empty.style.display = 'none';
+        const typeMap = {'text': '文本模型', 'multimodal': '多模态', 'embedding': '向量模型', 'image': '生成图片'};
+        const typeBg = {'text': '#6366f1', 'multimodal': '#10b981', 'embedding': '#f59e0b', 'image': '#ec4899'};
+        let html = '<table><thead><tr><th>名称</th><th>模型</th><th>API 地址</th><th>超时</th><th>类型</th><th>默认</th><th>操作</th></tr></thead><tbody>';
+        llmModels.forEach(function(m) {
+            const typeLabel = typeMap[m.modelType] || '文本模型'; const bg = typeBg[m.modelType] || '#909296';
+            html += '<tr id="lm-row-' + m.id + '"><td><strong>' + escapeHtml(m.name) + '</strong></td><td><code>' + escapeHtml(m.model || '') + '</code></td><td style="font-size:12px;max-width:200px;overflow:hidden;text-overflow:ellipsis;"><code>' + escapeHtml(m.baseUrl || '') + '</code></td><td>' + (m.timeout || 600) + 's</td><td><span class="type-badge" style="background:' + bg + ';">' + typeLabel + '</span></td><td>' + (m.isDefault ? '✅ 默认' : '—') + '</td><td><button class="btn btn-secondary btn-sm" onclick="editLlmModel(' + m.id + ')" style="margin-right:4px;">编辑</button>' + (m.isDefault ? '' : '<button class="btn btn-secondary btn-sm" onclick="setDefaultModel(' + m.id + ')" style="margin-right:4px;">设为默认</button>') + '<button class="btn btn-danger btn-sm" onclick="deleteLlmModel(' + m.id + ')">删除</button></td></tr>';
+        });
+        html += '</tbody></table>'; container.innerHTML = html;
+    }
+    function resetLlmForm() {
+        document.getElementById('newModelName').value = ''; document.getElementById('newModelApiKey').value = ''; document.getElementById('newModelBaseUrl').value = 'https://api.deepseek.com'; document.getElementById('newModelModel').value = ''; document.getElementById('newModelTimeout').value = '600'; document.getElementById('newModelType').value = 'text';
+        document.getElementById('llmFormTitle').textContent = '添加模型'; document.getElementById('llmSubmitBtn').textContent = '添加模型'; document.getElementById('llmCancelBtn').style.display = 'none'; document.getElementById('llmModelsStatus').textContent = ''; llmEditingId = null;
+    }
+    async function submitLlmModel() {
+        const name = document.getElementById('newModelName').value.trim();
+        if (!name) { document.getElementById('llmModelsStatus').textContent = '❌ 请输入模型名称'; return; }
+        const payload = { name: name, apiKey: document.getElementById('newModelApiKey').value, baseUrl: document.getElementById('newModelBaseUrl').value || 'https://api.deepseek.com', model: document.getElementById('newModelModel').value || 'deepseek-chat', timeout: parseInt(document.getElementById('newModelTimeout').value) || 600, modelType: document.getElementById('newModelType').value || 'text' };
+        if (llmEditingId !== null) { payload.id = llmEditingId; const old = llmModels.find(m => m.id === llmEditingId); if (old) payload.isDefault = old.isDefault; } else payload.isDefault = llmModels.length === 0;
+        try { const res = await apiFetch('/api/config/llm-profiles', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) }); const data = await res.json(); const status = document.getElementById('llmModelsStatus'); if (data.ok) { status.textContent = llmEditingId !== null ? '✅ 已更新' : '✅ 已添加'; resetLlmForm(); loadLlmModels(); setTimeout(() => status.textContent = '', 3000); } else { status.textContent = '❌ ' + (data.error || '保存失败'); } } catch (e) { document.getElementById('llmModelsStatus').textContent = '❌ 请求失败'; }
+    }
+    function editLlmModel(id) {
+        const model = llmModels.find(m => m.id === id); if (!model) return;
+        document.getElementById('newModelName').value = model.name; document.getElementById('newModelApiKey').value = model.apiKey || ''; document.getElementById('newModelBaseUrl').value = model.baseUrl || 'https://api.deepseek.com'; document.getElementById('newModelModel').value = model.model || ''; document.getElementById('newModelTimeout').value = model.timeout || 600; document.getElementById('newModelType').value = model.modelType || 'text';
+        document.getElementById('llmFormTitle').textContent = '编辑模型: ' + model.name; document.getElementById('llmSubmitBtn').textContent = '保存修改'; document.getElementById('llmCancelBtn').style.display = 'inline-block'; llmEditingId = id;
+    }
+    function cancelEditLlmModel() { resetLlmForm(); }
+    async function deleteLlmModel(id) { if (!confirm('确定删除该模型？')) return; try { const res = await apiFetch('/api/config/llm-profiles/' + id, { method: 'DELETE' }); const data = await res.json(); const status = document.getElementById('llmModelsStatus'); if (data.ok) { status.textContent = '✅ 已删除'; if (llmEditingId === id) resetLlmForm(); loadLlmModels(); setTimeout(() => status.textContent = '', 3000); } else { status.textContent = '❌ ' + (data.error || '删除失败'); } } catch (e) { document.getElementById('llmModelsStatus').textContent = '❌ 请求失败'; } }
+    async function setDefaultModel(id) { try { const res = await apiFetch('/api/config/llm-profiles/' + id + '/default', { method: 'POST' }); const data = await res.json(); const status = document.getElementById('llmModelsStatus'); if (data.ok) { status.textContent = '✅ 默认模型已切换'; loadLlmModels(); setTimeout(() => status.textContent = '', 3000); } else { status.textContent = '❌ ' + (data.error || '设置失败'); } } catch (e) { document.getElementById('llmModelsStatus').textContent = '❌ 请求失败'; } }
+
+    function loadEmbeddingModel() { apiFetch('/api/config/embedding-model').then(r => r.json()).then(data => { if (data.ok) { if (data.model) document.getElementById('embeddingModel').value = data.model; if (data.baseUrl) document.getElementById('embeddingBaseUrl').value = data.baseUrl; if (data.apiKey) document.getElementById('embeddingApiKey').value = data.apiKey; if (data.provider) document.getElementById('embeddingProvider').value = data.provider; } }).catch(function(){}); }
+    async function saveEmbeddingModel() {
+        const model = document.getElementById('embeddingModel').value.trim() || 'bge-m3'; const baseUrl = document.getElementById('embeddingBaseUrl').value.trim() || 'http://127.0.0.1:11434'; const apiKey = document.getElementById('embeddingApiKey').value.trim(); const provider = document.getElementById('embeddingProvider').value.trim();
+        try { const res = await apiFetch('/api/config/embedding-model', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({model: model, baseUrl: baseUrl, apiKey: apiKey, provider: provider}) }); const data = await res.json(); const status = document.getElementById('embeddingModelStatus'); if (data.ok) { status.textContent = '✅ 已保存'; setTimeout(() => status.textContent = '', 3000); toast('✅ 语义向量模型已更新', 'success'); } else { status.textContent = '❌ ' + (data.error || '保存失败'); } } catch (e) { document.getElementById('embeddingModelStatus').textContent = '❌ 请求失败'; }
+    }
+
+    function escapeHtml(str) { return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+    function toast(msg, type) {
+        const t = document.createElement('div');
+        t.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);padding:10px 24px;border-radius:8px;font-size:14px;z-index:999;background:' + (type === 'error' ? '#dc2626' : '#16a34a') + ';color:#fff;box-shadow:0 4px 12px rgba(0,0,0,0.15);';
+        t.textContent = msg; document.body.appendChild(t); setTimeout(() => t.remove(), 2500);
+    }
+    </script>
+</body>
+</html>

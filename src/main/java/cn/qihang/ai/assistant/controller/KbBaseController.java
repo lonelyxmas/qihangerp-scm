@@ -60,7 +60,7 @@ public class KbBaseController {
     @GetMapping("/kb/{id}/ai")
     public String aiHub(@PathVariable Long id, Map<String, Object> model) {
         KbBaseEntity kb = kbService.getById(id);
-        if (kb == null) return "redirect:/config";
+        if (kb == null) return "redirect:/config/kb";
 
         model.put("kb", kb);
         model.put("labels", parseLabels(kb.getLabels()));
@@ -90,7 +90,7 @@ public class KbBaseController {
     @GetMapping("/kb/{id}/index")
     public String kbIndex(@PathVariable Long id, Map<String, Object> model) {
         KbBaseEntity kb = kbService.getById(id);
-        if (kb == null) return "redirect:/config";
+        if (kb == null) return "redirect:/config/kb";
 
         model.put("kb", kb);
         model.put("kbId", id);
@@ -104,7 +104,7 @@ public class KbBaseController {
     @GetMapping("/kb/{id}/search")
     public String kbSearch(@PathVariable Long id, Map<String, Object> model) {
         KbBaseEntity kb = kbService.getById(id);
-        if (kb == null) return "redirect:/config";
+        if (kb == null) return "redirect:/config/kb";
 
         model.put("kb", kb);
         model.put("labels", parseLabels(kb.getLabels()));
@@ -117,7 +117,7 @@ public class KbBaseController {
     @GetMapping("/kb/{id}/data")
     public String kbData(@PathVariable Long id, Map<String, Object> model) {
         KbBaseEntity kb = kbService.getById(id);
-        if (kb == null) return "redirect:/config";
+        if (kb == null) return "redirect:/config/kb";
 
         model.put("kb", kb);
         model.put("labels", parseLabels(kb.getLabels()));
@@ -134,7 +134,7 @@ public class KbBaseController {
                                 @RequestParam(defaultValue = "") String file,
                                 Map<String, Object> model) {
         KbBaseEntity kb = kbService.getById(id);
-        if (kb == null) return "redirect:/config";
+        if (kb == null) return "redirect:/config/kb";
 
         model.put("kb", kb);
         model.put("labels", parseLabels(kb.getLabels()));

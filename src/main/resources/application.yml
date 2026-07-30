@@ -22,7 +22,7 @@ spring:
     driver-class-name: com.mysql.cj.jdbc.Driver
     url: jdbc:mysql://localhost:3306/qihang-work-ai?useUnicode=true&characterEncoding=utf8&zeroDateTimeBehavior=convertToNull&useSSL=true&serverTimezone=GMT%2B8
     username: qihang
-    password: qihang2026
+    password: your_db_password
   ai:
     deepseek:
       api-key: ${DEEPSEEK_API_KEY:dummy}
@@ -53,7 +53,7 @@ mybatis-plus:
   mapper-locations: classpath:mapper/**/*.xml
 
 token:
-  secret: abcdefghijklmnopqrstuvwxyzabcdefghijklmnopqrstuvwxyzabcdefghijk
+  secret: your_jwt_secret_key_here_change_in_production
   expireTime: 30
 
 logging:
