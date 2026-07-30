@@ -20,6 +20,8 @@ import java.util.concurrent.Executors;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import cn.qihang.ai.assistant.security.common.SecurityUtils;
+
 @RestController
 @RequestMapping("/api/chat")
 public class ChatApiController {
@@ -61,6 +63,9 @@ public class ChatApiController {
 
     @GetMapping("/kbs")
     public ResponseEntity<Map<String, Object>> listKbs() {
+        if (!SecurityUtils.isLoggedIn()) {
+            return ResponseEntity.ok(Map.of("ok", false, "error", "请先登录"));
+        }
         List<KbBaseEntity> kbs = kbService.getAccessibleKbs();
         List<Map<String, Object>> result = new ArrayList<>();
         for (KbBaseEntity kb : kbs) {
@@ -74,6 +79,9 @@ public class ChatApiController {
 
     @GetMapping("/sessions")
     public ResponseEntity<Map<String, Object>> listSessions() {
+        if (!SecurityUtils.isLoggedIn()) {
+            return ResponseEntity.ok(Map.of("ok", false, "error", "请先登录"));
+        }
         List<SessionEntity> sessions = sessionDbService.listBySourceOrderByUpdate("web");
         List<Map<String, Object>> result = new ArrayList<>();
         for (SessionEntity s : sessions) {
@@ -90,7 +98,10 @@ public class ChatApiController {
 
     @PostMapping("/sessions")
     public ResponseEntity<Map<String, Object>> createSession(@RequestParam(required = false) String title,
-                                                             @RequestParam(required = false, defaultValue = "knowledge") String mode) {
+                                                              @RequestParam(required = false, defaultValue = "knowledge") String mode) {
+        if (!SecurityUtils.isLoggedIn()) {
+            return ResponseEntity.ok(Map.of("ok", false, "error", "请先登录"));
+        }
         String id = UUID.randomUUID().toString().substring(0, 12);
         String now = TimeUtil.nowStr();
         SessionEntity se = new SessionEntity();
@@ -111,12 +122,18 @@ public class ChatApiController {
 
     @DeleteMapping("/sessions/{id}")
     public ResponseEntity<Map<String, Object>> deleteSession(@PathVariable String id) {
+        if (!SecurityUtils.isLoggedIn()) {
+            return ResponseEntity.ok(Map.of("ok", false, "error", "请先登录"));
+        }
         sessionService.deleteSession(id);
         return ResponseEntity.ok(Map.of("ok", true));
     }
 
     @GetMapping("/models")
     public ResponseEntity<Map<String, Object>> listModels() {
+        if (!SecurityUtils.isLoggedIn()) {
+            return ResponseEntity.ok(Map.of("ok", false, "error", "请先登录"));
+        }
         List<cn.qihang.ai.assistant.entity.LlmProfileEntity> chatModels = llmConfigResolver.getAllProfiles()
                 .stream()
                 .filter(p -> !cn.qihang.ai.assistant.entity.LlmProfileEntity.TYPE_EMBEDDING.equals(p.getModelType()))
@@ -145,6 +162,15 @@ public class ChatApiController {
                                 @RequestParam(required = false, defaultValue = "knowledge") String mode,
                                 @RequestParam(required = false, defaultValue = "") String modelName,
                                 @RequestParam(required = false) String sessionId) {
+        if (!SecurityUtils.isLoggedIn()) {
+            SseEmitter emitter = new SseEmitter(300_000L);
+            try {
+                emitter.send(SseEmitter.event().data(mapper.writeValueAsString(
+                        Map.of("type", "error", "content", "请先登录"))));
+                emitter.complete();
+            } catch (Exception e) { emitter.completeWithError(e); }
+            return emitter;
+        }
         SseEmitter emitter = new SseEmitter(300_000L);
 
         String cleanMessage = message;
@@ -221,9 +247,12 @@ public class ChatApiController {
 
     @GetMapping("/messages")
     public ResponseEntity<Map<String, Object>> getMessages(@RequestParam(required = false) Long kbId,
-                                                           @RequestParam(required = false) String sessionId,
-                                                           @RequestParam(defaultValue = "0") int offset,
-                                                           @RequestParam(defaultValue = "60") int limit) {
+                                                            @RequestParam(required = false) String sessionId,
+                                                            @RequestParam(defaultValue = "0") int offset,
+                                                            @RequestParam(defaultValue = "60") int limit) {
+        if (!SecurityUtils.isLoggedIn()) {
+            return ResponseEntity.ok(Map.of("ok", false, "error", "请先登录"));
+        }
         List<MessageEntity> msgs;
         long total;
 
@@ -259,7 +288,10 @@ public class ChatApiController {
 
     @DeleteMapping("/clear")
     public ResponseEntity<Map<String, Object>> clearChat(@RequestParam(required = false) Long kbId,
-                                                         @RequestParam(required = false) String sessionId) {
+                                                          @RequestParam(required = false) String sessionId) {
+        if (!SecurityUtils.isLoggedIn()) {
+            return ResponseEntity.ok(Map.of("ok", false, "error", "请先登录"));
+        }
         if (sessionId != null && !sessionId.isBlank()) {
             sessionService.deleteSession(sessionId);
             logService.add("对话", "清空", "清空会话(session=" + sessionId + ")的聊天记录");
@@ -274,6 +306,9 @@ public class ChatApiController {
     public ResponseEntity<Map<String, Object>> searchMessages(@RequestParam Long kbId,
                                                                @RequestParam String q,
                                                                @RequestParam(defaultValue = "30") int limit) {
+        if (!SecurityUtils.isLoggedIn()) {
+            return ResponseEntity.ok(Map.of("ok", false, "error", "请先登录"));
+        }
         if (q == null || q.isBlank()) {
             return ResponseEntity.ok(Map.of("ok", true, "messages", List.of()));
         }
@@ -292,6 +327,9 @@ public class ChatApiController {
 
     @GetMapping("/export")
     public ResponseEntity<Map<String, Object>> exportMessages(@RequestParam Long kbId) {
+        if (!SecurityUtils.isLoggedIn()) {
+            return ResponseEntity.ok(Map.of("ok", false, "error", "请先登录"));
+        }
         List<MessageEntity> msgs = messageDbService.listByKb(kbId, 0, 99999);
         List<Map<String, Object>> messages = new ArrayList<>();
         for (MessageEntity me : msgs) {

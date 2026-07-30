@@ -117,7 +117,7 @@
     <aside class="sessions-sidebar">
         <div class="sessions-header">
             <div class="sessions-title">对话</div>
-            <button class="new-chat-btn" onclick="createNewSession()">
+            <button class="new-chat-btn" onclick="createNewSession()" id="newChatBtn">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
                     <path d="M12 5v14M5 12h14"/>
                 </svg>
@@ -199,18 +199,72 @@
         var kbList = [];
         var modelList = [];
         var currentModel = '';
-        
+
+        function apiFetch(url, options) {
+            if (!options) options = {};
+            if (!options.headers) options.headers = {};
+            var token = localStorage.getItem('Admin-Token');
+            if (token) options.headers['Authorization'] = 'Bearer ' + token;
+            return fetch(url, options);
+        }
+
+        function checkAuthBeforeFetch(url, opts) {
+            return apiFetch(url, opts).then(function(r) {
+                if (r.status === 401 || r.status === 403) return r.json().then(function(d) { d.__401 = true; return d; });
+                if (!r.ok) throw new Error('请求失败');
+                return r.json();
+            });
+        }
+
+        function isAuthError(d) {
+            return d && (d.__401 || (d.code === 500 && d.msg === '认证失败'));
+        }
+
+        function handleUnauthenticated() {
+            localStorage.removeItem('Admin-Token');
+            document.cookie = 'Admin-Token=; path=/; max-age=0; SameSite=Lax';
+            document.getElementById('newChatBtn').style.display = 'none';
+            document.getElementById('clearBtn').style.display = 'none';
+            var empty = document.getElementById('emptyState');
+            if (empty) {
+                empty.innerHTML = '<div class="empty-icon">🔐</div><div class="empty-title">需要登录</div><div class="empty-desc">登录后即可与 AI 对话</div>';
+            }
+            var chatInput = document.getElementById('chatInput');
+            if (chatInput) chatInput.disabled = true;
+            var sendBtn = document.getElementById('sendBtn');
+            if (sendBtn) sendBtn.disabled = true;
+            showLoginModal(function() { window.location.href = window.location.href; });
+        }
+
+        function updateButtonsForAuth() {
+            var token = localStorage.getItem('Admin-Token');
+            if (token) {
+                document.getElementById('newChatBtn').style.display = 'flex';
+                document.getElementById('clearBtn').style.display = '';
+            } else {
+                document.getElementById('newChatBtn').style.display = 'none';
+                document.getElementById('clearBtn').style.display = 'none';
+            }
+        }
+
         document.addEventListener('DOMContentLoaded', function() {
+            updateButtonsForAuth();
+            if (!localStorage.getItem('Admin-Token')) { handleUnauthenticated(); return; }
             loadSessions();
             loadKbs();
             loadModels();
         });
+
+        document.addEventListener('auth-change', function() {
+            updateButtonsForAuth();
+            if (!localStorage.getItem('Admin-Token')) handleUnauthenticated();
+        });
         
         async function loadSessions() {
-            const r = await fetch(API + '/sessions');
-            const d = await r.json();
-            if (d.ok && d.data) {
-                sessions = d.data;
+            const r = await checkAuthBeforeFetch(API + '/sessions');
+            if (isAuthError(r)) { handleUnauthenticated(); return; }
+            if (r.ok && r.data) {
+                sessions = r.data;
                 renderSessions();
                 if (sessions.length > 0) {
                     selectSession(sessions[0].id);
@@ -219,19 +273,19 @@
         }
         
         async function loadKbs() {
-            const r = await fetch(API + '/kbs');
-            const d = await r.json();
-            if (d.ok && d.data) {
-                kbList = d.data;
+            const r = await checkAuthBeforeFetch(API + '/kbs');
+            if (isAuthError(r)) { handleUnauthenticated(); return; }
+            if (r.ok && r.data) {
+                kbList = r.data;
                 renderMentionDropdown();
             }
         }
-        
+
         async function loadModels() {
-            const r = await fetch(API + '/models');
-            const d = await r.json();
-            if (d.ok && d.data) {
-                modelList = d.data;
+            const r = await checkAuthBeforeFetch(API + '/models');
+            if (isAuthError(r)) { handleUnauthenticated(); return; }
+            if (r.ok && r.data) {
+                modelList = r.data;
                 if (modelList.length === 0) {
                     document.getElementById('unconfiguredBanner').style.display = 'flex';
                     document.getElementById('noModelState').style.display = 'flex';
@@ -242,7 +296,7 @@
                     document.getElementById('modelBtn').disabled = true;
                     document.getElementById('clearBtn').disabled = true;
                 } else {
-                    currentModel = d.defaultModel || modelList[0].name || '';
+                    currentModel = r.defaultModel || modelList[0].name || '';
                     document.getElementById('currentModel').textContent = currentModel || '默认模型';
                     renderModelDropdown();
                 }
@@ -275,23 +329,23 @@
         }
         
         async function createNewSession() {
-            const r = await fetch(API + '/sessions', {
+            const r = await checkAuthBeforeFetch(API + '/sessions', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/x-www-form-urlencoded'},
                 body: ''
             });
-            const d = await r.json();
-            if (d.ok) {
+            if (isAuthError(r)) { handleUnauthenticated(); return; }
+            if (r.ok) {
                 await loadSessions();
-                selectSession(d.id);
+                selectSession(r.id);
             }
         }
-        
+
         async function deleteSession(sessionId) {
             if (!confirm('确定要删除这个对话吗？')) return;
-            const r = await fetch(API + '/sessions/' + sessionId, { method: 'DELETE' });
-            const d = await r.json();
-            if (d.ok) {
+            const r = await checkAuthBeforeFetch(API + '/sessions/' + sessionId, { method: 'DELETE' });
+            if (isAuthError(r)) { handleUnauthenticated(); return; }
+            if (r.ok) {
                 await loadSessions();
                 if (currentSessionId === sessionId) {
                     if (sessions.length > 0) {
@@ -396,10 +450,10 @@
         
         async function loadMessages() {
             if (!currentSessionId) return;
-            var r = await fetch(API + '/messages?sessionId=' + currentSessionId);
-            var d = await r.json();
-            if (d.ok && d.messages) {
-                renderMessages(d.messages);
+            const r = await checkAuthBeforeFetch(API + '/messages?sessionId=' + currentSessionId);
+            if (isAuthError(r)) { handleUnauthenticated(); return; }
+            if (r.ok && r.messages) {
+                renderMessages(r.messages);
             }
         }
         
@@ -500,8 +554,18 @@
             formData.append('modelName', currentModel);
             if (currentSessionId) formData.append('sessionId', currentSessionId);
             
-            fetch(API + '/send', { method: 'POST', body: formData })
+            var headers = {};
+            var token = localStorage.getItem('Admin-Token');
+            if (token) headers['Authorization'] = 'Bearer ' + token;
+
+            apiFetch(API + '/send', { method: 'POST', headers: headers, body: formData })
                 .then(function(response) {
+                    if (response.status === 401 || response.status === 403) {
+                        handleUnauthenticated();
+                        sendBtn.disabled = false;
+                        removeTypingIndicator();
+                        return;
+                    }
                     if (!response.ok) throw new Error('Network response was not ok');
                     var reader = response.body.getReader();
                     var decoder = new TextDecoder();
@@ -624,10 +688,10 @@
                 return;
             }
             if (!confirm('确定要清空当前对话记录吗？')) return;
-            fetch(API + '/clear?sessionId=' + currentSessionId, { method: 'DELETE' })
-                .then(function(r) { return r.json(); })
-                .then(function(d) {
-                    if (d.ok) {
+            checkAuthBeforeFetch(API + '/clear?sessionId=' + currentSessionId, { method: 'DELETE' })
+                .then(function(r) {
+                    if (isAuthError(r)) { handleUnauthenticated(); return; }
+                    if (r.ok) {
                         document.getElementById('messagesList').innerHTML = '';
                     }
                 });

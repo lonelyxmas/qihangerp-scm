@@ -69,7 +69,7 @@ public class SecurityConfig {
                         .requestMatchers("/kb/**", "/image/**", "/coding/**", "/v1/**", "/v3/**", "/admin/**").permitAll()
                         // 需要登录的 API
                         .requestMatchers("/api/datacenter/**", "/api/tasks/**", "/api/reminders/**",
-                                "/api/collab/**").authenticated()
+                                "/api/chat/**", "/api/collab/**", "/api/ai/**").authenticated()
                         .requestMatchers("/api/system/**").authenticated()
                         .anyRequest().permitAll())
                 .authenticationProvider(authenticationProvider())
