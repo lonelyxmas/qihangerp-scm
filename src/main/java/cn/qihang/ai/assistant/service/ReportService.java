@@ -22,7 +22,7 @@ public class ReportService {
 
     private final FeishuService feishuService;
     private final LogService logService;
-    private final AgentAnalysisService agentAnalysisService;
+    private final LlmService llmService;
     private final KbBaseService kbService;
     private final AiAnalysisDbService aiAnalysisDbService;
     private final DataSetService dataSetService;
@@ -33,13 +33,13 @@ public class ReportService {
 
     public ReportService(FeishuService feishuService,
                           LogService logService,
-                          AgentAnalysisService agentAnalysisService,
+                          LlmService llmService,
                           KbBaseService kbService,
                           AiAnalysisDbService aiAnalysisDbService,
                           DataSetService dataSetService) {
         this.feishuService = feishuService;
         this.logService = logService;
-        this.agentAnalysisService = agentAnalysisService;
+        this.llmService = llmService;
         this.kbService = kbService;
         this.aiAnalysisDbService = aiAnalysisDbService;
         this.dataSetService = dataSetService;
@@ -90,7 +90,7 @@ public class ReportService {
             prompt = prompt.replace("{date}", TimeUtil.todayStr());
             prompt = prompt.replace("{weekday}", TimeUtil.weekdayCn(TimeUtil.now()));
 
-            if (!agentAnalysisService.isAvailable()) {
+            if (!llmService.isAvailable()) {
                 result.error = "LLM API Key 未配置";
                 latestReport = "";
                 latestError = result.error;
@@ -106,7 +106,7 @@ public class ReportService {
             // 主动读取所有数据集内容，注入到对话上下文中，确保日报包含结构化数据
             String datasetContext = buildDatasetContext();
 
-            String report = agentAnalysisService.analyze(prompt + "\n\n" + datasetContext, systemPrompt);
+            String report = llmService.chat(systemPrompt, prompt + "\n\n" + datasetContext);
 
             if (report != null && !report.isEmpty()) {
                 result.report = report;
