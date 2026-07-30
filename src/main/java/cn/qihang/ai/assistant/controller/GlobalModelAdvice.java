@@ -1,7 +1,6 @@
 package cn.qihang.ai.assistant.controller;
 
 import com.fasterxml.jackson.core.type.TypeReference;
-import cn.qihang.ai.assistant.config.AppConfig;
 import cn.qihang.ai.assistant.datacenter.DataModuleService;
 import cn.qihang.ai.assistant.entity.KbBaseEntity;
 import cn.qihang.ai.assistant.security.common.SecurityUtils;
@@ -22,16 +21,14 @@ public class GlobalModelAdvice {
 
     private static final TypeReference<Map<String, String>> LABELS_TYPE = new TypeReference<>() {};
 
-    private final AppConfig appConfig;
     private final KbBaseService kbService;
     private final EmbeddingService embeddingService;
     private final DataModuleService moduleService;
 
-    public GlobalModelAdvice(AppConfig appConfig,
+    public GlobalModelAdvice(
                              KbBaseService kbService,
                              EmbeddingService embeddingService,
                              DataModuleService moduleService) {
-        this.appConfig = appConfig;
         this.kbService = kbService;
         this.embeddingService = embeddingService;
         this.moduleService = moduleService;
@@ -74,11 +71,6 @@ public class GlobalModelAdvice {
     @ModelAttribute("ollamaProvider")
     public String ollamaProvider() {
         return embeddingService.getProviderLabel();
-    }
-
-    @ModelAttribute("ollamaModel")
-    public String ollamaModel() {
-        return appConfig.getOllamaModel();
     }
 
     @ModelAttribute("dataSets")

@@ -43,10 +43,6 @@ qiniu:
   bucket: ""
   domain: ""
 
-app:
-  timezone: Asia/Shanghai
-  max-history-chars: 6000
-
 mybatis-plus:
   configuration:
     map-underscore-to-camel-case: true

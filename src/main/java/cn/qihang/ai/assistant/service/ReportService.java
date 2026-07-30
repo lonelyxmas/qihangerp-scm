@@ -1,6 +1,5 @@
 package cn.qihang.ai.assistant.service;
 
-import cn.qihang.ai.assistant.config.AppConfig;
 import cn.qihang.ai.assistant.entity.AiAnalysisEntity;
 import cn.qihang.ai.assistant.datacenter.DataSetService;
 import cn.qihang.ai.assistant.datacenter.model.DataSet;
@@ -21,7 +20,6 @@ public class ReportService {
     private static final Logger log = LoggerFactory.getLogger(ReportService.class);
     private static final String DEFAULT_PROMPT = "现在是{date} {weekday}。请根据我的工作笔记生成今天的综合日报。内容需要涵盖：今日重点工作、客户沟通情况、开发进展、文章发布情况、明日计划。请按以下格式输出：\n\n【今日重点】\n...\n\n【客户沟通】\n...\n\n【开发进展】\n...\n\n【文章发布】\n...\n\n【明日计划】\n...\n\n注意：如果某个板块没有相关信息，请写\"暂无\"。请使用中文回复。";
 
-    private final AppConfig appConfig;
     private final FeishuService feishuService;
     private final LogService logService;
     private final AgentAnalysisService agentAnalysisService;
@@ -33,14 +31,12 @@ public class ReportService {
     private volatile String latestReportTime = "";
     private volatile String latestError = "";
 
-    public ReportService(AppConfig appConfig,
-                          FeishuService feishuService,
+    public ReportService(FeishuService feishuService,
                           LogService logService,
                           AgentAnalysisService agentAnalysisService,
                           KbBaseService kbService,
                           AiAnalysisDbService aiAnalysisDbService,
                           DataSetService dataSetService) {
-        this.appConfig = appConfig;
         this.feishuService = feishuService;
         this.logService = logService;
         this.agentAnalysisService = agentAnalysisService;

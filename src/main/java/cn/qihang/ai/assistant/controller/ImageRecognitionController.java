@@ -1,6 +1,5 @@
 package cn.qihang.ai.assistant.controller;
 
-import cn.qihang.ai.assistant.config.AppConfig;
 import cn.qihang.ai.assistant.entity.KbBaseEntity;
 import cn.qihang.ai.assistant.entity.LlmProfileEntity;
 import cn.qihang.ai.assistant.service.KbBaseService;
@@ -27,19 +26,16 @@ public class ImageRecognitionController {
     private static final Set<String> IMAGE_EXTENSIONS = Set.of(
             ".png", ".jpg", ".jpeg", ".gif", ".bmp", ".webp");
 
-    private final AppConfig appConfig;
     private final KbBaseService kbService;
     private final LlmService llmService;
     private final LogService logService;
     private final LlmConfigResolver llmConfigResolver;
     private final DataSource dataSource;
 
-    public ImageRecognitionController(AppConfig appConfig,
-                                       KbBaseService kbService,
+    public ImageRecognitionController(KbBaseService kbService,
                                        LlmService llmService, LogService logService,
                                        LlmConfigResolver llmConfigResolver,
                                        DataSource dataSource) {
-        this.appConfig = appConfig;
         this.kbService = kbService;
         this.llmService = llmService;
         this.logService = logService;

@@ -12,7 +12,6 @@ import com.lark.oapi.service.im.v1.model.CreateMessageReqBody;
 import com.lark.oapi.service.im.v1.model.CreateMessageResp;
 import com.lark.oapi.service.im.v1.model.P2MessageReceiveV1;
 import com.lark.oapi.service.im.v1.model.ext.MessageText;
-import cn.qihang.ai.assistant.config.AppConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -36,7 +35,6 @@ public class FeishuLongConnectionService {
     private final NoteAssistantService noteAssistantService;
     private final LogService logService;
     private final FeishuChatSessionService feishuChatSessionService;
-    private final AppConfig appConfig;
 
     private com.lark.oapi.ws.Client wsClient;
     private Client client;
@@ -53,14 +51,12 @@ public class FeishuLongConnectionService {
                                         LlmService llmService,
                                         NoteAssistantService noteAssistantService,
                                         LogService logService,
-                                        FeishuChatSessionService feishuChatSessionService,
-                                        AppConfig appConfig) {
+                                        FeishuChatSessionService feishuChatSessionService) {
         this.feishuConfigResolver = feishuConfigResolver;
         this.llmService = llmService;
         this.noteAssistantService = noteAssistantService;
         this.logService = logService;
         this.feishuChatSessionService = feishuChatSessionService;
-        this.appConfig = appConfig;
     }
 
     @PostConstruct
