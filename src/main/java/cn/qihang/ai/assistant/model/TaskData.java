@@ -10,7 +10,7 @@ public class TaskData {
 
     @JsonIgnoreProperties(ignoreUnknown = true)
     public static class TaskItem {
-        public String id;
+        public Long id;
         public String title;
         public String description;
         public String status;
@@ -21,6 +21,8 @@ public class TaskData {
         public String action;
         public String actionPrompt;
         public String lastReminded;
+        public String scheduledStart;
+        public Long createdBy;
         public Long kbId;
     }
 
@@ -28,5 +30,21 @@ public class TaskData {
     public static class Root {
         public Map<String, Object> meta;
         public List<TaskItem> tasks;
+    }
+
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public static class TaskExecution {
+        public String executionId;
+        public Long taskId;
+        public String taskTitle;
+        public String status;
+        public String triggerType;
+        public String triggeredBy;
+        public String startTime;
+        public String endTime;
+        public String logText;
+        public String resultText;
+        public String errorMessage;
+        public String createdAt;
     }
 }

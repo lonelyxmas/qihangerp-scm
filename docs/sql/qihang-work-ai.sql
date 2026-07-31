@@ -580,7 +580,7 @@ CREATE TABLE `system_log`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `tasks`;
 CREATE TABLE `tasks`  (
-  `id` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '任务 ID',
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '任务 ID',
   `title` varchar(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '任务标题',
   `description` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL COMMENT '任务描述',
   `status` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'pending' COMMENT '状态',
@@ -592,9 +592,37 @@ CREATE TABLE `tasks`  (
   `action` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '任务动作: ai=到期AI自动执行, NULL=普通任务',
   `action_prompt` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL COMMENT 'AI执行指令',
   `last_reminded` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '上次到期提醒日期(用于去重)',
+  `scheduled_start` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '定时启动时间 yyyy-MM-dd HH:mm:ss，到点自动入队执行',
+  `created_by` bigint NULL DEFAULT NULL COMMENT '创建人用户ID',
   PRIMARY KEY (`id`) USING BTREE,
   INDEX `idx_kb_id`(`kb_id` ASC) USING BTREE,
+  INDEX `idx_status`(`status` ASC) USING BTREE,
+  INDEX `idx_created_by`(`created_by` ASC) USING BTREE,
+  INDEX `idx_scheduled_start`(`scheduled_start` ASC) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '任务' ROW_FORMAT = Dynamic;
+
+-- ----------------------------
+-- Table structure for task_executions
+-- ----------------------------
+DROP TABLE IF EXISTS `task_executions`;
+CREATE TABLE `task_executions`  (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `execution_id` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '执行唯一标识',
+  `task_id` bigint NOT NULL COMMENT '任务 ID',
+  `task_title` varchar(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '任务标题快照',
+  `status` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'QUEUED' COMMENT '状态: QUEUED/RUNNING/SUCCESS/FAILED/CANCELLED',
+  `trigger_type` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '触发方式: manual=手动, scheduled=定时, due=到期自动',
+  `triggered_by` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '触发人用户名（定时为 system）',
+  `start_time` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '开始执行时间',
+  `end_time` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '结束时间',
+  `log_text` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL COMMENT '执行过程详细记录',
+  `result_text` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL COMMENT '执行结果内容',
+  `error_message` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL COMMENT '失败原因',
+  `created_at` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '创建时间',
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `uk_execution_id`(`execution_id` ASC) USING BTREE,
+  INDEX `idx_task_id`(`task_id` ASC) USING BTREE,
   INDEX `idx_status`(`status` ASC) USING BTREE
-) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '任务' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '任务执行记录' ROW_FORMAT = Dynamic;
 
 SET FOREIGN_KEY_CHECKS = 1;

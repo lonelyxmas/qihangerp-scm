@@ -3,6 +3,7 @@ package cn.qihang.ai.assistant.service;
 import cn.qihang.ai.assistant.model.TaskData.*;
 import cn.qihang.ai.assistant.service.db.ActivityLogDbService;
 import cn.qihang.ai.assistant.service.db.NotificationDbService;
+import cn.qihang.ai.assistant.util.TimeUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -52,24 +53,35 @@ public class TaskService {
     private void insertTaskToDb(TaskItem task, Long kbId) {
         try (Connection conn = dataSource.getConnection();
              PreparedStatement ps = conn.prepareStatement(
-                     "INSERT INTO tasks (id, title, description, status, priority, due_date, created_at, updated_at, kb_id, action, action_prompt, last_reminded) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE id=VALUES(id), title=VALUES(title), description=VALUES(description), status=VALUES(status), priority=VALUES(priority), due_date=VALUES(due_date), created_at=VALUES(created_at), updated_at=VALUES(updated_at), kb_id=VALUES(kb_id), action=VALUES(action), action_prompt=VALUES(action_prompt), last_reminded=VALUES(last_reminded)")) {
-            ps.setString(1, task.id);
-            ps.setString(2, task.title);
-            ps.setString(3, task.description);
-            ps.setString(4, task.status);
-            ps.setString(5, task.priority);
-            ps.setString(6, task.dueDate);
-            ps.setString(7, task.createdAt);
-            ps.setString(8, task.updatedAt);
+                     "INSERT INTO tasks (title, description, status, priority, due_date, created_at, updated_at, kb_id, action, action_prompt, last_reminded, scheduled_start, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                     PreparedStatement.RETURN_GENERATED_KEYS)) {
+            ps.setString(1, task.title);
+            ps.setString(2, task.description);
+            ps.setString(3, task.status);
+            ps.setString(4, task.priority);
+            ps.setString(5, task.dueDate);
+            ps.setString(6, task.createdAt);
+            ps.setString(7, task.updatedAt);
             if (kbId != null) {
-                ps.setLong(9, kbId);
+                ps.setLong(8, kbId);
             } else {
-                ps.setNull(9, Types.INTEGER);
+                ps.setNull(8, Types.INTEGER);
             }
-            ps.setString(10, task.action);
-            ps.setString(11, task.actionPrompt);
-            ps.setString(12, task.lastReminded);
+            ps.setString(9, task.action);
+            ps.setString(10, task.actionPrompt);
+            ps.setString(11, task.lastReminded);
+            ps.setString(12, task.scheduledStart);
+            if (task.createdBy != null) {
+                ps.setLong(13, task.createdBy);
+            } else {
+                ps.setNull(13, Types.BIGINT);
+            }
             ps.executeUpdate();
+            try (ResultSet keys = ps.getGeneratedKeys()) {
+                if (keys.next()) {
+                    task.id = keys.getLong(1);
+                }
+            }
         } catch (SQLException e) {
             log.error("[任务] 插入失败", e);
         }
@@ -77,7 +89,7 @@ public class TaskService {
 
     private TaskItem mapRowToTask(ResultSet rs) throws SQLException {
         TaskItem task = new TaskItem();
-        task.id = rs.getString("id");
+        task.id = rs.getLong("id");
         task.title = rs.getString("title");
         task.description = rs.getString("description");
         task.status = rs.getString("status");
@@ -88,15 +100,18 @@ public class TaskService {
         task.action = rs.getString("action");
         task.actionPrompt = rs.getString("action_prompt");
         task.lastReminded = rs.getString("last_reminded");
+        task.scheduledStart = rs.getString("scheduled_start");
+        long createdBy = rs.getLong("created_by");
+        task.createdBy = rs.wasNull() ? null : createdBy;
         long kbId = rs.getLong("kb_id");
         task.kbId = rs.wasNull() ? null : kbId;
         return task;
     }
 
-    private TaskItem getTaskFromDb(String id) {
+    private TaskItem getTaskFromDb(Long id) {
         try (Connection conn = dataSource.getConnection();
              PreparedStatement ps = conn.prepareStatement("SELECT * FROM tasks WHERE id = ?")) {
-            ps.setString(1, id);
+            ps.setLong(1, id);
             ResultSet rs = ps.executeQuery();
             if (rs.next()) {
                 return mapRowToTask(rs);
@@ -110,7 +125,7 @@ public class TaskService {
     private void updateTaskInDb(TaskItem task) {
         try (Connection conn = dataSource.getConnection();
              PreparedStatement ps = conn.prepareStatement(
-                     "UPDATE tasks SET title=?, description=?, status=?, priority=?, due_date=?, updated_at=?, action=?, action_prompt=?, last_reminded=? WHERE id=?")) {
+                     "UPDATE tasks SET title=?, description=?, status=?, priority=?, due_date=?, updated_at=?, action=?, action_prompt=?, last_reminded=?, scheduled_start=?, created_by=? WHERE id=?")) {
             ps.setString(1, task.title);
             ps.setString(2, task.description);
             ps.setString(3, task.status);
@@ -120,17 +135,23 @@ public class TaskService {
             ps.setString(7, task.action);
             ps.setString(8, task.actionPrompt);
             ps.setString(9, task.lastReminded);
-            ps.setString(10, task.id);
+            ps.setString(10, task.scheduledStart);
+            if (task.createdBy != null) {
+                ps.setLong(11, task.createdBy);
+            } else {
+                ps.setNull(11, Types.BIGINT);
+            }
+            ps.setLong(12, task.id);
             ps.executeUpdate();
         } catch (SQLException e) {
             log.error("[任务] 更新失败", e);
         }
     }
 
-    private void deleteTaskFromDb(String id) {
+    private void deleteTaskFromDb(Long id) {
         try (Connection conn = dataSource.getConnection();
              PreparedStatement ps = conn.prepareStatement("DELETE FROM tasks WHERE id = ?")) {
-            ps.setString(1, id);
+            ps.setLong(1, id);
             ps.executeUpdate();
         } catch (SQLException e) {
             log.error("[任务] 删除失败", e);
@@ -143,23 +164,40 @@ public class TaskService {
         return getAllTasksFromDb();
     }
 
+    /**
+     * 按登录用户获取任务：普通用户只能看到自己创建的任务，管理员可见全部。
+     */
+    public List<TaskItem> getAllTasksForUser(Long userId, boolean admin) {
+        List<TaskItem> all = getAllTasksFromDb();
+        if (admin || userId == null) {
+            return all;
+        }
+        return all.stream()
+                .filter(t -> userId.equals(t.createdBy))
+                .collect(java.util.stream.Collectors.toList());
+    }
+
     public TaskItem addTask(String title, String description, String priority, String dueDate) {
-        return addTaskInternal(title, description, priority, dueDate, null, null, null);
+        return addTaskInternal(title, description, priority, dueDate, null, null, null, null, null);
     }
 
     public TaskItem addTask(String title, String description, String priority, String dueDate, Long kbId) {
-        return addTaskInternal(title, description, priority, dueDate, kbId, null, null);
+        return addTaskInternal(title, description, priority, dueDate, kbId, null, null, null, null);
     }
 
     public TaskItem addTask(String title, String description, String priority, String dueDate, Long kbId,
                             String action, String actionPrompt) {
-        return addTaskInternal(title, description, priority, dueDate, kbId, action, actionPrompt);
+        return addTaskInternal(title, description, priority, dueDate, kbId, action, actionPrompt, null, null);
+    }
+
+    public TaskItem addTask(String title, String description, String priority, String dueDate, Long kbId,
+                            String action, String actionPrompt, String scheduledStart, Long createdBy) {
+        return addTaskInternal(title, description, priority, dueDate, kbId, action, actionPrompt, scheduledStart, createdBy);
     }
 
     private TaskItem addTaskInternal(String title, String description, String priority, String dueDate, Long kbId,
-                                     String action, String actionPrompt) {
+                                     String action, String actionPrompt, String scheduledStart, Long createdBy) {
         TaskItem task = new TaskItem();
-        task.id = "T" + System.currentTimeMillis();
         task.title = title;
         task.description = (description != null && !description.isEmpty()) ? description : null;
         task.priority = (priority != null && !priority.isEmpty()) ? priority : "mid";
@@ -170,31 +208,39 @@ public class TaskService {
         task.dueDate = (dueDate != null && !dueDate.isEmpty()) ? dueDate : null;
         task.action = (action != null && !action.isEmpty()) ? action : null;
         task.actionPrompt = (actionPrompt != null && !actionPrompt.isEmpty()) ? actionPrompt : null;
+        task.scheduledStart = (scheduledStart != null && !scheduledStart.isEmpty()) ? scheduledStart : null;
+        task.createdBy = createdBy;
 
         insertTaskToDb(task, kbId);
         activityLogDbService.addLog("create_task", "创建任务: " + title, "user", null, null);
         return task;
     }
 
-    public TaskItem updateTask(String id, String title, String description, String status,
+    public TaskItem updateTask(Long id, String title, String description, String status,
                                 String priority, String dueDate) {
-        return updateTaskInternal(id, title, description, status, priority, dueDate, null, null, null, null);
+        return updateTaskInternal(id, title, description, status, priority, dueDate, null, null, null, null, null);
     }
 
-    public TaskItem updateTask(String id, String title, String description, String status,
+    public TaskItem updateTask(Long id, String title, String description, String status,
                                 String priority, String dueDate, Long kbId) {
-        return updateTaskInternal(id, title, description, status, priority, dueDate, kbId, null, null, null);
+        return updateTaskInternal(id, title, description, status, priority, dueDate, kbId, null, null, null, null);
     }
 
-    public TaskItem updateTask(String id, String title, String description, String status,
+    public TaskItem updateTask(Long id, String title, String description, String status,
                                 String priority, String dueDate, Long kbId,
                                 String action, String actionPrompt) {
-        return updateTaskInternal(id, title, description, status, priority, dueDate, kbId, action, actionPrompt, null);
+        return updateTaskInternal(id, title, description, status, priority, dueDate, kbId, action, actionPrompt, null, null);
     }
 
-    private TaskItem updateTaskInternal(String id, String title, String description, String status,
+    public TaskItem updateTask(Long id, String title, String description, String status,
                                 String priority, String dueDate, Long kbId,
-                                String action, String actionPrompt, String lastReminded) {
+                                String action, String actionPrompt, String scheduledStart) {
+        return updateTaskInternal(id, title, description, status, priority, dueDate, kbId, action, actionPrompt, scheduledStart, null);
+    }
+
+    private TaskItem updateTaskInternal(Long id, String title, String description, String status,
+                                String priority, String dueDate, Long kbId,
+                                String action, String actionPrompt, String scheduledStart, String lastReminded) {
         TaskItem task = getTaskFromDb(id);
         if (task == null) return null;
 
@@ -207,6 +253,7 @@ public class TaskService {
         if (dueDate != null) task.dueDate = dueDate.isEmpty() ? null : dueDate;
         if (action != null) task.action = action.isEmpty() ? null : action;
         if (actionPrompt != null) task.actionPrompt = actionPrompt.isEmpty() ? null : actionPrompt;
+        if (scheduledStart != null) task.scheduledStart = scheduledStart.isEmpty() ? null : scheduledStart;
         if (lastReminded != null) task.lastReminded = lastReminded;
         task.updatedAt = java.time.LocalDate.now().toString();
 
@@ -221,7 +268,7 @@ public class TaskService {
         return task;
     }
 
-    public boolean markTaskReminded(String id, String date) {
+    public boolean markTaskReminded(Long id, String date) {
         TaskItem task = getTaskFromDb(id);
         if (task == null) return false;
         task.lastReminded = date;
@@ -278,15 +325,15 @@ public class TaskService {
         return f;
     }
 
-    public boolean deleteTask(String id) {
+    public boolean deleteTask(Long id) {
         return deleteTaskInternal(id, null);
     }
 
-    public boolean deleteTask(String id, Long kbId) {
+    public boolean deleteTask(Long id, Long kbId) {
         return deleteTaskInternal(id, kbId);
     }
 
-    private boolean deleteTaskInternal(String id, Long kbId) {
+    private boolean deleteTaskInternal(Long id, Long kbId) {
         deleteTaskFromDb(id);
         activityLogDbService.addLog("delete_task", "删除任务: " + id, "user", null, null);
         return true;
@@ -310,5 +357,180 @@ public class TaskService {
             log.error("[任务] 按KB查询失败", e);
         }
         return tasks;
+    }
+
+    // ========== 任务执行记录 ==========
+
+    public cn.qihang.ai.assistant.model.TaskData.TaskExecution createExecution(
+            String executionId, Long taskId, String taskTitle, String triggerType, String triggeredBy) {
+        String now = TimeUtil.nowStr();
+        try (Connection conn = dataSource.getConnection();
+             PreparedStatement ps = conn.prepareStatement(
+                     "INSERT INTO task_executions (execution_id, task_id, task_title, status, trigger_type, triggered_by, created_at) VALUES (?, ?, ?, 'QUEUED', ?, ?, ?)")) {
+            ps.setString(1, executionId);
+            ps.setLong(2, taskId);
+            ps.setString(3, taskTitle);
+            ps.setString(4, triggerType);
+            ps.setString(5, triggeredBy);
+            ps.setString(6, now);
+            ps.executeUpdate();
+        } catch (SQLException e) {
+            log.error("[任务] 创建执行记录失败", e);
+        }
+        cn.qihang.ai.assistant.model.TaskData.TaskExecution ex = new cn.qihang.ai.assistant.model.TaskData.TaskExecution();
+        ex.executionId = executionId;
+        ex.taskId = taskId;
+        ex.taskTitle = taskTitle;
+        ex.status = "QUEUED";
+        ex.triggerType = triggerType;
+        ex.triggeredBy = triggeredBy;
+        ex.createdAt = now;
+        return ex;
+    }
+
+    public void startExecution(String executionId) {
+        try (Connection conn = dataSource.getConnection();
+             PreparedStatement ps = conn.prepareStatement(
+                     "UPDATE task_executions SET status='RUNNING', start_time=? WHERE execution_id=?")) {
+            ps.setString(1, TimeUtil.nowStr());
+            ps.setString(2, executionId);
+            ps.executeUpdate();
+        } catch (SQLException e) {
+            log.error("[任务] 开始执行记录更新失败", e);
+        }
+    }
+
+    public void appendExecutionLog(String executionId, String line) {
+        try (Connection conn = dataSource.getConnection()) {
+            String existing = null;
+            try (PreparedStatement ps = conn.prepareStatement(
+                    "SELECT log_text FROM task_executions WHERE execution_id = ?")) {
+                ps.setString(1, executionId);
+                ResultSet rs = ps.executeQuery();
+                if (rs.next()) {
+                    existing = rs.getString(1);
+                }
+            }
+            String newLog = (existing == null || existing.isBlank())
+                    ? line
+                    : existing + "\n" + line;
+            try (PreparedStatement ps = conn.prepareStatement(
+                    "UPDATE task_executions SET log_text=? WHERE execution_id=?")) {
+                ps.setString(1, newLog);
+                ps.setString(2, executionId);
+                ps.executeUpdate();
+            }
+        } catch (SQLException e) {
+            log.error("[任务] 追加执行日志失败", e);
+        }
+    }
+
+    public void completeExecution(String executionId, String resultText) {
+        try (Connection conn = dataSource.getConnection();
+             PreparedStatement ps = conn.prepareStatement(
+                     "UPDATE task_executions SET status='SUCCESS', end_time=?, result_text=? WHERE execution_id=?")) {
+            ps.setString(1, TimeUtil.nowStr());
+            ps.setString(2, resultText);
+            ps.setString(3, executionId);
+            ps.executeUpdate();
+        } catch (SQLException e) {
+            log.error("[任务] 完成执行记录更新失败", e);
+        }
+    }
+
+    public void failExecution(String executionId, String errorMessage) {
+        try (Connection conn = dataSource.getConnection();
+             PreparedStatement ps = conn.prepareStatement(
+                     "UPDATE task_executions SET status='FAILED', end_time=?, error_message=? WHERE execution_id=?")) {
+            ps.setString(1, TimeUtil.nowStr());
+            ps.setString(2, errorMessage);
+            ps.setString(3, executionId);
+            ps.executeUpdate();
+        } catch (SQLException e) {
+            log.error("[任务] 失败执行记录更新失败", e);
+        }
+    }
+
+    public void cancelExecution(String executionId) {
+        try (Connection conn = dataSource.getConnection();
+             PreparedStatement ps = conn.prepareStatement(
+                     "UPDATE task_executions SET status='CANCELLED', end_time=? WHERE execution_id=?")) {
+            ps.setString(1, TimeUtil.nowStr());
+            ps.setString(2, executionId);
+            ps.executeUpdate();
+        } catch (SQLException e) {
+            log.error("[任务] 取消执行记录更新失败", e);
+        }
+    }
+
+    public boolean hasActiveExecution(Long taskId) {
+        try (Connection conn = dataSource.getConnection();
+             PreparedStatement ps = conn.prepareStatement(
+                     "SELECT COUNT(*) FROM task_executions WHERE task_id = ? AND status IN ('QUEUED', 'RUNNING')")) {
+            ps.setLong(1, taskId);
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) {
+                return rs.getInt(1) > 0;
+            }
+        } catch (SQLException e) {
+            log.error("[任务] 查询执行状态失败", e);
+        }
+        return false;
+    }
+
+    public List<cn.qihang.ai.assistant.model.TaskData.TaskExecution> getTaskExecutions(Long taskId) {
+        List<cn.qihang.ai.assistant.model.TaskData.TaskExecution> list = new ArrayList<>();
+        try (Connection conn = dataSource.getConnection();
+             PreparedStatement ps = conn.prepareStatement(
+                     "SELECT * FROM task_executions WHERE task_id = ? ORDER BY id DESC")) {
+            ps.setLong(1, taskId);
+            ResultSet rs = ps.executeQuery();
+            while (rs.next()) {
+                cn.qihang.ai.assistant.model.TaskData.TaskExecution ex = new cn.qihang.ai.assistant.model.TaskData.TaskExecution();
+                ex.executionId = rs.getString("execution_id");
+                ex.taskId = rs.getLong("task_id");
+                ex.taskTitle = rs.getString("task_title");
+                ex.status = rs.getString("status");
+                ex.triggerType = rs.getString("trigger_type");
+                ex.triggeredBy = rs.getString("triggered_by");
+                ex.startTime = rs.getString("start_time");
+                ex.endTime = rs.getString("end_time");
+                ex.logText = rs.getString("log_text");
+                ex.resultText = rs.getString("result_text");
+                ex.errorMessage = rs.getString("error_message");
+                ex.createdAt = rs.getString("created_at");
+                list.add(ex);
+            }
+        } catch (SQLException e) {
+            log.error("[任务] 查询执行记录失败", e);
+        }
+        return list;
+    }
+
+    public List<cn.qihang.ai.assistant.model.TaskData.TaskExecution> getAllExecutions() {
+        List<cn.qihang.ai.assistant.model.TaskData.TaskExecution> list = new ArrayList<>();
+        try (Connection conn = dataSource.getConnection();
+             PreparedStatement ps = conn.prepareStatement("SELECT * FROM task_executions ORDER BY id DESC LIMIT 200");
+             ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) {
+                cn.qihang.ai.assistant.model.TaskData.TaskExecution ex = new cn.qihang.ai.assistant.model.TaskData.TaskExecution();
+                ex.executionId = rs.getString("execution_id");
+                ex.taskId = rs.getLong("task_id");
+                ex.taskTitle = rs.getString("task_title");
+                ex.status = rs.getString("status");
+                ex.triggerType = rs.getString("trigger_type");
+                ex.triggeredBy = rs.getString("triggered_by");
+                ex.startTime = rs.getString("start_time");
+                ex.endTime = rs.getString("end_time");
+                ex.logText = rs.getString("log_text");
+                ex.resultText = rs.getString("result_text");
+                ex.errorMessage = rs.getString("error_message");
+                ex.createdAt = rs.getString("created_at");
+                list.add(ex);
+            }
+        } catch (SQLException e) {
+            log.error("[任务] 查询全部执行记录失败", e);
+        }
+        return list;
     }
 }

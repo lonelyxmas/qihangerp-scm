@@ -81,7 +81,7 @@ public class TaskTools {
 
     @Tool(description = "更新任务状态或字段。当用户说完成任务或更新任务时使用此工具")
     public String updateTask(
-            @ToolParam(description = "任务ID") String taskId,
+            @ToolParam(description = "任务ID") Long taskId,
             @ToolParam(description = "新标题，可选") String title,
             @ToolParam(description = "新描述，可选") String description,
             @ToolParam(description = "新状态: pending/done，可选") String status,
@@ -99,7 +99,7 @@ public class TaskTools {
 
     @Tool(description = "删除任务。当用户说删除任务或移除任务时使用此工具")
     public String deleteTask(
-            @ToolParam(description = "任务ID") String taskId) {
+            @ToolParam(description = "任务ID") Long taskId) {
         Long kbId = NoteTools.getCurrentKbId();
         taskService.deleteTask(taskId, kbId);
         log.info("[TaskTools] 删除任务: {}", taskId);
@@ -108,7 +108,7 @@ public class TaskTools {
 
     @Tool(description = "标记任务为已完成。当用户说完成任务或做完了时使用此工具")
     public String completeTask(
-            @ToolParam(description = "任务ID") String taskId) {
+            @ToolParam(description = "任务ID") Long taskId) {
         return updateTask(taskId, null, null, "done", null, null);
     }
 

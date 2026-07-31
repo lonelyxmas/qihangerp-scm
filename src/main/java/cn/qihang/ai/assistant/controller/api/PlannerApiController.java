@@ -2,13 +2,21 @@ package cn.qihang.ai.assistant.controller.api;
 
 import cn.qihang.ai.assistant.model.TaskData.*;
 import cn.qihang.ai.assistant.model.ReminderData.Reminder;
+import cn.qihang.ai.assistant.entity.SysUser;
+import cn.qihang.ai.assistant.security.LoginUser;
+import cn.qihang.ai.assistant.security.TokenService;
 import cn.qihang.ai.assistant.service.LogService;
 import cn.qihang.ai.assistant.service.TaskService;
 import cn.qihang.ai.assistant.service.ReminderService;
 import cn.qihang.ai.assistant.service.TaskAgentExecutor;
+import cn.qihang.ai.assistant.service.ISysUserService;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -19,20 +27,99 @@ public class PlannerApiController {
     private final ReminderService reminderService;
     private final LogService logService;
     private final TaskAgentExecutor taskAgentExecutor;
+    private final TokenService tokenService;
+    private final ISysUserService sysUserService;
 
     public PlannerApiController(TaskService taskService, ReminderService reminderService,
-                                LogService logService, TaskAgentExecutor taskAgentExecutor) {
+                                LogService logService, TaskAgentExecutor taskAgentExecutor,
+                                TokenService tokenService, ISysUserService sysUserService) {
         this.taskService = taskService;
         this.reminderService = reminderService;
         this.logService = logService;
         this.taskAgentExecutor = taskAgentExecutor;
+        this.tokenService = tokenService;
+        this.sysUserService = sysUserService;
+    }
+
+    private HttpServletRequest getCurrentRequest() {
+        ServletRequestAttributes attrs = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+        return attrs != null ? attrs.getRequest() : null;
+    }
+
+    private LoginUser getLoginUser() {
+        HttpServletRequest request = getCurrentRequest();
+        if (request == null) return null;
+        return tokenService.getLoginUser(request);
+    }
+
+    private Long getCurrentUserId() {
+        LoginUser loginUser = getLoginUser();
+        return loginUser != null ? loginUser.getUserId() : null;
+    }
+
+    private String getCurrentUserName() {
+        LoginUser loginUser = getLoginUser();
+        if (loginUser == null) return null;
+        SysUser user = loginUser.getUser();
+        return user != null ? user.getUserName() : null;
+    }
+
+    private boolean isCurrentUserAdmin() {
+        LoginUser loginUser = getLoginUser();
+        return loginUser != null && SysUser.isAdmin(loginUser.getUserId());
     }
 
     @GetMapping("/api/tasks")
     @ResponseBody
     public Map<String, Object> getTasks(@RequestParam(required = false) Long kbId) {
-        List<TaskItem> tasks = taskService.getAllTasks();
-        return Map.of("ok", true, "tasks", tasks);
+        Long userId = getCurrentUserId();
+        List<TaskItem> tasks = taskService.getAllTasksForUser(userId, isCurrentUserAdmin());
+        Map<Long, Integer> queueInfo = taskAgentExecutor.getQueueInfo();
+        Map<Long, String> userNameCache = new java.util.HashMap<>();
+        List<Map<String, Object>> result = tasks.stream().map(t -> {
+            Map<String, Object> m = new LinkedHashMap<>();
+            m.put("id", t.id);
+            m.put("title", t.title);
+            m.put("description", t.description);
+            m.put("status", t.status);
+            m.put("priority", t.priority);
+            m.put("createdAt", t.createdAt);
+            m.put("updatedAt", t.updatedAt);
+            m.put("dueDate", t.dueDate);
+            m.put("action", t.action);
+            m.put("actionPrompt", t.actionPrompt);
+            m.put("scheduledStart", t.scheduledStart);
+            m.put("createdBy", t.createdBy);
+            m.put("creatorName", resolveUserName(t.createdBy, userNameCache));
+            m.put("kbId", t.kbId);
+            Integer pos = queueInfo.get(t.id);
+            m.put("queuePosition", pos);
+            if (pos != null) {
+                m.put("queueStatus", "QUEUED");
+            } else if (t.createdBy != null && taskService.hasActiveExecution(t.id)) {
+                m.put("queueStatus", "RUNNING");
+            }
+            return m;
+        }).toList();
+        return Map.of("ok", true, "tasks", result);
+    }
+
+    private String resolveUserName(Long userId, Map<Long, String> cache) {
+        if (userId == null) return null;
+        return cache.computeIfAbsent(userId, id -> {
+            try {
+                SysUser u = sysUserService.selectUserById(id);
+                return u != null && u.getUserName() != null ? u.getUserName() : String.valueOf(id);
+            } catch (Exception e) {
+                return String.valueOf(id);
+            }
+        });
+    }
+
+    @GetMapping("/api/tasks/queue")
+    @ResponseBody
+    public Map<String, Object> getQueueInfo() {
+        return Map.of("ok", true, "queue", taskAgentExecutor.getQueueInfo(), "size", taskAgentExecutor.getQueueSize());
     }
 
     @PostMapping("/api/tasks/add")
@@ -44,9 +131,11 @@ public class PlannerApiController {
             @RequestParam(required = false, defaultValue = "mid") String priority,
             @RequestParam(required = false, defaultValue = "") String dueDate,
             @RequestParam(required = false, defaultValue = "") String action,
-            @RequestParam(required = false, defaultValue = "") String actionPrompt) {
+            @RequestParam(required = false, defaultValue = "") String actionPrompt,
+            @RequestParam(required = false, defaultValue = "") String scheduledStart) {
         try {
-            TaskItem task = taskService.addTask(title, description, priority, dueDate, kbId, action, actionPrompt);
+            Long userId = getCurrentUserId();
+            TaskItem task = taskService.addTask(title, description, priority, dueDate, kbId, action, actionPrompt, scheduledStart, userId);
             logService.add("任务中心", "成功", "添加任务: " + title);
             return Map.of("ok", true, "task", task);
         } catch (Exception e) {
@@ -58,16 +147,17 @@ public class PlannerApiController {
     @ResponseBody
     public Map<String, Object> updateTask(
             @RequestParam(required = false) Long kbId,
-            @RequestParam String id,
+            @RequestParam Long id,
             @RequestParam(required = false) String title,
             @RequestParam(required = false) String description,
             @RequestParam(required = false) String status,
             @RequestParam(required = false) String priority,
             @RequestParam(required = false) String dueDate,
             @RequestParam(required = false) String action,
-            @RequestParam(required = false) String actionPrompt) {
+            @RequestParam(required = false) String actionPrompt,
+            @RequestParam(required = false) String scheduledStart) {
         try {
-            TaskItem task = taskService.updateTask(id, title, description, status, priority, dueDate, kbId, action, actionPrompt);
+            TaskItem task = taskService.updateTask(id, title, description, status, priority, dueDate, kbId, action, actionPrompt, scheduledStart);
             if (task == null) {
                 return Map.of("ok", false, "error", "任务不存在");
             }
@@ -82,8 +172,9 @@ public class PlannerApiController {
     @ResponseBody
     public Map<String, Object> deleteTask(
             @RequestParam(required = false) Long kbId,
-            @RequestParam String id) {
+            @RequestParam Long id) {
         try {
+            taskAgentExecutor.cancelQueued(id);
             boolean ok = taskService.deleteTask(id, kbId);
             if (ok) {
                 logService.add("任务中心", "成功", "删除任务: " + id);
@@ -98,20 +189,47 @@ public class PlannerApiController {
     @ResponseBody
     public Map<String, Object> executeTask(
             @RequestParam(required = false) Long kbId,
-            @RequestParam String id) {
+            @RequestParam Long id) {
         try {
             TaskItem task = taskService.getAllTasks().stream()
-                    .filter(x -> x.id.equals(id))
+                    .filter(x -> id.equals(x.id))
                     .findFirst().orElse(null);
             if (task == null) {
                 return Map.of("ok", false, "error", "任务不存在");
             }
-            taskAgentExecutor.executeAsync(task, kbId != null ? kbId : task.kbId);
+            if (taskService.hasActiveExecution(id)) {
+                return Map.of("ok", false, "error", "该任务已在排队或执行中，请勿重复触发");
+            }
+            Map<String, Object> queueInfo = taskAgentExecutor.enqueue(task, kbId != null ? kbId : task.kbId, "manual", getCurrentUserName());
             logService.add("任务中心", "成功", "手动触发 AI 执行: " + task.title);
-            return Map.of("ok", true);
+            Map<String, Object> result = new LinkedHashMap<>();
+            result.put("ok", true);
+            result.put("executionId", queueInfo.get("executionId"));
+            result.put("position", queueInfo.get("position"));
+            return result;
         } catch (Exception e) {
             return Map.of("ok", false, "error", e.getMessage());
         }
+    }
+
+    @PostMapping("/api/tasks/cancel-queue")
+    @ResponseBody
+    public Map<String, Object> cancelQueuedTask(@RequestParam Long id) {
+        try {
+            boolean ok = taskAgentExecutor.cancelQueued(id);
+            return Map.of("ok", ok);
+        } catch (Exception e) {
+            return Map.of("ok", false, "error", e.getMessage());
+        }
+    }
+
+    @GetMapping("/api/tasks/executions")
+    @ResponseBody
+    public Map<String, Object> getExecutions(@RequestParam(required = false) Long taskId) {
+        List<TaskExecution> executions = (taskId != null)
+                ? taskService.getTaskExecutions(taskId)
+                : taskService.getAllExecutions();
+        return Map.of("ok", true, "executions", executions);
     }
 
     @GetMapping("/api/reminders")

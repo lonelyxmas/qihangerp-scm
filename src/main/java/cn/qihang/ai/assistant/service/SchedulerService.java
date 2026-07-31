@@ -83,6 +83,7 @@ public class SchedulerService {
     public void checkDueTasks() {
         try {
             String today = LocalDate.now().toString();
+            String now = cn.qihang.ai.assistant.util.TimeUtil.nowStr();
             List<TaskItem> tasks = taskService.getAllTasks();
             for (TaskItem t : tasks) {
                 if (t == null || "done".equals(t.status) || t.dueDate == null || t.dueDate.isBlank()) {
@@ -100,7 +101,7 @@ public class SchedulerService {
 
                 if ("ai".equals(t.action)) {
                     log.info("[{}] ⏰ 触发 AI 任务：{}", TimeUtil.nowStr(), t.title);
-                    taskAgentExecutor.executeAsync(t, t.kbId);
+                    enqueueTask(t, "due");
                     taskService.markTaskReminded(t.id, today);
                     logService.add("任务中心", "成功", "触发 AI 任务: " + t.title);
                 } else {
@@ -113,6 +114,49 @@ public class SchedulerService {
             }
         } catch (Exception e) {
             log.error("[任务] 检查任务到期失败: {}", e.getMessage(), e);
+        }
+    }
+
+    @Scheduled(cron = "0 * * * * ?", zone = "Asia/Shanghai")
+    public void checkScheduledStart() {
+        try {
+            String now = cn.qihang.ai.assistant.util.TimeUtil.nowStr();
+            List<TaskItem> tasks = taskService.getAllTasks();
+            for (TaskItem t : tasks) {
+                if (t == null || "done".equals(t.status)) {
+                    continue;
+                }
+                if (t.scheduledStart == null || t.scheduledStart.isBlank()) {
+                    continue;
+                }
+                if (t.scheduledStart.compareTo(now) > 0) {
+                    continue;
+                }
+                // 已有排队/执行中的记录则跳过，避免重复入队
+                if (taskService.hasActiveExecution(t.id)) {
+                    continue;
+                }
+                if ("ai".equals(t.action)) {
+                    log.info("[{}] ⏰ 定时启动 AI 任务：{} (计划时间: {})", TimeUtil.nowStr(), t.title, t.scheduledStart);
+                    enqueueTask(t, "scheduled");
+                    logService.add("任务中心", "成功", "定时启动 AI 任务: " + t.title);
+                } else {
+                    log.info("[{}] ⏰ 定时启动普通任务：{} (计划时间: {})", TimeUtil.nowStr(), t.title, t.scheduledStart);
+                    pushTaskDue(t, false);
+                    taskService.markTaskReminded(t.id, cn.qihang.ai.assistant.util.TimeUtil.todayStr());
+                    logService.add("任务中心", "成功", "定时启动任务: " + t.title);
+                }
+            }
+        } catch (Exception e) {
+            log.error("[任务] 检查定时启动失败: {}", e.getMessage(), e);
+        }
+    }
+
+    private void enqueueTask(TaskItem t, String triggerType) {
+        try {
+            taskAgentExecutor.enqueue(t, t.kbId, triggerType, "system");
+        } catch (Exception e) {
+            log.warn("[任务] 任务入队失败: {} - {}", t.title, e.getMessage());
         }
     }
 

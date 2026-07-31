@@ -40,7 +40,23 @@
         .badge-ai { background: rgba(139,92,246,0.12); color: #8b5cf6; }
         .badge-due { background: rgba(59,130,246,0.12); color: #3b82f6; }
         .badge-overdue { background: rgba(239,68,68,0.12); color: #ef4444; }
-        .task-actions { margin-top: 10px; display: flex; gap: 6px; }
+        .badge-queue { background: rgba(245,158,11,0.12); color: #f59e0b; }
+        .badge-schedule { background: rgba(16,185,129,0.12); color: #10b981; }
+        .badge-running { background: rgba(139,92,246,0.15); color: #8b5cf6; }
+        .task-actions { margin-top: 10px; display: flex; gap: 6px; flex-wrap: wrap; }
+
+        .exec-item { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px 14px; margin-bottom: 10px; background: #fafafa; }
+        .exec-head { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; flex-wrap: wrap; }
+        .exec-status { padding: 1px 8px; border-radius: 10px; font-size: 11px; font-weight: 500; }
+        .exec-status-QUEUED { background: rgba(245,158,11,0.12); color: #f59e0b; }
+        .exec-status-RUNNING { background: rgba(139,92,246,0.12); color: #8b5cf6; }
+        .exec-status-SUCCESS { background: rgba(34,197,94,0.12); color: #22c55e; }
+        .exec-status-FAILED { background: rgba(239,68,68,0.12); color: #ef4444; }
+        .exec-status-CANCELLED { background: rgba(148,163,184,0.15); color: #64748b; }
+        .exec-meta { font-size: 12px; color: var(--text-muted); }
+        .exec-log { font-size: 12px; line-height: 1.7; background: #0f172a; color: #e2e8f0; border-radius: var(--radius-sm); padding: 10px 12px; margin-top: 8px; white-space: pre-wrap; word-break: break-all; max-height: 260px; overflow-y: auto; }
+        .exec-result { font-size: 12px; line-height: 1.7; background: #ecfdf5; border: 1px solid #a7f3d0; color: #065f46; border-radius: var(--radius-sm); padding: 10px 12px; margin-top: 8px; white-space: pre-wrap; word-break: break-all; max-height: 260px; overflow-y: auto; }
+        .exec-error { font-size: 12px; line-height: 1.7; background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c; border-radius: var(--radius-sm); padding: 10px 12px; margin-top: 8px; white-space: pre-wrap; word-break: break-all; max-height: 200px; overflow-y: auto; }
 
         .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 1000; }
         .modal-overlay.show { display: flex; }
@@ -90,6 +106,9 @@
                                 <div class="task-title">
                                     {{ task.title }}
                                     <span v-if="task.action === 'ai'" class="badge badge-ai">🤖 AI</span>
+                                    <span v-if="task.scheduledStart" class="badge badge-schedule">🚀 {{ formatSchedule(task.scheduledStart) }}</span>
+                                    <span v-if="task.queuePosition" class="badge badge-queue">⏳ 排队 #{{ task.queuePosition }}</span>
+                                    <span v-else-if="task.queueStatus === 'RUNNING'" class="badge badge-running">⚙️ 执行中</span>
                                     <span v-if="isDueToday(task)" class="badge badge-due">今日到期</span>
                                     <span v-if="isOverdue(task)" class="badge badge-overdue">已逾期</span>
                                 </div>
@@ -98,9 +117,12 @@
                                         {{ task.priority === 'high' ? '🔴' : (task.priority === 'mid' ? '🟡' : '🟢') }}
                                     </span>
                                     <span v-if="task.dueDate" class="task-due">📅 {{ formatDate(task.dueDate) }}</span>
+                                    <span v-if="task.creatorName" class="task-due">👤 {{ task.creatorName }}</span>
                                 </div>
                                 <div v-if="task.action === 'ai'" class="task-actions" @click.stop>
-                                    <button class="btn btn-secondary" style="padding:4px 10px;font-size:12px;color:#8b5cf6;border-color:#c4b5fd;" @click="executeTask(task)">⚡ 立即执行</button>
+                                    <button v-if="!task.queuePosition && task.queueStatus !== 'RUNNING'" class="btn btn-secondary" style="padding:4px 10px;font-size:12px;color:#8b5cf6;border-color:#c4b5fd;" @click="executeTask(task)">⚡ 立即执行</button>
+                                    <button v-if="task.queuePosition" class="btn btn-secondary" style="padding:4px 10px;font-size:12px;color:#f59e0b;border-color:#fcd34d;" @click="cancelQueuedTask(task)">✖ 取消排队</button>
+                                    <button class="btn btn-secondary" style="padding:4px 10px;font-size:12px;" @click="showExecutionsModal(task)">📜 执行记录</button>
                                 </div>
                             </div>
                         </div>
@@ -116,6 +138,9 @@
                                 <div class="task-title">
                                     {{ task.title }}
                                     <span v-if="task.action === 'ai'" class="badge badge-ai">🤖 AI</span>
+                                    <span v-if="task.scheduledStart" class="badge badge-schedule">🚀 {{ formatSchedule(task.scheduledStart) }}</span>
+                                    <span v-if="task.queuePosition" class="badge badge-queue">⏳ 排队 #{{ task.queuePosition }}</span>
+                                    <span v-else-if="task.queueStatus === 'RUNNING'" class="badge badge-running">⚙️ 执行中</span>
                                     <span v-if="isDueToday(task)" class="badge badge-due">今日到期</span>
                                     <span v-if="isOverdue(task)" class="badge badge-overdue">已逾期</span>
                                 </div>
@@ -124,9 +149,12 @@
                                         {{ task.priority === 'high' ? '🔴' : (task.priority === 'mid' ? '🟡' : '🟢') }}
                                     </span>
                                     <span v-if="task.dueDate" class="task-due">📅 {{ formatDate(task.dueDate) }}</span>
+                                    <span v-if="task.creatorName" class="task-due">👤 {{ task.creatorName }}</span>
                                 </div>
                                 <div v-if="task.action === 'ai'" class="task-actions" @click.stop>
-                                    <button class="btn btn-secondary" style="padding:4px 10px;font-size:12px;color:#8b5cf6;border-color:#c4b5fd;" @click="executeTask(task)">⚡ 立即执行</button>
+                                    <button v-if="!task.queuePosition && task.queueStatus !== 'RUNNING'" class="btn btn-secondary" style="padding:4px 10px;font-size:12px;color:#8b5cf6;border-color:#c4b5fd;" @click="executeTask(task)">⚡ 立即执行</button>
+                                    <button v-if="task.queuePosition" class="btn btn-secondary" style="padding:4px 10px;font-size:12px;color:#f59e0b;border-color:#fcd34d;" @click="cancelQueuedTask(task)">✖ 取消排队</button>
+                                    <button class="btn btn-secondary" style="padding:4px 10px;font-size:12px;" @click="showExecutionsModal(task)">📜 执行记录</button>
                                 </div>
                             </div>
                         </div>
@@ -142,19 +170,25 @@
                                 <div class="task-title">
                                     {{ task.title }}
                                     <span v-if="task.action === 'ai'" class="badge badge-ai">🤖 AI</span>
+                                    <span v-if="task.scheduledStart" class="badge badge-schedule">🚀 {{ formatSchedule(task.scheduledStart) }}</span>
                                 </div>
                                 <div class="task-meta">
                                     <span :class="'priority-' + task.priority">
                                         {{ task.priority === 'high' ? '🔴' : (task.priority === 'mid' ? '🟡' : '🟢') }}
                                     </span>
                                     <span v-if="task.dueDate" class="task-due">📅 {{ formatDate(task.dueDate) }}</span>
+                                    <span v-if="task.creatorName" class="task-due">👤 {{ task.creatorName }}</span>
+                                </div>
+                                <div v-if="task.action === 'ai'" class="task-actions" @click.stop>
+                                    <button class="btn btn-secondary" style="padding:4px 10px;font-size:12px;" @click="showExecutionsModal(task)">📜 执行记录</button>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
                 <div class="ai-hint">
-                    💡 <b>AI 任务</b>：任务到期时 AI 会自动执行你填写的指令（查数据、生成报告），结果推送到飞书。也可随时点「立即执行」手动触发。
+                    💡 <b>AI 任务</b>：任务到期时 AI 会自动执行你填写的指令（查数据、生成报告），结果推送到飞书；多个任务同时触发时会进入<b>执行队列</b>依次处理，可在卡片上查看排队位置与<b>执行记录</b>。
+                    可设置「定时启动」让任务在指定时间自动开始；也可随时点「立即执行」手动触发。
                     普通任务到期/逾期会自动推送提醒，完成后自动沉淀到「任务完成记录」数据集，供日报引用。
                 </div>
             </div>
@@ -187,6 +221,10 @@
                     <option value="ai">🤖 AI 任务（到期自动执行 AI 指令）</option>
                 </select>
             </div>
+            <div class="form-group">
+                <label>⏰ 定时启动 <span style="color:#94a3b8;font-weight:normal;">（选填，到点自动开始执行/提醒）</span></label>
+                <input type="datetime-local" v-model="editingTask.scheduledStart" class="form-control">
+            </div>
             <div class="form-group" v-if="editingTask.action === 'ai'">
                 <label>AI 执行指令 *</label>
                 <textarea v-model="editingTask.actionPrompt" class="form-control" rows="3"
@@ -216,6 +254,33 @@
             <div class="modal-actions">
                 <button class="btn btn-secondary" @click="showDeleteModal = false">取消</button>
                 <button class="btn btn-danger" @click="confirmDelete()">删除</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" :class="{ show: showExecutionsModalVisible }" @click.self="showExecutionsModalVisible = false">
+        <div class="modal" style="width:680px; max-height:85vh; overflow-y:auto;">
+            <h3>📜 执行记录 - {{ executionsTaskTitle }}</h3>
+            <div v-if="executions.length === 0" class="empty-state" style="padding:30px 10px;">
+                <div class="empty-icon">📭</div>
+                <div>暂无执行记录</div>
+            </div>
+            <div v-for="ex in executions" :key="ex.executionId" class="exec-item">
+                <div class="exec-head">
+                    <span class="exec-status" :class="'exec-status-' + ex.status">
+                        {{ statusLabel(ex.status) }}
+                    </span>
+                    <span class="exec-meta">触发方式: {{ triggerLabel(ex.triggerType) }}</span>
+                    <span class="exec-meta">触发人: {{ ex.triggeredBy || '-' }}</span>
+                    <span class="exec-meta">开始: {{ ex.startTime || '-' }}</span>
+                    <span class="exec-meta">结束: {{ ex.endTime || '-' }}</span>
+                </div>
+                <div v-if="ex.logText" class="exec-log">{{ ex.logText }}</div>
+                <div v-if="ex.resultText" class="exec-result">📊 {{ ex.resultText }}</div>
+                <div v-if="ex.errorMessage" class="exec-error">❌ {{ ex.errorMessage }}</div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" @click="showExecutionsModalVisible = false">关闭</button>
             </div>
         </div>
     </div>
@@ -279,11 +344,15 @@
                 const isEditingTask = ref(false);
                 const editingTask = ref({
                     id: '', title: '', description: '', priority: 'mid', dueDate: '',
-                    status: 'pending', action: '', actionPrompt: ''
+                    status: 'pending', action: '', actionPrompt: '', scheduledStart: ''
                 });
 
                 const showDeleteModal = ref(false);
                 const deleteId = ref('');
+
+                const showExecutionsModalVisible = ref(false);
+                const executions = ref([]);
+                const executionsTaskTitle = ref('');
 
                 const pendingTasks = computed(() => (tasks.value || []).filter(t => t.status === 'pending'));
                 const progressTasks = computed(() => (tasks.value || []).filter(t => t.status === 'in_progress'));
@@ -320,14 +389,29 @@
 
                 function showAddTaskModal() {
                     isEditingTask.value = false;
-                    editingTask.value = { id: '', title: '', description: '', priority: 'mid', dueDate: '', status: 'pending', action: '', actionPrompt: '' };
+                    editingTask.value = { id: '', title: '', description: '', priority: 'mid', dueDate: '', status: 'pending', action: '', actionPrompt: '', scheduledStart: '' };
                     showTaskModal.value = true;
                 }
 
                 function showEditTaskModal(task) {
                     isEditingTask.value = true;
-                    editingTask.value = { ...task };
+                    const copy = { ...task };
+                    if (copy.scheduledStart) copy.scheduledStart = toLocalDateTime(copy.scheduledStart);
+                    editingTask.value = copy;
                     showTaskModal.value = true;
+                }
+
+                function toServerDateTime(v) {
+                    if (!v) return '';
+                    const s = String(v).replace('T', ' ');
+                    return s.length === 16 ? s + ':00' : s;
+                }
+
+                function toLocalDateTime(v) {
+                    if (!v) return '';
+                    let s = String(v).replace(' ', 'T');
+                    if (s.length === 19) s = s.substring(0, 16);
+                    return s;
                 }
 
                 async function saveTask() {
@@ -348,6 +432,7 @@
                     formData.append('dueDate', editingTask.value.dueDate || '');
                     formData.append('action', editingTask.value.action || '');
                     formData.append('actionPrompt', editingTask.value.actionPrompt || '');
+                    formData.append('scheduledStart', toServerDateTime(editingTask.value.scheduledStart) || '');
                     if (editingTask.value.id) {
                         formData.append('id', editingTask.value.id);
                         formData.append('status', editingTask.value.status);
@@ -374,10 +459,57 @@
                     const r = await checkAuthBeforeFetch(url, { method: 'POST' });
                     if (isAuthError(r)) { handleUnauthenticated(); return; }
                     if (r.ok) {
-                        alert('🤖 已触发 AI 执行，完成后结果会推送到飞书');
+                        if (r.position && r.position > 1) {
+                            alert('⏳ 已进入执行队列，当前排队位置: #' + r.position + '（执行完成后结果推送到飞书）');
+                        } else {
+                            alert('🤖 已触发 AI 执行，完成后结果会推送到飞书');
+                        }
+                        await loadTasks();
                     } else {
                         alert(r.error || '触发失败');
                     }
+                }
+
+                async function cancelQueuedTask(task) {
+                    if (!confirm('确定取消任务「' + task.title + '」的排队执行吗？')) return;
+                    let url = '/api/tasks/cancel-queue?id=' + task.id;
+                    if (currentKbId.value) url += '&kbId=' + currentKbId.value;
+
+                    const r = await checkAuthBeforeFetch(url, { method: 'POST' });
+                    if (isAuthError(r)) { handleUnauthenticated(); return; }
+                    if (r.ok) {
+                        await loadTasks();
+                    } else {
+                        alert(r.error || '取消失败');
+                    }
+                }
+
+                async function showExecutionsModal(task) {
+                    executionsTaskTitle.value = task.title;
+                    showExecutionsModalVisible.value = true;
+                    let url = '/api/tasks/executions?taskId=' + task.id;
+                    if (currentKbId.value) url += '&kbId=' + currentKbId.value;
+
+                    const r = await checkAuthBeforeFetch(url);
+                    if (isAuthError(r)) { handleUnauthenticated(); return; }
+                    if (r.ok && Array.isArray(r.executions)) {
+                        executions.value = r.executions;
+                    } else {
+                        executions.value = [];
+                    }
+                }
+
+                function statusLabel(s) {
+                    return { QUEUED: '⏳ 排队中', RUNNING: '⚙️ 执行中', SUCCESS: '✅ 成功', FAILED: '❌ 失败', CANCELLED: '🚫 已取消' }[s] || s;
+                }
+
+                function triggerLabel(t) {
+                    return { manual: '手动', scheduled: '定时', due: '到期自动' }[t] || t || '-';
+                }
+
+                function formatSchedule(v) {
+                    if (!v) return '';
+                    return v.substring(5, 16).replace('-', '/');
                 }
 
                 function openDeleteModal(id) {
@@ -393,6 +525,7 @@
                     if (isAuthError(r)) { handleUnauthenticated(); return; }
                     if (r.ok) {
                         showDeleteModal.value = false;
+                        showTaskModal.value = false;
                         await loadTasks();
                     }
                 }
@@ -405,6 +538,10 @@
 
                 onMounted(() => {
                     loadTasks();
+                    const timer = setInterval(() => {
+                        if (!document.hidden) loadTasks();
+                    }, 15000);
+                    window.addEventListener('beforeunload', () => clearInterval(timer));
                 });
 
                 return {
@@ -414,7 +551,10 @@
                     pendingTasks, progressTasks, doneTasks,
                     isDueToday, isOverdue,
                     showAddTaskModal, showEditTaskModal, saveTask,
-                    executeTask, openDeleteModal, confirmDelete,
+                    executeTask, cancelQueuedTask,
+                    showExecutionsModal, showExecutionsModalVisible, executions, executionsTaskTitle,
+                    statusLabel, triggerLabel, formatSchedule,
+                    openDeleteModal, confirmDelete,
                     formatDate
                 };
             }
