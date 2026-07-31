@@ -450,7 +450,7 @@ CREATE TABLE `notifications`  (
 -- ----------------------------
 DROP TABLE IF EXISTS `reminders`;
 CREATE TABLE `reminders`  (
-  `id` varchar(128) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '提醒 ID',
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '提醒 ID',
   `name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '提醒名称',
   `message` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL COMMENT '提醒内容',
   `type` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '提醒类型',
@@ -466,7 +466,7 @@ CREATE TABLE `reminders`  (
   PRIMARY KEY (`id`) USING BTREE,
   INDEX `idx_kb_id`(`kb_id` ASC) USING BTREE,
   INDEX `idx_enabled`(`enabled` ASC) USING BTREE
-) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '提醒' ROW_FORMAT = Dynamic;
+) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '提醒' ROW_FORMAT = Dynamic;
 
 -- ----------------------------
 -- Table structure for solve_follow_ups
@@ -594,6 +594,12 @@ CREATE TABLE `tasks`  (
   `last_reminded` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '上次到期提醒日期(用于去重)',
   `scheduled_start` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '定时启动时间 yyyy-MM-dd HH:mm:ss，到点自动入队执行',
   `created_by` bigint NULL DEFAULT NULL COMMENT '创建人用户ID',
+  `schedule_type` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '调度类型: once=一次性定时, cycle=循环执行',
+  `cycle_type` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '循环周期: daily/weekly/monthly/cron',
+  `cycle_value` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '循环值: 周几1-7逗号分隔/每月几号/cron表达式',
+  `cycle_time` varchar(10) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '循环执行时间 HH:mm',
+  `cycle_end` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '循环结束日期 yyyy-MM-dd，到期自动转为已完成',
+  `last_cycle_run` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '最近一次循环执行时间',
   PRIMARY KEY (`id`) USING BTREE,
   INDEX `idx_kb_id`(`kb_id` ASC) USING BTREE,
   INDEX `idx_status`(`status` ASC) USING BTREE,

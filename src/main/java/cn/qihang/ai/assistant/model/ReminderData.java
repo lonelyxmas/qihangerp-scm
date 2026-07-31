@@ -10,7 +10,7 @@ public class ReminderData {
 
     @JsonIgnoreProperties(ignoreUnknown = true)
     public static class Reminder {
-        public String id;
+        public Long id;
         public String name;
         public String message;
         public String type;

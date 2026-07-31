@@ -2,7 +2,6 @@ package cn.qihang.ai.assistant.service;
 
 import cn.qihang.ai.assistant.model.ReminderData.Reminder;
 import cn.qihang.ai.assistant.service.db.NotificationDbService;
-import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -37,33 +36,6 @@ public class ReminderService {
         this.notificationDbService = notificationDbService;
     }
 
-    @PostConstruct
-    public void init() {
-        ensureDefaultReminder();
-    }
-
-    private void ensureDefaultReminder() {
-        try {
-            List<Reminder> existing = getAllRemindersFromDb();
-            boolean hasDailyReport = existing.stream()
-                    .anyMatch(r -> "daily-report-reminder".equals(r.id));
-            if (!hasDailyReport) {
-                Reminder r = new Reminder();
-                r.id = "daily-report-reminder";
-                r.name = "下班日报提醒";
-                r.message = "到6点了老齐，写一下今天的工作记录！\n写完后我来帮你更新记忆文件，明天综合日报就会包含这些内容。\n内容包括：\n- 今天做了什么事\n- 客户沟通情况\n- 开发/文章进展\n- 明天计划";
-                r.type = "daily";
-                r.time = "18:00";
-                r.enabled = true;
-                r.createdAt = java.time.LocalDateTime.now(ZoneId.of("Asia/Shanghai")).format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"));
-                insertReminderToDb(r, null);
-                log.info("[提醒] 已创建默认下班日报提醒");
-            }
-        } catch (Exception e) {
-            log.warn("[提醒] 初始化默认提醒失败: {}", e.getMessage());
-        }
-    }
-
     // ========== SQLite CRUD ==========
 
     private List<Reminder> getAllRemindersFromDb() {
@@ -83,25 +55,30 @@ public class ReminderService {
     private void insertReminderToDb(Reminder r, Long kbId) {
         try (Connection conn = dataSource.getConnection();
              PreparedStatement ps = conn.prepareStatement(
-                     "INSERT INTO reminders (id, name, message, type, time, date, day_of_week, day_of_month, month_day, enabled, created_at, last_triggered, kb_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE id=VALUES(id), name=VALUES(name), message=VALUES(message), type=VALUES(type), time=VALUES(time), date=VALUES(date), day_of_week=VALUES(day_of_week), day_of_month=VALUES(day_of_month), month_day=VALUES(month_day), enabled=VALUES(enabled), created_at=VALUES(created_at), last_triggered=VALUES(last_triggered), kb_id=VALUES(kb_id)")) {
-            ps.setString(1, r.id);
-            ps.setString(2, r.name);
-            ps.setString(3, r.message);
-            ps.setString(4, r.type);
-            ps.setString(5, r.time);
-            ps.setString(6, r.date);
-            ps.setString(7, r.dayOfWeek);
-            ps.setString(8, r.dayOfMonth);
-            ps.setString(9, r.monthDay);
-            ps.setInt(10, r.enabled ? 1 : 0);
-            ps.setString(11, r.createdAt);
-            ps.setString(12, r.lastTriggered);
+                     "INSERT INTO reminders (name, message, type, time, date, day_of_week, day_of_month, month_day, enabled, created_at, last_triggered, kb_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                     PreparedStatement.RETURN_GENERATED_KEYS)) {
+            ps.setString(1, r.name);
+            ps.setString(2, r.message);
+            ps.setString(3, r.type);
+            ps.setString(4, r.time);
+            ps.setString(5, r.date);
+            ps.setString(6, r.dayOfWeek);
+            ps.setString(7, r.dayOfMonth);
+            ps.setString(8, r.monthDay);
+            ps.setInt(9, r.enabled ? 1 : 0);
+            ps.setString(10, r.createdAt);
+            ps.setString(11, r.lastTriggered);
             if (kbId != null) {
-                ps.setLong(13, kbId);
+                ps.setLong(12, kbId);
             } else {
-                ps.setNull(13, Types.INTEGER);
+                ps.setNull(12, Types.INTEGER);
             }
             ps.executeUpdate();
+            try (ResultSet keys = ps.getGeneratedKeys()) {
+                if (keys.next()) {
+                    r.id = keys.getLong(1);
+                }
+            }
         } catch (SQLException e) {
             log.error("[提醒] 插入失败", e);
         }
@@ -109,7 +86,7 @@ public class ReminderService {
 
     private Reminder mapRowToReminder(ResultSet rs) throws SQLException {
         Reminder r = new Reminder();
-        r.id = rs.getString("id");
+        r.id = rs.getLong("id");
         r.name = rs.getString("name");
         r.message = rs.getString("message");
         r.type = rs.getString("type");
@@ -124,10 +101,10 @@ public class ReminderService {
         return r;
     }
 
-    private Reminder getReminderFromDb(String id) {
+    private Reminder getReminderFromDb(Long id) {
         try (Connection conn = dataSource.getConnection();
              PreparedStatement ps = conn.prepareStatement("SELECT * FROM reminders WHERE id = ?")) {
-            ps.setString(1, id);
+            ps.setLong(1, id);
             ResultSet rs = ps.executeQuery();
             if (rs.next()) {
                 return mapRowToReminder(rs);
@@ -152,17 +129,17 @@ public class ReminderService {
             ps.setString(8, r.monthDay);
             ps.setInt(9, r.enabled ? 1 : 0);
             ps.setString(10, r.lastTriggered);
-            ps.setString(11, r.id);
+            ps.setLong(11, r.id);
             ps.executeUpdate();
         } catch (SQLException e) {
             log.error("[提醒] 更新失败", e);
         }
     }
 
-    private void deleteReminderFromDb(String id) {
+    private void deleteReminderFromDb(Long id) {
         try (Connection conn = dataSource.getConnection();
              PreparedStatement ps = conn.prepareStatement("DELETE FROM reminders WHERE id = ?")) {
-            ps.setString(1, id);
+            ps.setLong(1, id);
             ps.executeUpdate();
         } catch (SQLException e) {
             log.error("[提醒] 删除失败", e);
@@ -194,7 +171,6 @@ public class ReminderService {
     private Reminder addReminderInternal(String name, String message, String type, String time,
                                  String date, String dayOfWeek, String dayOfMonth, String monthDay, Long kbId) {
         Reminder r = new Reminder();
-        r.id = "R" + System.currentTimeMillis();
         r.name = name;
         r.message = message;
         r.type = type;
@@ -221,19 +197,19 @@ public class ReminderService {
         return r;
     }
 
-    public boolean updateReminder(String id, String name, String message, String type,
+    public boolean updateReminder(Long id, String name, String message, String type,
                                     String time, String date, String dayOfWeek, String dayOfMonth,
                                     String monthDay, Boolean enabled) {
         return updateReminderInternal(id, name, message, type, time, date, dayOfWeek, dayOfMonth, monthDay, enabled, null);
     }
 
-    public boolean updateReminder(String id, String name, String message, String type,
+    public boolean updateReminder(Long id, String name, String message, String type,
                                     String time, String date, String dayOfWeek, String dayOfMonth,
                                     String monthDay, Boolean enabled, Long kbId) {
         return updateReminderInternal(id, name, message, type, time, date, dayOfWeek, dayOfMonth, monthDay, enabled, kbId);
     }
 
-    private boolean updateReminderInternal(String id, String name, String message, String type,
+    private boolean updateReminderInternal(Long id, String name, String message, String type,
                                     String time, String date, String dayOfWeek, String dayOfMonth,
                                     String monthDay, Boolean enabled, Long kbId) {
         Reminder r = getReminderFromDb(id);
@@ -308,15 +284,15 @@ public class ReminderService {
         }
     }
 
-    public boolean deleteReminder(String id) {
+    public boolean deleteReminder(Long id) {
         return deleteReminderInternal(id, null);
     }
 
-    public boolean deleteReminder(String id, Long kbId) {
+    public boolean deleteReminder(Long id, Long kbId) {
         return deleteReminderInternal(id, kbId);
     }
 
-    private boolean deleteReminderInternal(String id, Long kbId) {
+    private boolean deleteReminderInternal(Long id, Long kbId) {
         deleteReminderFromDb(id);
 
         if (kbId != null) {
@@ -326,15 +302,15 @@ public class ReminderService {
         return true;
     }
 
-    public boolean toggleReminder(String id) {
+    public boolean toggleReminder(Long id) {
         return toggleReminderInternal(id, null);
     }
 
-    public boolean toggleReminder(String id, Long kbId) {
+    public boolean toggleReminder(Long id, Long kbId) {
         return toggleReminderInternal(id, kbId);
     }
 
-    private boolean toggleReminderInternal(String id, Long kbId) {
+    private boolean toggleReminderInternal(Long id, Long kbId) {
         Reminder r = getReminderFromDb(id);
         if (r == null) return false;
 
@@ -377,7 +353,7 @@ public class ReminderService {
                         1L,
                         "⏰ " + r.name,
                         (scheduleText != null && !scheduleText.isBlank() ? "📅 " + scheduleText + "\n" : "") + content,
-                        "reminder", "reminder", r.id);
+                        "reminder", "reminder", String.valueOf(r.id));
             } catch (Exception e) {
                 log.warn("[提醒] 站内通知写入失败: {} - {}", r.name, e.getMessage());
             }

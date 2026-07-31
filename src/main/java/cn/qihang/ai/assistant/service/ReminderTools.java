@@ -82,7 +82,7 @@ public class ReminderTools {
 
     @Tool(description = "启用或禁用提醒。当用户说打开提醒或关闭提醒时使用此工具")
     public String toggleReminder(
-            @ToolParam(description = "提醒ID") String reminderId) {
+            @ToolParam(description = "提醒ID") Long reminderId) {
         Long kbId = NoteTools.getCurrentKbId();
         boolean success = reminderService.toggleReminder(reminderId, kbId);
         if (!success) {
@@ -93,7 +93,7 @@ public class ReminderTools {
 
     @Tool(description = "删除提醒。当用户说删除提醒或移除提醒时使用此工具")
     public String deleteReminder(
-            @ToolParam(description = "提醒ID") String reminderId) {
+            @ToolParam(description = "提醒ID") Long reminderId) {
         Long kbId = NoteTools.getCurrentKbId();
         reminderService.deleteReminder(reminderId, kbId);
         return "已删除提醒: " + reminderId;
@@ -101,7 +101,7 @@ public class ReminderTools {
 
     @Tool(description = "更新提醒的设置。当用户说修改提醒时使用此工具。只传需要修改的字段")
     public String updateReminder(
-            @ToolParam(description = "提醒ID") String reminderId,
+            @ToolParam(description = "提醒ID") Long reminderId,
             @ToolParam(description = "新名称，可选") String name,
             @ToolParam(description = "新消息内容，可选") String message,
             @ToolParam(description = "新类型: daily/once/weekly/monthly，可选") String type,

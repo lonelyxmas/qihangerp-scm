@@ -42,6 +42,7 @@
         .badge-overdue { background: rgba(239,68,68,0.12); color: #ef4444; }
         .badge-queue { background: rgba(245,158,11,0.12); color: #f59e0b; }
         .badge-schedule { background: rgba(16,185,129,0.12); color: #10b981; }
+        .badge-cycle { background: rgba(168,85,247,0.12); color: #a855f7; }
         .badge-running { background: rgba(139,92,246,0.15); color: #8b5cf6; }
         .task-actions { margin-top: 10px; display: flex; gap: 6px; flex-wrap: wrap; }
 
@@ -106,7 +107,8 @@
                                 <div class="task-title">
                                     {{ task.title }}
                                     <span v-if="task.action === 'ai'" class="badge badge-ai">🤖 AI</span>
-                                    <span v-if="task.scheduledStart" class="badge badge-schedule">🚀 {{ formatSchedule(task.scheduledStart) }}</span>
+                                    <span v-if="task.scheduleType === 'cycle'" class="badge badge-cycle">🔁 {{ cycleLabel(task) }}</span>
+                                    <span v-if="task.scheduledStart && task.scheduleType !== 'cycle'" class="badge badge-schedule">🚀 {{ formatSchedule(task.scheduledStart) }}</span>
                                     <span v-if="task.queuePosition" class="badge badge-queue">⏳ 排队 #{{ task.queuePosition }}</span>
                                     <span v-else-if="task.queueStatus === 'RUNNING'" class="badge badge-running">⚙️ 执行中</span>
                                     <span v-if="isDueToday(task)" class="badge badge-due">今日到期</span>
@@ -138,7 +140,8 @@
                                 <div class="task-title">
                                     {{ task.title }}
                                     <span v-if="task.action === 'ai'" class="badge badge-ai">🤖 AI</span>
-                                    <span v-if="task.scheduledStart" class="badge badge-schedule">🚀 {{ formatSchedule(task.scheduledStart) }}</span>
+                                    <span v-if="task.scheduleType === 'cycle'" class="badge badge-cycle">🔁 {{ cycleLabel(task) }}</span>
+                                    <span v-if="task.scheduledStart && task.scheduleType !== 'cycle'" class="badge badge-schedule">🚀 {{ formatSchedule(task.scheduledStart) }}</span>
                                     <span v-if="task.queuePosition" class="badge badge-queue">⏳ 排队 #{{ task.queuePosition }}</span>
                                     <span v-else-if="task.queueStatus === 'RUNNING'" class="badge badge-running">⚙️ 执行中</span>
                                     <span v-if="isDueToday(task)" class="badge badge-due">今日到期</span>
@@ -170,7 +173,8 @@
                                 <div class="task-title">
                                     {{ task.title }}
                                     <span v-if="task.action === 'ai'" class="badge badge-ai">🤖 AI</span>
-                                    <span v-if="task.scheduledStart" class="badge badge-schedule">🚀 {{ formatSchedule(task.scheduledStart) }}</span>
+                                    <span v-if="task.scheduleType === 'cycle'" class="badge badge-cycle">🔁 {{ cycleLabel(task) }}</span>
+                                    <span v-if="task.scheduledStart && task.scheduleType !== 'cycle'" class="badge badge-schedule">🚀 {{ formatSchedule(task.scheduledStart) }}</span>
                                 </div>
                                 <div class="task-meta">
                                     <span :class="'priority-' + task.priority">
@@ -188,7 +192,7 @@
                 </div>
                 <div class="ai-hint">
                     💡 <b>AI 任务</b>：任务到期时 AI 会自动执行你填写的指令（查数据、生成报告），结果推送到飞书；多个任务同时触发时会进入<b>执行队列</b>依次处理，可在卡片上查看排队位置与<b>执行记录</b>。
-                    可设置「定时启动」让任务在指定时间自动开始；也可随时点「立即执行」手动触发。
+                    可设置「一次性」定时启动，或「循环执行」（每天/每周/每月/Cron）让任务按周期自动运行，循环任务执行完成后自动回到待办等待下一周期。
                     普通任务到期/逾期会自动推送提醒，完成后自动沉淀到「任务完成记录」数据集，供日报引用。
                 </div>
             </div>
@@ -209,7 +213,7 @@
                         <option value="low">🟢 低优先级</option>
                     </select>
                 </div>
-                <div class="form-group">
+                <div class="form-group" v-if="editingTask.scheduleType !== 'cycle'">
                     <label>截止日期</label>
                     <input type="date" v-model="editingTask.dueDate" class="form-control">
                 </div>
@@ -222,9 +226,54 @@
                 </select>
             </div>
             <div class="form-group">
-                <label>⏰ 定时启动 <span style="color:#94a3b8;font-weight:normal;">（选填，到点自动开始执行/提醒）</span></label>
+                <label>📅 调度类型</label>
+                <select v-model="editingTask.scheduleType" class="form-control">
+                    <option value="">⏸ 不自动调度（仅手动/到期触发）</option>
+                    <option value="once">⏰ 一次性（指定时间触发一次）</option>
+                    <option value="cycle">🔁 循环执行（按周期重复触发）</option>
+                </select>
+            </div>
+            <div class="form-group" v-if="editingTask.scheduleType === 'once'">
+                <label>⏰ 触发时间 <span style="color:#94a3b8;font-weight:normal;">（到点自动开始执行/提醒）</span></label>
                 <input type="datetime-local" v-model="editingTask.scheduledStart" class="form-control">
             </div>
+            <template v-if="editingTask.scheduleType === 'cycle'">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>周期类型</label>
+                        <select v-model="editingTask.cycleType" class="form-control">
+                            <option value="daily">📆 每天</option>
+                            <option value="weekly">📅 每周（指定星期）</option>
+                            <option value="monthly">🗓 每月（指定日期）</option>
+                            <option value="cron">⚙️ Cron 表达式</option>
+                        </select>
+                    </div>
+                    <div class="form-group" v-if="editingTask.cycleType !== 'cron'">
+                        <label>执行时间</label>
+                        <input type="time" v-model="editingTask.cycleTime" class="form-control">
+                    </div>
+                </div>
+                <div class="form-group" v-if="editingTask.cycleType === 'weekly'">
+                    <label>每周执行日（可多选）</label>
+                    <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                        <label v-for="d in weekDays" :key="d.value" style="font-size:12px;font-weight:normal;display:flex;align-items:center;gap:3px;cursor:pointer;">
+                            <input type="checkbox" :value="d.value" v-model="cycleWeekDays"> {{ d.label }}
+                        </label>
+                    </div>
+                </div>
+                <div class="form-group" v-if="editingTask.cycleType === 'monthly'">
+                    <label>每月执行日期 <span style="color:#94a3b8;font-weight:normal;">（逗号分隔，如 1,15）</span></label>
+                    <input type="text" v-model="editingTask.cycleValue" class="form-control" placeholder="1,15">
+                </div>
+                <div class="form-group" v-if="editingTask.cycleType === 'cron'">
+                    <label>Cron 表达式 <span style="color:#94a3b8;font-weight:normal;">（秒 分 时 日 月 周）</span></label>
+                    <input type="text" v-model="editingTask.cycleValue" class="form-control" placeholder="0 0 9 * * MON-FRI">
+                </div>
+                <div class="form-group">
+                    <label>循环结束日期 <span style="color:#94a3b8;font-weight:normal;">（选填，到期自动转为已完成）</span></label>
+                    <input type="date" v-model="editingTask.cycleEnd" class="form-control">
+                </div>
+            </template>
             <div class="form-group" v-if="editingTask.action === 'ai'">
                 <label>AI 执行指令 *</label>
                 <textarea v-model="editingTask.actionPrompt" class="form-control" rows="3"
@@ -344,8 +393,16 @@
                 const isEditingTask = ref(false);
                 const editingTask = ref({
                     id: '', title: '', description: '', priority: 'mid', dueDate: '',
-                    status: 'pending', action: '', actionPrompt: '', scheduledStart: ''
+                    status: 'pending', action: '', actionPrompt: '', scheduledStart: '',
+                    scheduleType: '', cycleType: 'daily', cycleValue: '', cycleTime: '', cycleEnd: ''
                 });
+
+                const weekDays = [
+                    { value: '1', label: '周一' }, { value: '2', label: '周二' }, { value: '3', label: '周三' },
+                    { value: '4', label: '周四' }, { value: '5', label: '周五' }, { value: '6', label: '周六' },
+                    { value: '7', label: '周日' }
+                ];
+                const cycleWeekDays = ref([]);
 
                 const showDeleteModal = ref(false);
                 const deleteId = ref('');
@@ -389,7 +446,8 @@
 
                 function showAddTaskModal() {
                     isEditingTask.value = false;
-                    editingTask.value = { id: '', title: '', description: '', priority: 'mid', dueDate: '', status: 'pending', action: '', actionPrompt: '', scheduledStart: '' };
+                    editingTask.value = { id: '', title: '', description: '', priority: 'mid', dueDate: '', status: 'pending', action: '', actionPrompt: '', scheduledStart: '', scheduleType: '', cycleType: 'daily', cycleValue: '', cycleTime: '', cycleEnd: '' };
+                    cycleWeekDays.value = [];
                     showTaskModal.value = true;
                 }
 
@@ -397,6 +455,7 @@
                     isEditingTask.value = true;
                     const copy = { ...task };
                     if (copy.scheduledStart) copy.scheduledStart = toLocalDateTime(copy.scheduledStart);
+                    cycleWeekDays.value = copy.cycleValue ? String(copy.cycleValue).split(',').filter(Boolean) : [];
                     editingTask.value = copy;
                     showTaskModal.value = true;
                 }
@@ -423,16 +482,36 @@
                         alert('AI 任务请填写 AI 执行指令');
                         return;
                     }
+                    if (editingTask.value.scheduleType === 'once' && !editingTask.value.scheduledStart) {
+                        alert('请选择一次性调度的触发时间');
+                        return;
+                    }
+                    if (editingTask.value.scheduleType === 'cycle') {
+                        if (editingTask.value.cycleType === 'cron') {
+                            if (!editingTask.value.cycleValue.trim()) { alert('请填写 Cron 表达式'); return; }
+                        } else if (editingTask.value.cycleType === 'weekly') {
+                            if (cycleWeekDays.value.length === 0) { alert('请至少选择一个执行日'); return; }
+                            editingTask.value.cycleValue = cycleWeekDays.value.join(',');
+                        } else if (editingTask.value.cycleType === 'monthly') {
+                            if (!editingTask.value.cycleValue.trim()) { alert('请填写每月执行日期'); return; }
+                        }
+                        if (!editingTask.value.cycleTime) { alert('请选择执行时间'); return; }
+                    }
 
                     let url = editingTask.value.id ? '/api/tasks/update' : '/api/tasks/add';
                     const formData = new FormData();
                     formData.append('title', editingTask.value.title);
                     formData.append('description', editingTask.value.description || '');
                     formData.append('priority', editingTask.value.priority);
-                    formData.append('dueDate', editingTask.value.dueDate || '');
+                    formData.append('dueDate', editingTask.value.scheduleType === 'cycle' ? '' : (editingTask.value.dueDate || ''));
                     formData.append('action', editingTask.value.action || '');
                     formData.append('actionPrompt', editingTask.value.actionPrompt || '');
-                    formData.append('scheduledStart', toServerDateTime(editingTask.value.scheduledStart) || '');
+                    formData.append('scheduledStart', editingTask.value.scheduleType === 'once' ? (toServerDateTime(editingTask.value.scheduledStart) || '') : '');
+                    formData.append('scheduleType', editingTask.value.scheduleType || '');
+                    formData.append('cycleType', editingTask.value.cycleType || '');
+                    formData.append('cycleValue', editingTask.value.cycleValue || '');
+                    formData.append('cycleTime', editingTask.value.cycleTime || '');
+                    formData.append('cycleEnd', editingTask.value.cycleEnd || '');
                     if (editingTask.value.id) {
                         formData.append('id', editingTask.value.id);
                         formData.append('status', editingTask.value.status);
@@ -512,6 +591,13 @@
                     return v.substring(5, 16).replace('-', '/');
                 }
 
+                function cycleLabel(task) {
+                    if (task.cycleType === 'cron') return '循环 ' + (task.cycleValue || '');
+                    if (task.cycleType === 'weekly') return '循环 周' + (task.cycleValue || '');
+                    if (task.cycleType === 'monthly') return '循环 每月' + (task.cycleValue || '') + '号';
+                    return '循环 ' + (task.cycleTime || '');
+                }
+
                 function openDeleteModal(id) {
                     deleteId.value = id;
                     showDeleteModal.value = true;
@@ -553,7 +639,8 @@
                     showAddTaskModal, showEditTaskModal, saveTask,
                     executeTask, cancelQueuedTask,
                     showExecutionsModal, showExecutionsModalVisible, executions, executionsTaskTitle,
-                    statusLabel, triggerLabel, formatSchedule,
+                    statusLabel, triggerLabel, formatSchedule, cycleLabel,
+                    weekDays, cycleWeekDays,
                     openDeleteModal, confirmDelete,
                     formatDate
                 };

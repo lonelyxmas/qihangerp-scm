@@ -24,6 +24,12 @@ public class TaskData {
         public String scheduledStart;
         public Long createdBy;
         public Long kbId;
+        public String scheduleType;
+        public String cycleType;
+        public String cycleValue;
+        public String cycleTime;
+        public String cycleEnd;
+        public String lastCycleRun;
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)

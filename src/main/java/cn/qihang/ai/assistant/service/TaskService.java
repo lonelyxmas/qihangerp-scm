@@ -53,7 +53,7 @@ public class TaskService {
     private void insertTaskToDb(TaskItem task, Long kbId) {
         try (Connection conn = dataSource.getConnection();
              PreparedStatement ps = conn.prepareStatement(
-                     "INSERT INTO tasks (title, description, status, priority, due_date, created_at, updated_at, kb_id, action, action_prompt, last_reminded, scheduled_start, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                     "INSERT INTO tasks (title, description, status, priority, due_date, created_at, updated_at, kb_id, action, action_prompt, last_reminded, scheduled_start, created_by, schedule_type, cycle_type, cycle_value, cycle_time, cycle_end, last_cycle_run) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                      PreparedStatement.RETURN_GENERATED_KEYS)) {
             ps.setString(1, task.title);
             ps.setString(2, task.description);
@@ -76,6 +76,12 @@ public class TaskService {
             } else {
                 ps.setNull(13, Types.BIGINT);
             }
+            ps.setString(14, task.scheduleType);
+            ps.setString(15, task.cycleType);
+            ps.setString(16, task.cycleValue);
+            ps.setString(17, task.cycleTime);
+            ps.setString(18, task.cycleEnd);
+            ps.setString(19, task.lastCycleRun);
             ps.executeUpdate();
             try (ResultSet keys = ps.getGeneratedKeys()) {
                 if (keys.next()) {
@@ -101,6 +107,12 @@ public class TaskService {
         task.actionPrompt = rs.getString("action_prompt");
         task.lastReminded = rs.getString("last_reminded");
         task.scheduledStart = rs.getString("scheduled_start");
+        task.scheduleType = rs.getString("schedule_type");
+        task.cycleType = rs.getString("cycle_type");
+        task.cycleValue = rs.getString("cycle_value");
+        task.cycleTime = rs.getString("cycle_time");
+        task.cycleEnd = rs.getString("cycle_end");
+        task.lastCycleRun = rs.getString("last_cycle_run");
         long createdBy = rs.getLong("created_by");
         task.createdBy = rs.wasNull() ? null : createdBy;
         long kbId = rs.getLong("kb_id");
@@ -125,7 +137,7 @@ public class TaskService {
     private void updateTaskInDb(TaskItem task) {
         try (Connection conn = dataSource.getConnection();
              PreparedStatement ps = conn.prepareStatement(
-                     "UPDATE tasks SET title=?, description=?, status=?, priority=?, due_date=?, updated_at=?, action=?, action_prompt=?, last_reminded=?, scheduled_start=?, created_by=? WHERE id=?")) {
+                     "UPDATE tasks SET title=?, description=?, status=?, priority=?, due_date=?, updated_at=?, action=?, action_prompt=?, last_reminded=?, scheduled_start=?, created_by=?, schedule_type=?, cycle_type=?, cycle_value=?, cycle_time=?, cycle_end=?, last_cycle_run=? WHERE id=?")) {
             ps.setString(1, task.title);
             ps.setString(2, task.description);
             ps.setString(3, task.status);
@@ -141,7 +153,13 @@ public class TaskService {
             } else {
                 ps.setNull(11, Types.BIGINT);
             }
-            ps.setLong(12, task.id);
+            ps.setString(12, task.scheduleType);
+            ps.setString(13, task.cycleType);
+            ps.setString(14, task.cycleValue);
+            ps.setString(15, task.cycleTime);
+            ps.setString(16, task.cycleEnd);
+            ps.setString(17, task.lastCycleRun);
+            ps.setLong(18, task.id);
             ps.executeUpdate();
         } catch (SQLException e) {
             log.error("[任务] 更新失败", e);
@@ -178,25 +196,37 @@ public class TaskService {
     }
 
     public TaskItem addTask(String title, String description, String priority, String dueDate) {
-        return addTaskInternal(title, description, priority, dueDate, null, null, null, null, null);
+        return addTaskInternal(title, description, priority, dueDate, null, null, null, null, null,
+                null, null, null, null, null);
     }
 
     public TaskItem addTask(String title, String description, String priority, String dueDate, Long kbId) {
-        return addTaskInternal(title, description, priority, dueDate, kbId, null, null, null, null);
+        return addTaskInternal(title, description, priority, dueDate, kbId, null, null, null, null,
+                null, null, null, null, null);
     }
 
     public TaskItem addTask(String title, String description, String priority, String dueDate, Long kbId,
                             String action, String actionPrompt) {
-        return addTaskInternal(title, description, priority, dueDate, kbId, action, actionPrompt, null, null);
+        return addTaskInternal(title, description, priority, dueDate, kbId, action, actionPrompt, null, null,
+                null, null, null, null, null);
     }
 
     public TaskItem addTask(String title, String description, String priority, String dueDate, Long kbId,
                             String action, String actionPrompt, String scheduledStart, Long createdBy) {
-        return addTaskInternal(title, description, priority, dueDate, kbId, action, actionPrompt, scheduledStart, createdBy);
+        return addTaskInternal(title, description, priority, dueDate, kbId, action, actionPrompt, scheduledStart, createdBy,
+                null, null, null, null, null);
+    }
+
+    public TaskItem addTask(String title, String description, String priority, String dueDate, Long kbId,
+                            String action, String actionPrompt, String scheduledStart, Long createdBy,
+                            String scheduleType, String cycleType, String cycleValue, String cycleTime, String cycleEnd) {
+        return addTaskInternal(title, description, priority, dueDate, kbId, action, actionPrompt, scheduledStart, createdBy,
+                scheduleType, cycleType, cycleValue, cycleTime, cycleEnd);
     }
 
     private TaskItem addTaskInternal(String title, String description, String priority, String dueDate, Long kbId,
-                                     String action, String actionPrompt, String scheduledStart, Long createdBy) {
+                                     String action, String actionPrompt, String scheduledStart, Long createdBy,
+                                     String scheduleType, String cycleType, String cycleValue, String cycleTime, String cycleEnd) {
         TaskItem task = new TaskItem();
         task.title = title;
         task.description = (description != null && !description.isEmpty()) ? description : null;
@@ -210,6 +240,11 @@ public class TaskService {
         task.actionPrompt = (actionPrompt != null && !actionPrompt.isEmpty()) ? actionPrompt : null;
         task.scheduledStart = (scheduledStart != null && !scheduledStart.isEmpty()) ? scheduledStart : null;
         task.createdBy = createdBy;
+        task.scheduleType = (scheduleType != null && !scheduleType.isEmpty()) ? scheduleType : null;
+        task.cycleType = (cycleType != null && !cycleType.isEmpty()) ? cycleType : null;
+        task.cycleValue = (cycleValue != null && !cycleValue.isEmpty()) ? cycleValue : null;
+        task.cycleTime = (cycleTime != null && !cycleTime.isEmpty()) ? cycleTime : null;
+        task.cycleEnd = (cycleEnd != null && !cycleEnd.isEmpty()) ? cycleEnd : null;
 
         insertTaskToDb(task, kbId);
         activityLogDbService.addLog("create_task", "创建任务: " + title, "user", null, null);
@@ -238,9 +273,25 @@ public class TaskService {
         return updateTaskInternal(id, title, description, status, priority, dueDate, kbId, action, actionPrompt, scheduledStart, null);
     }
 
+    public TaskItem updateTask(Long id, String title, String description, String status,
+                                String priority, String dueDate, Long kbId,
+                                String action, String actionPrompt, String scheduledStart,
+                                String scheduleType, String cycleType, String cycleValue, String cycleTime, String cycleEnd) {
+        return updateTaskInternal(id, title, description, status, priority, dueDate, kbId, action, actionPrompt, scheduledStart, null,
+                scheduleType, cycleType, cycleValue, cycleTime, cycleEnd);
+    }
+
     private TaskItem updateTaskInternal(Long id, String title, String description, String status,
                                 String priority, String dueDate, Long kbId,
                                 String action, String actionPrompt, String scheduledStart, String lastReminded) {
+        return updateTaskInternal(id, title, description, status, priority, dueDate, kbId, action, actionPrompt,
+                scheduledStart, lastReminded, null, null, null, null, null);
+    }
+
+    private TaskItem updateTaskInternal(Long id, String title, String description, String status,
+                                String priority, String dueDate, Long kbId,
+                                String action, String actionPrompt, String scheduledStart, String lastReminded,
+                                String scheduleType, String cycleType, String cycleValue, String cycleTime, String cycleEnd) {
         TaskItem task = getTaskFromDb(id);
         if (task == null) return null;
 
@@ -255,6 +306,11 @@ public class TaskService {
         if (actionPrompt != null) task.actionPrompt = actionPrompt.isEmpty() ? null : actionPrompt;
         if (scheduledStart != null) task.scheduledStart = scheduledStart.isEmpty() ? null : scheduledStart;
         if (lastReminded != null) task.lastReminded = lastReminded;
+        if (scheduleType != null) task.scheduleType = scheduleType.isEmpty() ? null : scheduleType;
+        if (cycleType != null) task.cycleType = cycleType.isEmpty() ? null : cycleType;
+        if (cycleValue != null) task.cycleValue = cycleValue.isEmpty() ? null : cycleValue;
+        if (cycleTime != null) task.cycleTime = cycleTime.isEmpty() ? null : cycleTime;
+        if (cycleEnd != null) task.cycleEnd = cycleEnd.isEmpty() ? null : cycleEnd;
         task.updatedAt = java.time.LocalDate.now().toString();
 
         boolean justDone = "done".equals(task.status) && !"done".equals(oldStatus);
@@ -325,10 +381,80 @@ public class TaskService {
         return f;
     }
 
+    /**
+     * 任务执行完成后标记为已完成，避免定时/到期逻辑重复触发。
+     */
+    public boolean markTaskDone(Long id) {
+        TaskItem task = getTaskFromDb(id);
+        if (task == null || "done".equals(task.status)) return false;
+        task.status = "done";
+        task.updatedAt = java.time.LocalDate.now().toString();
+        updateTaskInDb(task);
+        activityLogDbService.addLog("update_task", "AI执行完成: " + task.title + " (状态: done)", "system", null, null);
+        log.info("[任务] AI执行完成，任务标记为已完成: {}", task.title);
+        return true;
+    }
+
+    /**
+     * 任务进入执行队列 → 状态置为执行中。
+     */
+    public boolean markTaskInProgress(Long id) {
+        TaskItem task = getTaskFromDb(id);
+        if (task == null || "done".equals(task.status)) return false;
+        task.status = "in_progress";
+        task.updatedAt = java.time.LocalDate.now().toString();
+        updateTaskInDb(task);
+        log.info("[任务] 任务进入执行队列: {}", task.title);
+        return true;
+    }
+
+    /**
+     * 循环任务执行完成后回到待办，等待下一周期继续执行。
+     */
+    public boolean markTaskPending(Long id) {
+        TaskItem task = getTaskFromDb(id);
+        if (task == null) return false;
+        task.status = "pending";
+        task.updatedAt = java.time.LocalDate.now().toString();
+        updateTaskInDb(task);
+        log.info("[任务] 循环任务本轮执行完成，回到待办等待下一周期: {}", task.title);
+        return true;
+    }
+
+    /**
+     * 循环任务触发时记录本次执行时间（用于周期去重）。
+     */
+    public boolean markTaskCycleRun(Long id, String runTime) {
+        TaskItem task = getTaskFromDb(id);
+        if (task == null) return false;
+        task.lastCycleRun = (runTime != null) ? runTime : TimeUtil.nowStr();
+        task.lastReminded = java.time.LocalDate.now().toString();
+        updateTaskInDb(task);
+        return true;
+    }
+
+    /**
+     * 循环任务是否已到结束日期（cycle_end 小于今天）。
+     */
+    public static boolean isCycleEnded(TaskItem task) {
+        if (task == null || task.cycleEnd == null || task.cycleEnd.isBlank()) return false;
+        try {
+            return java.time.LocalDate.parse(task.cycleEnd).isBefore(java.time.LocalDate.now());
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /**
+     * 任务是否为循环任务。
+     */
+    public static boolean isCycleTask(TaskItem task) {
+        return task != null && "cycle".equals(task.scheduleType);
+    }
+
     public boolean deleteTask(Long id) {
         return deleteTaskInternal(id, null);
     }
-
     public boolean deleteTask(Long id, Long kbId) {
         return deleteTaskInternal(id, kbId);
     }
@@ -463,6 +589,10 @@ public class TaskService {
         }
     }
 
+    public TaskItem getTaskById(Long id) {
+        return getTaskFromDb(id);
+    }
+
     public boolean hasActiveExecution(Long taskId) {
         try (Connection conn = dataSource.getConnection();
              PreparedStatement ps = conn.prepareStatement(
@@ -476,6 +606,38 @@ public class TaskService {
             log.error("[任务] 查询执行状态失败", e);
         }
         return false;
+    }
+
+    public List<cn.qihang.ai.assistant.model.TaskData.TaskExecution> getActiveExecutions() {
+        List<cn.qihang.ai.assistant.model.TaskData.TaskExecution> list = new ArrayList<>();
+        try (Connection conn = dataSource.getConnection();
+             PreparedStatement ps = conn.prepareStatement(
+                     "SELECT * FROM task_executions WHERE status IN ('QUEUED', 'RUNNING') ORDER BY id DESC");
+             ResultSet rs = ps.executeQuery()) {
+            while (rs.next()) {
+                list.add(mapRowToExecution(rs));
+            }
+        } catch (SQLException e) {
+            log.error("[任务] 查询活跃执行记录失败", e);
+        }
+        return list;
+    }
+
+    private cn.qihang.ai.assistant.model.TaskData.TaskExecution mapRowToExecution(ResultSet rs) throws SQLException {
+        cn.qihang.ai.assistant.model.TaskData.TaskExecution ex = new cn.qihang.ai.assistant.model.TaskData.TaskExecution();
+        ex.executionId = rs.getString("execution_id");
+        ex.taskId = rs.getLong("task_id");
+        ex.taskTitle = rs.getString("task_title");
+        ex.status = rs.getString("status");
+        ex.triggerType = rs.getString("trigger_type");
+        ex.triggeredBy = rs.getString("triggered_by");
+        ex.startTime = rs.getString("start_time");
+        ex.endTime = rs.getString("end_time");
+        ex.logText = rs.getString("log_text");
+        ex.resultText = rs.getString("result_text");
+        ex.errorMessage = rs.getString("error_message");
+        ex.createdAt = rs.getString("created_at");
+        return ex;
     }
 
     public List<cn.qihang.ai.assistant.model.TaskData.TaskExecution> getTaskExecutions(Long taskId) {
@@ -532,5 +694,56 @@ public class TaskService {
             log.error("[任务] 查询全部执行记录失败", e);
         }
         return list;
+    }
+
+    /**
+     * 分页查询执行记录。普通用户只能看到自己任务的执行记录。
+     */
+    public Map<String, Object> getExecutionsPage(int page, int pageSize, Long userId, boolean admin) {
+        if (page < 1) page = 1;
+        if (pageSize < 1) pageSize = 10;
+        if (pageSize > 100) pageSize = 100;
+        int offset = (page - 1) * pageSize;
+        boolean filter = !admin && userId != null;
+        List<cn.qihang.ai.assistant.model.TaskData.TaskExecution> list = new ArrayList<>();
+        int total = 0;
+        try (Connection conn = dataSource.getConnection()) {
+            String countSql = filter
+                    ? "SELECT COUNT(*) FROM task_executions te JOIN tasks t ON te.task_id = t.id WHERE t.created_by = ?"
+                    : "SELECT COUNT(*) FROM task_executions";
+            String listSql = filter
+                    ? "SELECT te.* FROM task_executions te JOIN tasks t ON te.task_id = t.id WHERE t.created_by = ? ORDER BY te.id DESC LIMIT ? OFFSET ?"
+                    : "SELECT * FROM task_executions ORDER BY id DESC LIMIT ? OFFSET ?";
+            try (PreparedStatement ps = conn.prepareStatement(countSql)) {
+                if (filter) {
+                    ps.setLong(1, userId);
+                }
+                ResultSet rs = ps.executeQuery();
+                if (rs.next()) {
+                    total = rs.getInt(1);
+                }
+            }
+            try (PreparedStatement ps = conn.prepareStatement(listSql)) {
+                int idx = 1;
+                if (filter) {
+                    ps.setLong(idx++, userId);
+                }
+                ps.setInt(idx++, pageSize);
+                ps.setInt(idx, offset);
+                ResultSet rs = ps.executeQuery();
+                while (rs.next()) {
+                    list.add(mapRowToExecution(rs));
+                }
+            }
+        } catch (SQLException e) {
+            log.error("[任务] 分页查询执行记录失败", e);
+        }
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("total", total);
+        result.put("page", page);
+        result.put("pageSize", pageSize);
+        result.put("totalPages", pageSize > 0 ? (int) Math.ceil((double) total / pageSize) : 0);
+        result.put("executions", list);
+        return result;
     }
 }

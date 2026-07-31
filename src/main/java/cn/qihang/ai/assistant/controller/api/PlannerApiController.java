@@ -92,6 +92,12 @@ public class PlannerApiController {
             m.put("createdBy", t.createdBy);
             m.put("creatorName", resolveUserName(t.createdBy, userNameCache));
             m.put("kbId", t.kbId);
+            m.put("scheduleType", t.scheduleType);
+            m.put("cycleType", t.cycleType);
+            m.put("cycleValue", t.cycleValue);
+            m.put("cycleTime", t.cycleTime);
+            m.put("cycleEnd", t.cycleEnd);
+            m.put("lastCycleRun", t.lastCycleRun);
             Integer pos = queueInfo.get(t.id);
             m.put("queuePosition", pos);
             if (pos != null) {
@@ -132,10 +138,16 @@ public class PlannerApiController {
             @RequestParam(required = false, defaultValue = "") String dueDate,
             @RequestParam(required = false, defaultValue = "") String action,
             @RequestParam(required = false, defaultValue = "") String actionPrompt,
-            @RequestParam(required = false, defaultValue = "") String scheduledStart) {
+            @RequestParam(required = false, defaultValue = "") String scheduledStart,
+            @RequestParam(required = false, defaultValue = "") String scheduleType,
+            @RequestParam(required = false, defaultValue = "") String cycleType,
+            @RequestParam(required = false, defaultValue = "") String cycleValue,
+            @RequestParam(required = false, defaultValue = "") String cycleTime,
+            @RequestParam(required = false, defaultValue = "") String cycleEnd) {
         try {
             Long userId = getCurrentUserId();
-            TaskItem task = taskService.addTask(title, description, priority, dueDate, kbId, action, actionPrompt, scheduledStart, userId);
+            TaskItem task = taskService.addTask(title, description, priority, dueDate, kbId, action, actionPrompt,
+                    scheduledStart, userId, scheduleType, cycleType, cycleValue, cycleTime, cycleEnd);
             logService.add("任务中心", "成功", "添加任务: " + title);
             return Map.of("ok", true, "task", task);
         } catch (Exception e) {
@@ -155,9 +167,15 @@ public class PlannerApiController {
             @RequestParam(required = false) String dueDate,
             @RequestParam(required = false) String action,
             @RequestParam(required = false) String actionPrompt,
-            @RequestParam(required = false) String scheduledStart) {
+            @RequestParam(required = false) String scheduledStart,
+            @RequestParam(required = false) String scheduleType,
+            @RequestParam(required = false) String cycleType,
+            @RequestParam(required = false) String cycleValue,
+            @RequestParam(required = false) String cycleTime,
+            @RequestParam(required = false) String cycleEnd) {
         try {
-            TaskItem task = taskService.updateTask(id, title, description, status, priority, dueDate, kbId, action, actionPrompt, scheduledStart);
+            TaskItem task = taskService.updateTask(id, title, description, status, priority, dueDate, kbId,
+                    action, actionPrompt, scheduledStart, scheduleType, cycleType, cycleValue, cycleTime, cycleEnd);
             if (task == null) {
                 return Map.of("ok", false, "error", "任务不存在");
             }
@@ -282,7 +300,7 @@ public class PlannerApiController {
     @ResponseBody
     public Map<String, Object> updateReminder(
             @RequestParam(required = false) Long kbId,
-            @RequestParam String id,
+            @RequestParam Long id,
             @RequestParam(required = false) String name,
             @RequestParam(required = false) String message,
             @RequestParam(required = false) String type,
@@ -309,7 +327,7 @@ public class PlannerApiController {
     @ResponseBody
     public Map<String, Object> deleteReminder(
             @RequestParam(required = false) Long kbId,
-            @RequestParam String id) {
+            @RequestParam Long id) {
         try {
             boolean ok = reminderService.deleteReminder(id, kbId);
             if (ok) {
@@ -325,7 +343,7 @@ public class PlannerApiController {
     @ResponseBody
     public Map<String, Object> toggleReminder(
             @RequestParam(required = false) Long kbId,
-            @RequestParam String id) {
+            @RequestParam Long id) {
         try {
             boolean ok = reminderService.toggleReminder(id, kbId);
             if (ok) {
@@ -341,10 +359,10 @@ public class PlannerApiController {
     @ResponseBody
     public Map<String, Object> triggerReminder(
             @RequestParam(required = false) Long kbId,
-            @RequestParam String id) {
+            @RequestParam Long id) {
         try {
             List<Reminder> reminders = reminderService.getAllReminders();
-            Reminder r = reminders.stream().filter(x -> x.id.equals(id)).findFirst().orElse(null);
+            Reminder r = reminders.stream().filter(x -> id.equals(x.id)).findFirst().orElse(null);
             if (r == null) {
                 return Map.of("ok", false, "error", "提醒不存在");
             }
