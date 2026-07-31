@@ -170,7 +170,7 @@
             html += '<td><strong>' + escapeHtml(kb.name) + '</strong></td>';
             html += '<td>' + vis + '</td>';
             html += '<td id="kb-index-status-' + kb.id + '"><span class="text-muted">加载中...</span></td>';
-            html += '<td>' + (kb.autoReport ? '✅' : '—') + '</td>';
+            html += '<td>' + (kb.autoReport === 1 ? '✅' : '—') + '</td>';
             html += '<td>' + (kb.feishuPush ? '✅' : '—') + '</td>';
             html += '<td><button class="btn btn-secondary btn-sm" onclick="editKb(' + kb.id + ')" style="margin-right:4px;">编辑</button><button class="btn btn-secondary btn-sm" onclick="reindexKb(' + kb.id + ')" style="margin-right:4px;">🔄 重索引</button><button class="btn btn-danger btn-sm" onclick="deleteKb(' + kb.id + ')">删除</button></td>';
             html += '</tr>';

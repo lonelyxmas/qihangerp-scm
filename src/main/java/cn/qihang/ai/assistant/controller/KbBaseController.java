@@ -160,8 +160,8 @@ public class KbBaseController {
     public Map<String, Object> getReportConfig(@PathVariable Long id) {
         KbBaseEntity kb = kbService.getById(id);
         if (kb == null) return Map.of("ok", false, "error", "知识库不存在");
-        boolean autoReport = kb.getAutoReport() == null || kb.getAutoReport() == 1;
-        boolean feishuPush = kb.getFeishuPush() == null || kb.getFeishuPush() == 1;
+        boolean autoReport = kb.getAutoReport() != null && kb.getAutoReport() == 1;
+        boolean feishuPush = kb.getFeishuPush() != null && kb.getFeishuPush() == 1;
         return Map.of(
             "ok", true,
             "autoReport", autoReport,

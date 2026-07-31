@@ -31,13 +31,13 @@ public class SchedulerService {
         this.kbService = kbService;
     }
 
-    @Scheduled(cron = "0 0 9 * * ?", zone = "Asia/Shanghai")
+    @Scheduled(cron = "0 0 11 * * ?", zone = "Asia/Shanghai")
     public void morningReport() {
         log.info("[{}] ⏰ 定时任务：生成综合日报", TimeUtil.nowStr());
         List<KbBaseEntity> kbs = kbService.getAll();
         for (KbBaseEntity kb : kbs) {
             try {
-                boolean autoReport = kb.getAutoReport() == null || kb.getAutoReport() == 1;
+                boolean autoReport = kb.getAutoReport() != null && kb.getAutoReport() == 1;
                 if (!autoReport) {
                     log.info("[{}] ⏰ 知识库「{}」已关闭自动日报，跳过", TimeUtil.nowStr(), kb.getName());
                     continue;

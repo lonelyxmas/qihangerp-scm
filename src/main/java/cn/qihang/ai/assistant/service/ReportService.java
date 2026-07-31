@@ -234,7 +234,7 @@ public class ReportService {
             }
             String title = TimeUtil.greetingEmoji() + " 老齐" + TimeUtil.greetingText() + " · " + today + " · " + wd + kbLabel;
 
-            boolean feishuPush = kb != null && (kb.getFeishuPush() == null || kb.getFeishuPush() == 1);
+            boolean feishuPush = kb != null && kb.getFeishuPush() != null && kb.getFeishuPush() == 1;
 
             if (feishuPush) {
                 String markdownContent = r.report.replace("\\n", "\n");
