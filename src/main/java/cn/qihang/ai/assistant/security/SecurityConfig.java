@@ -63,7 +63,7 @@ public class SecurityConfig {
                         // 公开页面
                         .requestMatchers("/", "/login", "/login.html", "/config", "/config/**").permitAll()
                         .requestMatchers("/chat", "/help", "/log", "/notes").permitAll()
-                        .requestMatchers("/data/**", "/planner", "/planner/**", "/tasks", "/tasks/**", "/activity", "/activity/**",
+                        .requestMatchers("/data/**", "/planner", "/planner/**", "/reminders", "/reminders/**", "/tasks", "/tasks/**", "/activity", "/activity/**",
                                 "/notifications", "/notifications/**", "/approvals", "/approvals/**").permitAll()
                         .requestMatchers("/ai-guide", "/insights", "/health", "/automation", "/so").permitAll()
                         .requestMatchers("/kb/**", "/image/**", "/coding/**", "/v1/**", "/v3/**", "/admin/**").permitAll()

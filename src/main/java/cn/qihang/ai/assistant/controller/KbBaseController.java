@@ -85,7 +85,7 @@ public class KbBaseController {
         return "2.0/layout";
     }
 
-    // 任务/提醒页面已迁移到 /planner
+    // 任务中心 /tasks，提醒中心 /reminders
 
     @GetMapping("/kb/{id}/index")
     public String kbIndex(@PathVariable Long id, Map<String, Object> model) {

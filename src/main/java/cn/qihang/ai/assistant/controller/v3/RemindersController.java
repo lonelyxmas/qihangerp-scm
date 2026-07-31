@@ -9,21 +9,20 @@ import java.util.List;
 import java.util.Map;
 
 @Controller
-//@RequestMapping("/v3")
-public class PlannerController {
+public class RemindersController {
 
     private final KbBaseService kbService;
 
-    public PlannerController(KbBaseService kbService) {
+    public RemindersController(KbBaseService kbService) {
         this.kbService = kbService;
     }
 
-    @GetMapping("/planner")
-    public String plannerPage(@RequestParam(required = false) Long kbId, Map<String, Object> model) {
-        model.put("currentNav", "planner");
+    @GetMapping("/reminders")
+    public String remindersPage(@RequestParam(required = false) Long kbId, Map<String, Object> model) {
+        model.put("currentNav", "reminders");
         List<KbBaseEntity> kbList = kbService.getAll();
         model.put("kbList", kbList);
-        
+
         if (!kbList.isEmpty()) {
             model.put("defaultKbId", kbList.get(0).getId());
         }
@@ -35,6 +34,12 @@ public class PlannerController {
             }
         }
 
-        return "3.0/planner";
+        return "3.0/reminders";
     }
+
+    /** 旧地址 /planner 重定向到 /reminders */
+//    @GetMapping("/planner")
+//    public String plannerRedirect(@RequestParam(required = false) Long kbId) {
+//        return "redirect:/reminders" + (kbId != null ? "?kbId=" + kbId : "");
+//    }
 }
