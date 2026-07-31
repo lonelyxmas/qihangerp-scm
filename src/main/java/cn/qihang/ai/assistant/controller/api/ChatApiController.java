@@ -63,9 +63,6 @@ public class ChatApiController {
 
     @GetMapping("/kbs")
     public ResponseEntity<Map<String, Object>> listKbs() {
-        if (!SecurityUtils.isLoggedIn()) {
-            return ResponseEntity.ok(Map.of("ok", false, "error", "请先登录"));
-        }
         List<KbBaseEntity> kbs = kbService.getAccessibleKbs();
         List<Map<String, Object>> result = new ArrayList<>();
         for (KbBaseEntity kb : kbs) {

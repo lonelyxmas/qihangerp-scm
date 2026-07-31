@@ -60,6 +60,7 @@ public class SecurityConfig {
                         // 公开 API（登录、注册、公开沙箱）
                         .requestMatchers("/api/sys-api/login", "/api/sys-api/captchaImage", "/api/sys-api/register").permitAll()
                         .requestMatchers("/api/public/**").permitAll()
+                        .requestMatchers("/api/chat/kbs").permitAll()
                         // 公开页面
                         .requestMatchers("/", "/login", "/login.html", "/config", "/config/**").permitAll()
                         .requestMatchers("/chat", "/help", "/log", "/notes").permitAll()
