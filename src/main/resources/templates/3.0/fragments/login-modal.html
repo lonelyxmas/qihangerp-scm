@@ -74,4 +74,252 @@
             if (e.key === 'Escape') closeLoginModal();
         });
     </script>
+
+    <div class="notif-overlay" id="notifOverlay" onclick="if(event.target===this)closeNotif()">
+        <div class="notif-modal">
+            <div class="notif-header">
+                <h3 class="notif-title">⏰ 提醒</h3>
+                <span class="notif-time" id="notifTime"></span>
+                <button class="notif-close" onclick="closeNotif()">✕</button>
+            </div>
+            <div class="notif-body" id="notifBody">
+                <div class="notif-empty">暂无新提醒</div>
+            </div>
+            <div class="notif-footer">
+                <button class="notif-btn" onclick="ackAllNotif()">全部已读</button>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        .notif-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.45);
+            z-index: 11000;
+            align-items: center;
+            justify-content: center;
+        }
+        .notif-overlay.active { display: flex; }
+        .notif-modal {
+            width: 440px;
+            max-width: calc(100vw - 40px);
+            max-height: 80vh;
+            display: flex;
+            flex-direction: column;
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        .notif-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 16px 20px 12px;
+            border-bottom: 1px solid #e1e3e6;
+        }
+        .notif-title { flex: 1; font-size: 15px; font-weight: 700; color: #1e293b; }
+        .notif-time { color: #94a3b8; font-size: 11px; }
+        .notif-close {
+            width: 28px; height: 28px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border: none;
+            border-radius: 6px;
+            background: transparent;
+            color: #64748b;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        .notif-close:hover { background: #f0f0f0; }
+        .notif-body { flex: 1; min-height: 0; overflow-y: auto; padding: 12px 20px; }
+        .notif-empty { padding: 30px 0; text-align: center; color: #94a3b8; font-size: 13px; }
+        .notif-card {
+            display: flex;
+            gap: 12px;
+            padding: 12px 14px;
+            margin-bottom: 8px;
+            border-radius: 8px;
+            background: #f5f5f7;
+            border: 1px solid #e1e3e6;
+        }
+        .notif-card-icon {
+            width: 36px; height: 36px;
+            flex: 0 0 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            font-size: 18px;
+            background: #fef3c7;
+        }
+        .notif-card-body { flex: 1; min-width: 0; }
+        .notif-card-title { font-size: 13px; font-weight: 650; color: #1e293b; }
+        .notif-card-msg {
+            margin-top: 3px;
+            color: #64748b;
+            font-size: 12px;
+            line-height: 1.45;
+            white-space: pre-wrap;
+            display: -webkit-box;
+            -webkit-box-orient: vertical;
+            -webkit-line-clamp: 3;
+            overflow: hidden;
+        }
+        .notif-card-time { margin-top: 5px; color: #94a3b8; font-size: 10px; }
+        .notif-card-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            justify-content: center;
+            flex: 0 0 auto;
+        }
+        .notif-card-actions .notif-btn { min-height: 28px; padding: 4px 10px; font-size: 11px; }
+        .notif-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+            padding: 10px 20px 16px;
+            border-top: 1px solid #e1e3e6;
+        }
+        .notif-btn {
+            padding: 8px 16px;
+            background: var(--primary, #2563eb);
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .notif-btn:hover { opacity: 0.9; }
+    </style>
+
+    <script>
+        var notifList = [];
+        var desktopNotifIds = {};
+        var desktopNotifGranted = false;
+        var _firstPoll = true;
+
+        function ensureDesktopNotif() {
+            if (!('Notification' in window)) return;
+            if (Notification.permission === 'granted') {
+                desktopNotifGranted = true;
+            } else if (Notification.permission !== 'denied') {
+                Notification.requestPermission().then(function(p) {
+                    desktopNotifGranted = (p === 'granted');
+                });
+            }
+        }
+
+        function fireDesktopNotif(n) {
+            if (!desktopNotifGranted) return;
+            if (desktopNotifIds[n.id]) return;
+            desktopNotifIds[n.id] = true;
+            var notif = new Notification(n.title || '⏰ 提醒', {
+                body: n.content || '',
+                tag: 'reminder-' + n.id,
+                requireInteraction: true
+            });
+            notif.onclick = function() {
+                window.focus();
+                window.location.href = '/reminders';
+                this.close();
+            };
+        }
+
+        function pollNotif() {
+            if (!localStorage.getItem('Admin-Token')) return;
+            fetch('/api/collab/notification/pending')
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    var prevCount = notifList.length;
+                    notifList = Array.isArray(data) ? data : [];
+                    var isFirst = _firstPoll;
+                    _firstPoll = false;
+                    if (!isFirst) {
+                        for (var i = 0; i < notifList.length; i++) {
+                            fireDesktopNotif(notifList[i]);
+                        }
+                    }
+                    if (notifList.length > prevCount && !document.getElementById('notifOverlay').classList.contains('active')) {
+                        showNotif();
+                    }
+                })
+                .catch(function() {});
+        }
+
+        function showNotif() {
+            document.getElementById('notifOverlay').classList.add('active');
+            renderNotif();
+        }
+
+        function renderNotif() {
+            var body = document.getElementById('notifBody');
+            var timeEl = document.getElementById('notifTime');
+            if (notifList.length === 0) {
+                body.innerHTML = '<div class="notif-empty">暂无新提醒</div>';
+                timeEl.textContent = '';
+                return;
+            }
+            var html = '';
+            for (var i = 0; i < notifList.length; i++) {
+                var n = notifList[i];
+                var ts = n.createdAt || '';
+                if (ts.length > 16) ts = ts.substring(0, 16);
+                html += '<div class="notif-card">'
+                    + '<div class="notif-card-icon">🔔</div>'
+                    + '<div class="notif-card-body">'
+                    + '<div class="notif-card-title">' + escHtml(n.title) + '</div>'
+                    + '<div class="notif-card-msg">' + escHtml(n.content) + '</div>'
+                    + '<div class="notif-card-time">' + ts + '</div>'
+                    + '</div>'
+                    + '<div class="notif-card-actions">'
+                    + '<button class="notif-btn" onclick="ackNotif(' + n.id + ')">知道了</button>'
+                    + '</div></div>';
+            }
+            body.innerHTML = html;
+            timeEl.textContent = notifList.length + ' 条提醒';
+        }
+
+        function ackNotif(id) {
+            fetch('/api/collab/notification/mark-read?id=' + id, { method: 'POST' }).catch(function() {});
+            notifList = notifList.filter(function(n) { return n.id !== id; });
+            renderNotif();
+            if (notifList.length === 0) closeNotif();
+        }
+
+        function ackAllNotif() {
+            fetch('/api/collab/notification/mark-all-read?userId=1', { method: 'POST' }).catch(function() {});
+            notifList = [];
+            closeNotif();
+        }
+
+        function closeNotif() {
+            document.getElementById('notifOverlay').classList.remove('active');
+        }
+
+        function escHtml(str) {
+            if (!str) return '';
+            var d = document.createElement('div');
+            d.textContent = str;
+            return d.innerHTML;
+        }
+
+        ensureDesktopNotif();
+        setTimeout(pollNotif, 1000);
+        setInterval(pollNotif, 30000);
+
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && document.getElementById('notifOverlay').classList.contains('active')) {
+                closeNotif();
+            }
+        });
+
+        document.addEventListener('auth-change', function() {
+            setTimeout(pollNotif, 3000);
+        });
+    </script>
 </th:block>

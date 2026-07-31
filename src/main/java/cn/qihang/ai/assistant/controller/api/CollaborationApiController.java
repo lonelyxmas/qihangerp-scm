@@ -53,6 +53,19 @@ public class CollaborationApiController {
 
     // ==================== 通知 API ====================
 
+    @GetMapping("/notification/pending")
+    @ResponseBody
+    public List<Map<String, Object>> pendingNotifications(@RequestParam(defaultValue = "1") Long userId) {
+        try {
+            return notificationDbService.listByUserAndType(userId, "reminder", 20).stream()
+                    .filter(e -> e.getIsRead() == null || e.getIsRead() == 0)
+                    .map(this::toNotificationMap)
+                    .toList();
+        } catch (Exception e) {
+            return List.of();
+        }
+    }
+
     @GetMapping("/notification/list")
     @ResponseBody
     public Map<String, Object> listNotifications(@RequestParam(defaultValue = "1") Long userId,

@@ -13,7 +13,7 @@ spring:
     prefix: classpath:/templates/
     suffix: .html
     mode: HTML
-    cache: true
+    cache: false
     encoding: UTF-8
   jackson:
     default-property-inclusion: non_null

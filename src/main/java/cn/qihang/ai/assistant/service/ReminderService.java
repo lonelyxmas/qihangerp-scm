@@ -1,6 +1,7 @@
 package cn.qihang.ai.assistant.service;
 
 import cn.qihang.ai.assistant.model.ReminderData.Reminder;
+import cn.qihang.ai.assistant.service.db.NotificationDbService;
 import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -28,9 +29,12 @@ public class ReminderService {
 
     private final DataSource dataSource;
 
-    public ReminderService(FeishuService feishuService, DataSource dataSource) {
+    private final NotificationDbService notificationDbService;
+
+    public ReminderService(FeishuService feishuService, DataSource dataSource, NotificationDbService notificationDbService) {
         this.feishuService = feishuService;
         this.dataSource = dataSource;
+        this.notificationDbService = notificationDbService;
     }
 
     @PostConstruct
@@ -197,7 +201,7 @@ public class ReminderService {
         r.time = normalizeTime(time);
 
         if ("once".equals(type)) {
-            r.date = date;
+            r.date = (date != null && !date.isBlank()) ? date : LocalDate.now(TZ).toString();
         } else if ("weekly".equals(type)) {
             r.dayOfWeek = dayOfWeek;
         } else if ("monthly".equals(type)) {
@@ -238,16 +242,22 @@ public class ReminderService {
         if (name != null) r.name = name;
         if (message != null) r.message = message;
         if (type != null) r.type = type;
-        if (time != null) {
-            r.time = normalizeTime(time);
-            r.lastTriggered = null;
+        if (time != null && !time.isBlank()) {
+            String normalized = normalizeTime(time);
+            if (!normalized.equals(r.time)) {
+                r.time = normalized;
+                r.lastTriggered = null;
+            }
         }
 
         String reminderType = (type != null) ? type : r.type;
         if ("once".equals(reminderType)) {
             if (date != null) {
-                r.date = date;
-                r.lastTriggered = null;
+                String newDate = date.isBlank() ? LocalDate.now(TZ).toString() : date;
+                if (!newDate.equals(r.date)) {
+                    r.date = newDate;
+                    r.lastTriggered = null;
+                }
             }
             r.dayOfWeek = null;
             r.dayOfMonth = null;
@@ -349,20 +359,40 @@ public class ReminderService {
     public void triggerReminder(Reminder r, Long kbId) {
         if (r == null || !r.enabled) return;
 
+        // 先标记已触发，保证当天去重生效（无论推送成败，都不重复触发）
         try {
-            List<List<Map<String, String>>> content = List.of(
-                    List.of(Map.of("tag", "text", "text", "🔔 " + r.name)),
-                    List.of(Map.of("tag", "text", "text", "━━━━━━━━━━━━━━━━━━")),
-                    List.of(Map.of("tag", "text", "text", r.message != null ? r.message : "该提醒了！"))
-            );
-            boolean success = feishuService.sendPost("🔔 " + r.name, content);
-            if (!success) {
-                log.warn("[提醒] 触发失败(飞书发送未成功): {}", r.name);
-                return;
-            }
-
             r.lastTriggered = LocalDateTime.now(TZ).format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"));
             updateReminderInDb(r);
+        } catch (Exception e) {
+            log.error("[提醒] 更新触发状态失败: {} - {}", r.name, e.getMessage());
+        }
+
+        try {
+            String content = r.message != null && !r.message.isBlank() ? r.message : "该提醒了！";
+            String scheduleText = getReminderDescription(r);
+
+            // 站内通知（Web 页面弹出）
+            try {
+                notificationDbService.addNotification(
+                        1L,
+                        "⏰ " + r.name,
+                        (scheduleText != null && !scheduleText.isBlank() ? "📅 " + scheduleText + "\n" : "") + content,
+                        "reminder", "reminder", r.id);
+            } catch (Exception e) {
+                log.warn("[提醒] 站内通知写入失败: {} - {}", r.name, e.getMessage());
+            }
+
+            // 飞书推送：⏰ 提醒 + 名称 + 分隔线，有备注才加备注
+            List<List<Map<String, String>>> contentBlocks = new ArrayList<>();
+            contentBlocks.add(List.of(Map.of("tag", "text", "text", "🔔 " + r.name)));
+            contentBlocks.add(List.of(Map.of("tag", "text", "text", "━━━━━━━━━━━━━━━━━━")));
+            if (r.message != null && !r.message.isBlank()) {
+                contentBlocks.add(List.of(Map.of("tag", "text", "text", r.message)));
+            }
+            boolean success = feishuService.sendPost("⏰ 提醒", contentBlocks);
+            if (!success) {
+                log.warn("[提醒] 触发失败(飞书发送未成功): {}", r.name);
+            }
 
             log.info("[提醒] 触发提醒: {}", r.name);
         } catch (Exception e) {
@@ -402,7 +432,9 @@ public class ReminderService {
         int currentHour = currentTime.getHour();
         int currentMinute = currentTime.getMinute();
 
-        if (triggerHour != currentHour || triggerMinute != currentMinute) {
+        // 未到计划时间不触发；已到时间则触发（当天未触发过由 wasTriggeredToday 去重，
+        // 可容忍调度延迟数分钟而不漏发）
+        if (currentHour < triggerHour || (currentHour == triggerHour && currentMinute < triggerMinute)) {
             return false;
         }
 

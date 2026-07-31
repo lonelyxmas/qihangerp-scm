@@ -72,7 +72,7 @@
 <body>
     <th:block th:replace="3.0/fragments/sidebar::sidebar(${currentNav})"></th:block>
 
-    <main class="main-content">
+    <main class="main-content" id="app">
         <div class="content-header">
             <h1 class="content-title">提醒中心</h1>
             <div id="headerActions" style="display:flex;gap:8px;align-items:center;">
@@ -80,7 +80,7 @@
             </div>
         </div>
         
-        <div class="content-body" id="app">
+        <div class="content-body">
             <div class="card">
                 <div class="card-header">
                     <h2 class="card-title">⏰ 定时提醒</h2>
@@ -113,9 +113,8 @@
                 </div>
             </div>
         </div>
-    </main>
-    
-    <div class="modal-overlay" :class="{ show: showReminderModal }" @click.self="showReminderModal = false">
+
+        <div class="modal-overlay" :class="{ show: showReminderModal }" @click.self="showReminderModal = false">
         <div class="modal">
             <h3>{{ isEditingReminder ? '编辑提醒' : '添加提醒' }}</h3>
             <input type="hidden" v-model="editingReminder.id">
@@ -157,6 +156,7 @@
             </div>
         </div>
     </div>
+    </main>
     
     <script>
         const { createApp, ref, computed, onMounted } = Vue;
@@ -252,7 +252,7 @@
                     isEditingReminder.value = false;
                     editingReminder.value = {
                         id: '', name: '', message: '', type: 'daily',
-                        time: '09:00', date: '', dayOfWeek: '1', dayOfMonth: '', monthDay: ''
+                        time: '09:00', date: todayStr(), dayOfWeek: '1', dayOfMonth: '', monthDay: ''
                     };
                     reminderYearMonth.value = '';
                     reminderYearDay.value = '';
@@ -273,7 +273,16 @@
                     showReminderModal.value = true;
                 }
 
-                function onReminderTypeChange() {}
+                function onReminderTypeChange() {
+                    if (editingReminder.value.type === 'once' && !editingReminder.value.date) {
+                        editingReminder.value.date = todayStr();
+                    }
+                }
+
+                function todayStr() {
+                    const d = new Date();
+                    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+                }
 
                 async function saveReminder() {
                     if (!editingReminder.value.name.trim()) {
@@ -376,7 +385,7 @@
                     enabledReminderCount,
                     showAddReminderModal, showEditReminderModal, onReminderTypeChange, saveReminder,
                     toggleReminder, openDeleteModal, confirmDelete,
-                    getScheduleText, formatDate
+                    getScheduleText, formatDate, todayStr
                 };
             }
         }).mount('#app');
