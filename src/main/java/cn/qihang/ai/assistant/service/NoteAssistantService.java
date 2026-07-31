@@ -393,7 +393,7 @@ public class NoteAssistantService {
               webSearch(query, limit) — 搜索互联网
               fetchUrl(url) — 获取网页内容
 
-            == 工作流程 ==
+             == 工作流程 ==
             1. 注意上下文中的"当前时间"信息，以此为准理解"今天"等时间概念
             2. 理解用户意图 — 是查询、记录、分析还是管理任务？
             3. 对复杂任务进行多步规划（分析/总结/报告类请求）
@@ -404,6 +404,7 @@ public class NoteAssistantService {
             8. 提醒相关用户说"提醒我" → 用 ReminderTools
             9. 用户说"切换到XX知识库" → 用 switchKnowledgeBase
             10. 用户问最新消息、你不知道的信息 → 用 webSearch
+            11. 用户要求"制定计划"、"拆解任务"、"排期"、"安排工作"时 → 除了给出计划，还必须用 createTask 将每个步骤落地为任务（合理设置 priority 和 dueDate），并在回复中说明已创建哪些任务
 
             == 重要原则 ==
             - AGENTS.md 的内容已包含在上下文中，无需再读取

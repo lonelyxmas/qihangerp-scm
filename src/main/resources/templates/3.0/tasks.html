@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="/css/app.css">
+    <title>启航 AI 协作平台 - 任务中心</title>
+    <script src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.js"></script>
+    <style>
+        .card { background: white; border-radius: var(--radius-md); border: 1px solid var(--border); box-shadow: var(--shadow-sm); padding: 24px; margin-bottom: 24px; }
+        .card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+        .card-title { font-size: 16px; font-weight: 600; }
+
+        .btn { padding: 8px 16px; border: none; border-radius: var(--radius-sm); font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 6px; }
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-primary:hover { background: var(--primary-dark); }
+        .btn-secondary { background: white; color: var(--text-secondary); border: 1px solid var(--border); }
+        .btn-secondary:hover { background: var(--hover); }
+        .btn-danger { background: #ef4444; color: white; }
+        .btn-danger:hover { background: #dc2626; }
+
+        .task-board { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+        .task-column { background: #f8fafc; border-radius: var(--radius-md); padding: 16px; }
+        .column-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+        .column-title { font-size: 14px; font-weight: 600; }
+        .column-count { padding: 2px 8px; border-radius: 10px; font-size: 12px; font-weight: 500; }
+        .column-pending .column-count { background: rgba(251,146,60,0.1); color: #fb923c; }
+        .column-progress .column-count { background: rgba(59,130,246,0.1); color: #3b82f6; }
+        .column-done .column-count { background: rgba(34,197,94,0.1); color: #22c55e; }
+
+        .task-card { background: white; border-radius: var(--radius-sm); padding: 14px; margin-bottom: 12px; cursor: pointer; transition: all 0.2s; border: 1px solid var(--border); }
+        .task-card:hover { box-shadow: var(--shadow-md); }
+        .task-title { font-size: 14px; font-weight: 500; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+        .task-meta { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-muted); flex-wrap: wrap; }
+        .priority-high { color: #ef4444; }
+        .priority-mid { color: #fb923c; }
+        .priority-low { color: #22c55e; }
+        .task-due { display: flex; align-items: center; gap: 2px; }
+        .badge { padding: 1px 8px; border-radius: 10px; font-size: 11px; font-weight: 500; }
+        .badge-ai { background: rgba(139,92,246,0.12); color: #8b5cf6; }
+        .badge-due { background: rgba(59,130,246,0.12); color: #3b82f6; }
+        .badge-overdue { background: rgba(239,68,68,0.12); color: #ef4444; }
+        .task-actions { margin-top: 10px; display: flex; gap: 6px; }
+
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 1000; }
+        .modal-overlay.show { display: flex; }
+        .modal { background: white; border-radius: var(--radius-md); padding: 24px; width: 560px; max-width: 95vw; box-shadow: 0 20px 25px rgba(0,0,0,0.1); }
+        .modal h3 { font-size: 18px; font-weight: 600; margin-bottom: 20px; }
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; font-size: 13px; font-weight: 500; color: var(--text-secondary); margin-bottom: 6px; }
+        .form-control { width: 100%; padding: 10px 14px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 14px; outline: none; box-sizing: border-box; }
+        .form-control:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(99,102,241,0.1); }
+        .form-row { display: flex; gap: 12px; }
+        .form-row .form-group { flex: 1; }
+        textarea.form-control { resize: vertical; min-height: 80px; }
+        .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
+
+        .empty-state { text-align: center; padding: 60px 20px; color: var(--text-muted); }
+        .empty-icon { font-size: 48px; margin-bottom: 16px; opacity: 0.5; }
+
+        .ai-hint { background: rgba(139,92,246,0.06); border: 1px dashed #c4b5fd; border-radius: var(--radius-sm); padding: 10px 14px; font-size: 12px; color: #7c3aed; margin-top: 8px; line-height: 1.6; }
+    </style>
+</head>
+<body>
+    <th:block th:replace="3.0/fragments/sidebar::sidebar(${currentNav})"></th:block>
+
+    <main class="main-content">
+        <div class="content-header">
+            <h1 class="content-title">任务中心</h1>
+            <div style="display:flex;gap:8px;align-items:center;">
+                <a href="/planner" class="btn btn-secondary" style="text-decoration:none;">⏰ 定时提醒</a>
+            </div>
+        </div>
+
+        <div class="content-body" id="app">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">📋 任务看板</h2>
+                    <button class="btn btn-primary" @click="showAddTaskModal()">+ 添加任务</button>
+                </div>
+                <div class="task-board">
+                    <div class="task-column column-pending">
+                        <div class="column-header">
+                            <span class="column-title">📋 待办</span>
+                            <span class="column-count">{{ pendingTasks.length }}</span>
+                        </div>
+                        <div v-if="pendingTasks.length === 0" style="text-align:center;padding:20px;color:#94a3b8;font-size:13px;">暂无任务</div>
+                        <div v-else>
+                            <div v-for="task in pendingTasks" :key="task.id" class="task-card" @click="showEditTaskModal(task)">
+                                <div class="task-title">
+                                    {{ task.title }}
+                                    <span v-if="task.action === 'ai'" class="badge badge-ai">🤖 AI</span>
+                                    <span v-if="isDueToday(task)" class="badge badge-due">今日到期</span>
+                                    <span v-if="isOverdue(task)" class="badge badge-overdue">已逾期</span>
+                                </div>
+                                <div class="task-meta">
+                                    <span :class="'priority-' + task.priority">
+                                        {{ task.priority === 'high' ? '🔴' : (task.priority === 'mid' ? '🟡' : '🟢') }}
+                                    </span>
+                                    <span v-if="task.dueDate" class="task-due">📅 {{ formatDate(task.dueDate) }}</span>
+                                </div>
+                                <div v-if="task.action === 'ai'" class="task-actions" @click.stop>
+                                    <button class="btn btn-secondary" style="padding:4px 10px;font-size:12px;color:#8b5cf6;border-color:#c4b5fd;" @click="executeTask(task)">⚡ 立即执行</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="task-column column-progress">
+                        <div class="column-header">
+                            <span class="column-title">🔄 进行中</span>
+                            <span class="column-count">{{ progressTasks.length }}</span>
+                        </div>
+                        <div v-if="progressTasks.length === 0" style="text-align:center;padding:20px;color:#94a3b8;font-size:13px;">暂无任务</div>
+                        <div v-else>
+                            <div v-for="task in progressTasks" :key="task.id" class="task-card" @click="showEditTaskModal(task)">
+                                <div class="task-title">
+                                    {{ task.title }}
+                                    <span v-if="task.action === 'ai'" class="badge badge-ai">🤖 AI</span>
+                                    <span v-if="isDueToday(task)" class="badge badge-due">今日到期</span>
+                                    <span v-if="isOverdue(task)" class="badge badge-overdue">已逾期</span>
+                                </div>
+                                <div class="task-meta">
+                                    <span :class="'priority-' + task.priority">
+                                        {{ task.priority === 'high' ? '🔴' : (task.priority === 'mid' ? '🟡' : '🟢') }}
+                                    </span>
+                                    <span v-if="task.dueDate" class="task-due">📅 {{ formatDate(task.dueDate) }}</span>
+                                </div>
+                                <div v-if="task.action === 'ai'" class="task-actions" @click.stop>
+                                    <button class="btn btn-secondary" style="padding:4px 10px;font-size:12px;color:#8b5cf6;border-color:#c4b5fd;" @click="executeTask(task)">⚡ 立即执行</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="task-column column-done">
+                        <div class="column-header">
+                            <span class="column-title">✅ 已完成</span>
+                            <span class="column-count">{{ doneTasks.length }}</span>
+                        </div>
+                        <div v-if="doneTasks.length === 0" style="text-align:center;padding:20px;color:#94a3b8;font-size:13px;">暂无任务</div>
+                        <div v-else>
+                            <div v-for="task in doneTasks" :key="task.id" class="task-card" @click="showEditTaskModal(task)">
+                                <div class="task-title">
+                                    {{ task.title }}
+                                    <span v-if="task.action === 'ai'" class="badge badge-ai">🤖 AI</span>
+                                </div>
+                                <div class="task-meta">
+                                    <span :class="'priority-' + task.priority">
+                                        {{ task.priority === 'high' ? '🔴' : (task.priority === 'mid' ? '🟡' : '🟢') }}
+                                    </span>
+                                    <span v-if="task.dueDate" class="task-due">📅 {{ formatDate(task.dueDate) }}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="ai-hint">
+                    💡 <b>AI 任务</b>：任务到期时 AI 会自动执行你填写的指令（查数据、生成报告），结果推送到飞书。也可随时点「立即执行」手动触发。
+                    普通任务到期/逾期会自动推送提醒，完成后自动沉淀到「任务完成记录」数据集，供日报引用。
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <div class="modal-overlay" :class="{ show: showTaskModal }" @click.self="showTaskModal = false">
+        <div class="modal">
+            <h3>{{ isEditingTask ? '编辑任务' : '添加任务' }}</h3>
+            <input type="hidden" v-model="editingTask.id">
+            <div class="form-group"><label>标题 *</label><input type="text" v-model="editingTask.title" class="form-control" placeholder="任务标题"></div>
+            <div class="form-group"><label>描述</label><textarea v-model="editingTask.description" class="form-control" rows="3" placeholder="任务描述（可选）"></textarea></div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>优先级</label>
+                    <select v-model="editingTask.priority" class="form-control">
+                        <option value="high">🔴 高优先级</option>
+                        <option value="mid" selected>🟡 中优先级</option>
+                        <option value="low">🟢 低优先级</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>截止日期</label>
+                    <input type="date" v-model="editingTask.dueDate" class="form-control">
+                </div>
+            </div>
+            <div class="form-group">
+                <label>任务类型</label>
+                <select v-model="editingTask.action" class="form-control">
+                    <option value="">📋 普通任务（到期/逾期推送提醒）</option>
+                    <option value="ai">🤖 AI 任务（到期自动执行 AI 指令）</option>
+                </select>
+            </div>
+            <div class="form-group" v-if="editingTask.action === 'ai'">
+                <label>AI 执行指令 *</label>
+                <textarea v-model="editingTask.actionPrompt" class="form-control" rows="3"
+                          placeholder="例如：查询本周完成任务，汇总生成周报；或：搜索数据集新增记录并整理汇报"></textarea>
+                <div class="ai-hint">到期时 AI 会自动执行此指令，结果推送到飞书。留空则默认按任务标题/描述执行。</div>
+            </div>
+            <div class="form-group" v-if="isEditingTask">
+                <label>状态</label>
+                <select v-model="editingTask.status" class="form-control">
+                    <option value="pending">📋 待办</option>
+                    <option value="in_progress">🔄 进行中</option>
+                    <option value="done">✅ 已完成</option>
+                </select>
+            </div>
+            <div class="modal-actions">
+                <button v-if="isEditingTask" class="btn btn-danger" @click="openDeleteModal(editingTask.id)" style="margin-right:auto;">删除</button>
+                <button class="btn btn-secondary" @click="showTaskModal = false">取消</button>
+                <button class="btn btn-primary" @click="saveTask()">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" :class="{ show: showDeleteModal }" @click.self="showDeleteModal = false">
+        <div class="modal" style="width:400px;">
+            <h3>确认删除</h3>
+            <p style="color:#94a3b8;font-size:13px;">确定要删除这个任务吗？此操作不可撤销。</p>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" @click="showDeleteModal = false">取消</button>
+                <button class="btn btn-danger" @click="confirmDelete()">删除</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const { createApp, ref, computed, onMounted } = Vue;
+
+        const API_BASE = '/api';
+
+        function apiFetch(url, options) {
+            if (!options) options = {};
+            if (!options.headers) options.headers = {};
+            var token = localStorage.getItem('Admin-Token');
+            if (token) options.headers['Authorization'] = 'Bearer ' + token;
+            return fetch(url, options);
+        }
+
+        function isAuthError(d) {
+            return d.__401 || (d.code === 500 && d.msg === '认证失败');
+        }
+
+        function handleUnauthenticated() {
+            localStorage.removeItem('Admin-Token');
+            document.cookie = 'Admin-Token=; path=/; max-age=0; SameSite=Lax';
+            document.getElementById('app').innerHTML = '<div class="empty-state"><div class="empty-icon">🔐</div><div class="empty-title">需要登录</div><div class="empty-desc">登录后即可使用任务中心</div></div>';
+            showLoginModal(function() { window.location.href = window.location.href; });
+        }
+
+        function checkAuthBeforeFetch(url, opts) {
+            return apiFetch(url, opts).then(function(r) {
+                if (r.status === 401 || r.status === 403) return r.json().then(function(d) { d.__401 = true; return d; });
+                if (!r.ok) throw new Error('请求失败');
+                return r.json();
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            var token = localStorage.getItem('Admin-Token');
+            if (!token) { handleUnauthenticated(); return; }
+        });
+
+        document.addEventListener('auth-change', function() {
+            if (!localStorage.getItem('Admin-Token')) handleUnauthenticated();
+        });
+
+        createApp({
+            setup() {
+                const currentKbId = ref(/*[[${selectedKb != null ? selectedKb.id : null}]]*/ null);
+                const tasks = ref([]);
+
+                const showTaskModal = ref(false);
+                const isEditingTask = ref(false);
+                const editingTask = ref({
+                    id: '', title: '', description: '', priority: 'mid', dueDate: '',
+                    status: 'pending', action: '', actionPrompt: ''
+                });
+
+                const showDeleteModal = ref(false);
+                const deleteId = ref('');
+
+                const pendingTasks = computed(() => tasks.value.filter(t => t.status === 'pending'));
+                const progressTasks = computed(() => tasks.value.filter(t => t.status === 'in_progress'));
+                const doneTasks = computed(() => tasks.value.filter(t => t.status === 'done'));
+
+                function todayStr() {
+                    const d = new Date();
+                    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+                }
+
+                function isDueToday(task) {
+                    if (!task.dueDate) return false;
+                    return task.dueDate === todayStr() && task.status !== 'done';
+                }
+
+                function isOverdue(task) {
+                    if (!task.dueDate) return false;
+                    return task.dueDate < todayStr() && task.status !== 'done';
+                }
+
+                async function loadTasks() {
+                    let url = '/api/tasks';
+                    if (currentKbId.value) url += '?kbId=' + currentKbId.value;
+
+                    const r = await checkAuthBeforeFetch(url);
+                    if (isAuthError(r)) { handleUnauthenticated(); return; }
+                    if (r.ok && r.tasks) {
+                        tasks.value = r.tasks;
+                    }
+                }
+
+                function showAddTaskModal() {
+                    isEditingTask.value = false;
+                    editingTask.value = { id: '', title: '', description: '', priority: 'mid', dueDate: '', status: 'pending', action: '', actionPrompt: '' };
+                    showTaskModal.value = true;
+                }
+
+                function showEditTaskModal(task) {
+                    isEditingTask.value = true;
+                    editingTask.value = { ...task };
+                    showTaskModal.value = true;
+                }
+
+                async function saveTask() {
+                    if (!editingTask.value.title.trim()) {
+                        alert('请输入任务标题');
+                        return;
+                    }
+                    if (editingTask.value.action === 'ai' && !editingTask.value.actionPrompt.trim()) {
+                        alert('AI 任务请填写 AI 执行指令');
+                        return;
+                    }
+
+                    let url = editingTask.value.id ? '/api/tasks/update' : '/api/tasks/add';
+                    const formData = new FormData();
+                    formData.append('title', editingTask.value.title);
+                    formData.append('description', editingTask.value.description || '');
+                    formData.append('priority', editingTask.value.priority);
+                    formData.append('dueDate', editingTask.value.dueDate || '');
+                    formData.append('action', editingTask.value.action || '');
+                    formData.append('actionPrompt', editingTask.value.actionPrompt || '');
+                    if (editingTask.value.id) {
+                        formData.append('id', editingTask.value.id);
+                        formData.append('status', editingTask.value.status);
+                    }
+                    if (currentKbId.value) {
+                        formData.append('kbId', currentKbId.value);
+                    }
+
+                    const r = await checkAuthBeforeFetch(url, { method: 'POST', body: formData });
+                    if (isAuthError(r)) { handleUnauthenticated(); return; }
+                    if (r.ok) {
+                        showTaskModal.value = false;
+                        await loadTasks();
+                    } else {
+                        alert(r.error || '保存失败');
+                    }
+                }
+
+                async function executeTask(task) {
+                    if (!confirm('确定让 AI 立即执行任务「' + task.title + '」吗？执行结果将推送到飞书。')) return;
+                    let url = '/api/tasks/execute?id=' + task.id;
+                    if (currentKbId.value) url += '&kbId=' + currentKbId.value;
+
+                    const r = await checkAuthBeforeFetch(url, { method: 'POST' });
+                    if (isAuthError(r)) { handleUnauthenticated(); return; }
+                    if (r.ok) {
+                        alert('🤖 已触发 AI 执行，完成后结果会推送到飞书');
+                    } else {
+                        alert(r.error || '触发失败');
+                    }
+                }
+
+                function openDeleteModal(id) {
+                    deleteId.value = id;
+                    showDeleteModal.value = true;
+                }
+
+                async function confirmDelete() {
+                    let url = '/api/tasks/delete?id=' + deleteId.value;
+                    if (currentKbId.value) url += '&kbId=' + currentKbId.value;
+
+                    const r = await checkAuthBeforeFetch(url, { method: 'POST' });
+                    if (isAuthError(r)) { handleUnauthenticated(); return; }
+                    if (r.ok) {
+                        showDeleteModal.value = false;
+                        await loadTasks();
+                    }
+                }
+
+                function formatDate(dateStr) {
+                    if (!dateStr) return '';
+                    const date = new Date(dateStr);
+                    return (date.getMonth() + 1) + '/' + date.getDate();
+                }
+
+                onMounted(() => {
+                    loadTasks();
+                });
+
+                return {
+                    tasks,
+                    showTaskModal, isEditingTask, editingTask,
+                    showDeleteModal, deleteId,
+                    pendingTasks, progressTasks, doneTasks,
+                    isDueToday, isOverdue,
+                    showAddTaskModal, showEditTaskModal, saveTask,
+                    executeTask, openDeleteModal, confirmDelete,
+                    formatDate
+                };
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>

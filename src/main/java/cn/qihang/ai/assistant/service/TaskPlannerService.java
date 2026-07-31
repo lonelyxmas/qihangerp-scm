@@ -106,6 +106,8 @@ public class TaskPlannerService {
 
                 执行完所有步骤后，给出最终回复。
                 注意：如果某步执行结果为空或出错，尝试用其他工具补充。
+                如果用户明确要求安排/排期/落地计划（如"把计划安排到任务里"、"排期"），
+                请用 createTask 工具将各步骤创建为任务，并合理设置 priority 和 dueDate。
                 ---
                 """.formatted(plan);
     }

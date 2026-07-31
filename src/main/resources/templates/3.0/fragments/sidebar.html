@@ -47,14 +47,21 @@
                 </svg>
                 <span>数据中心</span>
             </a>
-            <a href="/planner" class="nav-item" th:classappend="${currentNav == 'planner' ? 'active' : ''}" title="任务看板">
+            <a href="/tasks" class="nav-item" th:classappend="${currentNav == 'tasks' ? 'active' : ''}" title="任务中心">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
                     <line x1="16" y1="2" x2="16" y2="6"/>
                     <line x1="8" y1="2" x2="8" y2="6"/>
                     <line x1="3" y1="10" x2="21" y2="10"/>
                 </svg>
-                <span>任务看板</span>
+                <span>任务中心</span>
+            </a>
+            <a href="/planner" class="nav-item" th:classappend="${currentNav == 'planner' ? 'active' : ''}" title="定时提醒">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"/>
+                    <polyline points="12 6 12 12 16 14"/>
+                </svg>
+                <span>定时提醒</span>
             </a>
             <a href="/so" class="nav-item" th:classappend="${currentNav == 'so' ? 'active' : ''}" title="全局搜索">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">

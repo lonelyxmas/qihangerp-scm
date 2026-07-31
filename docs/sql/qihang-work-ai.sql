@@ -589,6 +589,9 @@ CREATE TABLE `tasks`  (
   `created_at` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '创建时间',
   `updated_at` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '更新时间',
   `kb_id` bigint NULL DEFAULT NULL COMMENT '知识库 ID',
+  `action` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '任务动作: ai=到期AI自动执行, NULL=普通任务',
+  `action_prompt` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL COMMENT 'AI执行指令',
+  `last_reminded` varchar(32) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '上次到期提醒日期(用于去重)',
   PRIMARY KEY (`id`) USING BTREE,
   INDEX `idx_kb_id`(`kb_id` ASC) USING BTREE,
   INDEX `idx_status`(`status` ASC) USING BTREE

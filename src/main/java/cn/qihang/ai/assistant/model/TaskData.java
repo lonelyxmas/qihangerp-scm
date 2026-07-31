@@ -18,6 +18,10 @@ public class TaskData {
         public String createdAt;
         public String updatedAt;
         public String dueDate;
+        public String action;
+        public String actionPrompt;
+        public String lastReminded;
+        public Long kbId;
     }
 
     @JsonIgnoreProperties(ignoreUnknown = true)

@@ -5,6 +5,7 @@ import cn.qihang.ai.assistant.model.ReminderData.Reminder;
 import cn.qihang.ai.assistant.service.LogService;
 import cn.qihang.ai.assistant.service.TaskService;
 import cn.qihang.ai.assistant.service.ReminderService;
+import cn.qihang.ai.assistant.service.TaskAgentExecutor;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 
@@ -17,11 +18,14 @@ public class PlannerApiController {
     private final TaskService taskService;
     private final ReminderService reminderService;
     private final LogService logService;
+    private final TaskAgentExecutor taskAgentExecutor;
 
-    public PlannerApiController(TaskService taskService, ReminderService reminderService, LogService logService) {
+    public PlannerApiController(TaskService taskService, ReminderService reminderService,
+                                LogService logService, TaskAgentExecutor taskAgentExecutor) {
         this.taskService = taskService;
         this.reminderService = reminderService;
         this.logService = logService;
+        this.taskAgentExecutor = taskAgentExecutor;
     }
 
     @GetMapping("/api/tasks")
@@ -38,10 +42,12 @@ public class PlannerApiController {
             @RequestParam String title,
             @RequestParam(required = false, defaultValue = "") String description,
             @RequestParam(required = false, defaultValue = "mid") String priority,
-            @RequestParam(required = false, defaultValue = "") String dueDate) {
+            @RequestParam(required = false, defaultValue = "") String dueDate,
+            @RequestParam(required = false, defaultValue = "") String action,
+            @RequestParam(required = false, defaultValue = "") String actionPrompt) {
         try {
-            TaskItem task = taskService.addTask(title, description, priority, dueDate, kbId);
-            logService.add("任务看板", "成功", "添加任务: " + title);
+            TaskItem task = taskService.addTask(title, description, priority, dueDate, kbId, action, actionPrompt);
+            logService.add("任务中心", "成功", "添加任务: " + title);
             return Map.of("ok", true, "task", task);
         } catch (Exception e) {
             return Map.of("ok", false, "error", e.getMessage());
@@ -57,13 +63,15 @@ public class PlannerApiController {
             @RequestParam(required = false) String description,
             @RequestParam(required = false) String status,
             @RequestParam(required = false) String priority,
-            @RequestParam(required = false) String dueDate) {
+            @RequestParam(required = false) String dueDate,
+            @RequestParam(required = false) String action,
+            @RequestParam(required = false) String actionPrompt) {
         try {
-            TaskItem task = taskService.updateTask(id, title, description, status, priority, dueDate, kbId);
+            TaskItem task = taskService.updateTask(id, title, description, status, priority, dueDate, kbId, action, actionPrompt);
             if (task == null) {
                 return Map.of("ok", false, "error", "任务不存在");
             }
-            logService.add("任务看板", "成功", "更新任务: " + task.title);
+            logService.add("任务中心", "成功", "更新任务: " + task.title);
             return Map.of("ok", true, "task", task);
         } catch (Exception e) {
             return Map.of("ok", false, "error", e.getMessage());
@@ -78,9 +86,29 @@ public class PlannerApiController {
         try {
             boolean ok = taskService.deleteTask(id, kbId);
             if (ok) {
-                logService.add("任务看板", "成功", "删除任务: " + id);
+                logService.add("任务中心", "成功", "删除任务: " + id);
             }
             return Map.of("ok", ok);
+        } catch (Exception e) {
+            return Map.of("ok", false, "error", e.getMessage());
+        }
+    }
+
+    @PostMapping("/api/tasks/execute")
+    @ResponseBody
+    public Map<String, Object> executeTask(
+            @RequestParam(required = false) Long kbId,
+            @RequestParam String id) {
+        try {
+            TaskItem task = taskService.getAllTasks().stream()
+                    .filter(x -> x.id.equals(id))
+                    .findFirst().orElse(null);
+            if (task == null) {
+                return Map.of("ok", false, "error", "任务不存在");
+            }
+            taskAgentExecutor.executeAsync(task, kbId != null ? kbId : task.kbId);
+            logService.add("任务中心", "成功", "手动触发 AI 执行: " + task.title);
+            return Map.of("ok", true);
         } catch (Exception e) {
             return Map.of("ok", false, "error", e.getMessage());
         }
