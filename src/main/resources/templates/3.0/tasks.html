@@ -46,7 +46,10 @@
         .badge-cycle { background: rgba(168,85,247,0.12); color: #a855f7; }
         .badge-running { background: rgba(139,92,246,0.15); color: #8b5cf6; }
         .task-actions { margin-top: 10px; display: flex; gap: 6px; flex-wrap: wrap; }
-        .task-execs { margin-top: 10px; }
+        .exec-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        .exec-table th, .exec-table td { padding: 8px 10px; border-bottom: 1px solid var(--border); text-align: left; vertical-align: top; }
+        .exec-table th { background: #f8fafc; font-weight: 600; color: var(--text-secondary); white-space: nowrap; }
+        .exec-table tbody tr:hover td { background: #fafafa; }
         .markdown-content { white-space: pre-wrap; word-break: break-word; }
         .markdown-content p { margin-bottom: 8px; }
         .markdown-content ul, .markdown-content ol { padding-left: 20px; margin-bottom: 8px; }
@@ -365,6 +368,59 @@
         </div>
     </div>
 
+    <div class="modal-overlay" :class="{ show: showTaskExecModal }" @click.self="showTaskExecModal = false">
+        <div class="modal" style="width:820px; max-height:85vh; overflow-y:auto;">
+            <h3>📜 执行记录 - {{ executionsTaskTitle }}</h3>
+            <div v-if="executions.length === 0" class="empty-state" style="padding:30px 10px;">
+                <div class="empty-icon">📭</div>
+                <div>暂无执行记录</div>
+            </div>
+            <table v-else class="exec-table">
+                <thead>
+                    <tr>
+                        <th style="width:96px;">状态</th>
+                        <th style="width:160px;">触发</th>
+                        <th style="width:160px;">开始时间</th>
+                        <th style="width:160px;">结束时间</th>
+                        <th style="width:80px;">操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr v-for="ex in executions" :key="ex.executionId">
+                        <td><span class="exec-status" :class="'exec-status-' + ex.status">{{ statusLabel(ex.status) }}</span></td>
+                        <td>{{ triggerLabel(ex.triggerType) }}<br><span style="color:var(--text-muted);font-size:12px;">{{ ex.triggeredBy || '-' }}</span></td>
+                        <td>{{ ex.startTime || '-' }}</td>
+                        <td>{{ ex.endTime || '-' }}</td>
+                        <td><button class="btn btn-secondary" style="padding:3px 10px;font-size:12px;" @click="showExecDetail(ex)">查看结果</button></td>
+                    </tr>
+                </tbody>
+            </table>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" @click="showTaskExecModal = false">关闭</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" :class="{ show: showExecDetailModal }" @click.self="showExecDetailModal = false">
+        <div class="modal" style="width:720px; max-height:85vh; overflow-y:auto;">
+            <h3>📜 执行详情 - {{ execDetail ? execDetail.taskTitle : '' }}</h3>
+            <div v-if="execDetail">
+                <div class="exec-head">
+                    <span class="exec-status" :class="'exec-status-' + execDetail.status">{{ statusLabel(execDetail.status) }}</span>
+                    <span class="exec-meta">触发: {{ triggerLabel(execDetail.triggerType) }} / {{ execDetail.triggeredBy || '-' }}</span>
+                    <span class="exec-meta">开始: {{ execDetail.startTime || '-' }}</span>
+                    <span class="exec-meta">结束: {{ execDetail.endTime || '-' }}</span>
+                </div>
+                <div v-if="execDetail.logText" class="exec-log">{{ execDetail.logText }}</div>
+                <div v-if="execDetail.resultText" class="exec-result markdown-content" v-html="renderMd(execDetail.resultText)"></div>
+                <div v-if="execDetail.errorMessage" class="exec-error">❌ {{ execDetail.errorMessage }}</div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" @click="showExecDetailModal = false">关闭</button>
+            </div>
+        </div>
+    </div>
+
     </main>
 
     <script>
@@ -440,7 +496,10 @@
                 const deleteId = ref('');
 
                 const executions = ref([]);
-                const expandedExecTaskId = ref('');
+                const showTaskExecModal = ref(false);
+                const executionsTaskTitle = ref('');
+                const showExecDetailModal = ref(false);
+                const execDetail = ref(null);
 
                 const execPage = ref(1);
                 const execPageSize = 10;
@@ -600,13 +659,10 @@
                     }
                 }
 
-                async function toggleExecutions(task) {
-                    if (expandedExecTaskId.value === task.id) {
-                        expandedExecTaskId.value = '';
-                        return;
-                    }
-                    expandedExecTaskId.value = task.id;
+                async function showTaskExecutions(task) {
+                    executionsTaskTitle.value = task.title;
                     executions.value = [];
+                    showTaskExecModal.value = true;
                     let url = '/api/tasks/executions?taskId=' + task.id;
                     if (currentKbId.value) url += '&kbId=' + currentKbId.value;
 
@@ -617,6 +673,11 @@
                     } else {
                         executions.value = [];
                     }
+                }
+
+                function showExecDetail(ex) {
+                    execDetail.value = ex;
+                    showExecDetailModal.value = true;
                 }
 
                 async function loadExecutionsPage() {
@@ -718,7 +779,8 @@
                     isDueToday, isOverdue,
                     showAddTaskModal, showEditTaskModal, saveTask,
                     executeTask, cancelQueuedTask,
-                    toggleExecutions, expandedExecTaskId, executions,
+                    showTaskExecutions, showTaskExecModal, executions, executionsTaskTitle,
+                    showExecDetail, showExecDetailModal, execDetail,
                     statusLabel, triggerLabel, formatSchedule, cycleLabel, renderMd,
                     weekDays, cycleWeekDays,
                     openDeleteModal, confirmDelete,
