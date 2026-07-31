@@ -139,21 +139,8 @@
                                 <div v-if="task.action === 'ai'" class="task-actions" @click.stop>
                                     <button v-if="!task.queuePosition && task.queueStatus !== 'RUNNING'" class="btn btn-secondary" style="padding:4px 10px;font-size:12px;color:#8b5cf6;border-color:#c4b5fd;" @click="executeTask(task)">⚡ 立即执行</button>
                                     <button v-if="task.queuePosition" class="btn btn-secondary" style="padding:4px 10px;font-size:12px;color:#f59e0b;border-color:#fcd34d;" @click="cancelQueuedTask(task)">✖ 取消排队</button>
-                                    <button class="btn btn-secondary" style="padding:4px 10px;font-size:12px;" @click="toggleExecutions(task)">📜 {{ expandedExecTaskId === task.id ? '收起' : '执行记录' }}</button>
+                                    <button class="btn btn-secondary" style="padding:4px 10px;font-size:12px;" @click="showTaskExecutions(task)">📜 执行记录</button>
                                 </div>
-                                <div v-if="expandedExecTaskId === task.id" class="task-execs" @click.stop>
-                                    <div v-if="executions.length === 0" style="text-align:center;padding:16px;color:#94a3b8;font-size:13px;">暂无执行记录</div>
-                                    <div v-for="ex in executions" :key="ex.executionId" class="exec-item">
-                                        <div class="exec-head">
-                                            <span class="exec-status" :class="'exec-status-' + ex.status">{{ statusLabel(ex.status) }}</span>
-                                            <span class="exec-meta">触发: {{ triggerLabel(ex.triggerType) }} / {{ ex.triggeredBy || '-' }}</span>
-                                            <span class="exec-meta">开始: {{ ex.startTime || '-' }}</span>
-                                            <span class="exec-meta">结束: {{ ex.endTime || '-' }}</span>
-                                        </div>
-                                        <div v-if="ex.logText" class="exec-log">{{ ex.logText }}</div>
-                                        <div v-if="ex.resultText" class="exec-result markdown-content" v-html="renderMd(ex.resultText)"></div>
-                                        <div v-if="ex.errorMessage" class="exec-error">❌ {{ ex.errorMessage }}</div>
-                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -186,21 +173,8 @@
                                 <div v-if="task.action === 'ai'" class="task-actions" @click.stop>
                                     <button v-if="!task.queuePosition && task.queueStatus !== 'RUNNING'" class="btn btn-secondary" style="padding:4px 10px;font-size:12px;color:#8b5cf6;border-color:#c4b5fd;" @click="executeTask(task)">⚡ 立即执行</button>
                                     <button v-if="task.queuePosition" class="btn btn-secondary" style="padding:4px 10px;font-size:12px;color:#f59e0b;border-color:#fcd34d;" @click="cancelQueuedTask(task)">✖ 取消排队</button>
-                                    <button class="btn btn-secondary" style="padding:4px 10px;font-size:12px;" @click="toggleExecutions(task)">📜 {{ expandedExecTaskId === task.id ? '收起' : '执行记录' }}</button>
+                                    <button class="btn btn-secondary" style="padding:4px 10px;font-size:12px;" @click="showTaskExecutions(task)">📜 执行记录</button>
                                 </div>
-                                <div v-if="expandedExecTaskId === task.id" class="task-execs" @click.stop>
-                                    <div v-if="executions.length === 0" style="text-align:center;padding:16px;color:#94a3b8;font-size:13px;">暂无执行记录</div>
-                                    <div v-for="ex in executions" :key="ex.executionId" class="exec-item">
-                                        <div class="exec-head">
-                                            <span class="exec-status" :class="'exec-status-' + ex.status">{{ statusLabel(ex.status) }}</span>
-                                            <span class="exec-meta">触发: {{ triggerLabel(ex.triggerType) }} / {{ ex.triggeredBy || '-' }}</span>
-                                            <span class="exec-meta">开始: {{ ex.startTime || '-' }}</span>
-                                            <span class="exec-meta">结束: {{ ex.endTime || '-' }}</span>
-                                        </div>
-                                        <div v-if="ex.logText" class="exec-log">{{ ex.logText }}</div>
-                                        <div v-if="ex.resultText" class="exec-result markdown-content" v-html="renderMd(ex.resultText)"></div>
-                                        <div v-if="ex.errorMessage" class="exec-error">❌ {{ ex.errorMessage }}</div>
-                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -227,21 +201,8 @@
                                     <span v-if="task.creatorName" class="task-due">👤 {{ task.creatorName }}</span>
                                 </div>
                                 <div v-if="task.action === 'ai'" class="task-actions" @click.stop>
-                                    <button class="btn btn-secondary" style="padding:4px 10px;font-size:12px;" @click="toggleExecutions(task)">📜 {{ expandedExecTaskId === task.id ? '收起' : '执行记录' }}</button>
+                                    <button class="btn btn-secondary" style="padding:4px 10px;font-size:12px;" @click="showTaskExecutions(task)">📜 执行记录</button>
                                 </div>
-                                <div v-if="expandedExecTaskId === task.id" class="task-execs" @click.stop>
-                                    <div v-if="executions.length === 0" style="text-align:center;padding:16px;color:#94a3b8;font-size:13px;">暂无执行记录</div>
-                                    <div v-for="ex in executions" :key="ex.executionId" class="exec-item">
-                                        <div class="exec-head">
-                                            <span class="exec-status" :class="'exec-status-' + ex.status">{{ statusLabel(ex.status) }}</span>
-                                            <span class="exec-meta">触发: {{ triggerLabel(ex.triggerType) }} / {{ ex.triggeredBy || '-' }}</span>
-                                            <span class="exec-meta">开始: {{ ex.startTime || '-' }}</span>
-                                            <span class="exec-meta">结束: {{ ex.endTime || '-' }}</span>
-                                        </div>
-                                        <div v-if="ex.logText" class="exec-log">{{ ex.logText }}</div>
-                                        <div v-if="ex.resultText" class="exec-result markdown-content" v-html="renderMd(ex.resultText)"></div>
-                                        <div v-if="ex.errorMessage" class="exec-error">❌ {{ ex.errorMessage }}</div>
-                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -264,18 +225,28 @@
                     <div>暂无执行记录</div>
                 </div>
                 <div v-else>
-                    <div v-for="ex in execPageItems" :key="ex.executionId" class="exec-item">
-                        <div class="exec-head">
-                            <span class="exec-status" :class="'exec-status-' + ex.status">{{ statusLabel(ex.status) }}</span>
-                            <span style="font-weight:500;font-size:13px;">{{ ex.taskTitle }}</span>
-                            <span class="exec-meta">触发: {{ triggerLabel(ex.triggerType) }} / {{ ex.triggeredBy || '-' }}</span>
-                            <span class="exec-meta">开始: {{ ex.startTime || '-' }}</span>
-                            <span class="exec-meta">结束: {{ ex.endTime || '-' }}</span>
-                        </div>
-                        <div v-if="ex.logText" class="exec-log">{{ ex.logText }}</div>
-                        <div v-if="ex.resultText" class="exec-result markdown-content" v-html="renderMd(ex.resultText)"></div>
-                        <div v-if="ex.errorMessage" class="exec-error">❌ {{ ex.errorMessage }}</div>
-                    </div>
+                    <table class="exec-table">
+                        <thead>
+                            <tr>
+                                <th style="width:96px;">状态</th>
+                                <th>任务</th>
+                                <th style="width:150px;">触发</th>
+                                <th style="width:160px;">开始时间</th>
+                                <th style="width:160px;">结束时间</th>
+                                <th style="width:80px;">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="ex in execPageItems" :key="ex.executionId">
+                                <td><span class="exec-status" :class="'exec-status-' + ex.status">{{ statusLabel(ex.status) }}</span></td>
+                                <td style="font-weight:500;">{{ ex.taskTitle }}</td>
+                                <td>{{ triggerLabel(ex.triggerType) }}<br><span style="color:var(--text-muted);font-size:12px;">{{ ex.triggeredBy || '-' }}</span></td>
+                                <td>{{ ex.startTime || '-' }}</td>
+                                <td>{{ ex.endTime || '-' }}</td>
+                                <td><button class="btn btn-secondary" style="padding:3px 10px;font-size:12px;" @click="showExecDetail(ex)">查看结果</button></td>
+                            </tr>
+                        </tbody>
+                    </table>
                     <div class="pagination">
                         <button class="btn btn-secondary" style="padding:4px 12px;font-size:12px;" :disabled="execPage <= 1" @click="changeExecPage(execPage - 1)">‹ 上一页</button>
                         <span style="font-size:13px;color:var(--text-secondary);">第 {{ execPage }} / {{ execTotalPages }} 页</span>
