@@ -739,6 +739,7 @@ public class TaskService {
             log.error("[任务] 分页查询执行记录失败", e);
         }
         Map<String, Object> result = new LinkedHashMap<>();
+        result.put("ok", true);
         result.put("total", total);
         result.put("page", page);
         result.put("pageSize", pageSize);

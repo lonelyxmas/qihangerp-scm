@@ -6,6 +6,7 @@
     <link rel="stylesheet" href="/css/app.css">
     <title>启航 AI 协作平台 - 任务中心</title>
     <script src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <style>
         .card { background: white; border-radius: var(--radius-md); border: 1px solid var(--border); box-shadow: var(--shadow-sm); padding: 24px; margin-bottom: 24px; }
         .card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
@@ -45,6 +46,18 @@
         .badge-cycle { background: rgba(168,85,247,0.12); color: #a855f7; }
         .badge-running { background: rgba(139,92,246,0.15); color: #8b5cf6; }
         .task-actions { margin-top: 10px; display: flex; gap: 6px; flex-wrap: wrap; }
+        .task-execs { margin-top: 10px; }
+        .markdown-content { white-space: pre-wrap; word-break: break-word; }
+        .markdown-content p { margin-bottom: 8px; }
+        .markdown-content ul, .markdown-content ol { padding-left: 20px; margin-bottom: 8px; }
+        .markdown-content li { margin-bottom: 4px; }
+        .markdown-content code { background: rgba(0,0,0,0.04); padding: 2px 6px; border-radius: 4px; font-family: monospace; font-size: 13px; }
+        .markdown-content pre { background: #1e293b; color: #e2e8f0; padding: 12px; border-radius: 8px; overflow-x: auto; margin-bottom: 8px; font-family: monospace; font-size: 13px; }
+        .markdown-content pre code { background: transparent; padding: 0; }
+        .markdown-content blockquote { border-left: 3px solid #6366f1; padding-left: 10px; color: #64748b; margin-bottom: 8px; }
+        .markdown-content strong { font-weight: 600; }
+        .markdown-content a { color: #6366f1; text-decoration: none; }
+        .markdown-content a:hover { text-decoration: underline; }
 
         .exec-item { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px 14px; margin-bottom: 10px; background: #fafafa; }
         .exec-head { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; flex-wrap: wrap; }
@@ -58,6 +71,8 @@
         .exec-log { font-size: 12px; line-height: 1.7; background: #0f172a; color: #e2e8f0; border-radius: var(--radius-sm); padding: 10px 12px; margin-top: 8px; white-space: pre-wrap; word-break: break-all; max-height: 260px; overflow-y: auto; }
         .exec-result { font-size: 12px; line-height: 1.7; background: #ecfdf5; border: 1px solid #a7f3d0; color: #065f46; border-radius: var(--radius-sm); padding: 10px 12px; margin-top: 8px; white-space: pre-wrap; word-break: break-all; max-height: 260px; overflow-y: auto; }
         .exec-error { font-size: 12px; line-height: 1.7; background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c; border-radius: var(--radius-sm); padding: 10px 12px; margin-top: 8px; white-space: pre-wrap; word-break: break-all; max-height: 200px; overflow-y: auto; }
+        .pagination { display: flex; align-items: center; justify-content: center; gap: 12px; margin-top: 16px; }
+        .pagination .btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
         .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 1000; }
         .modal-overlay.show { display: flex; }
@@ -124,7 +139,21 @@
                                 <div v-if="task.action === 'ai'" class="task-actions" @click.stop>
                                     <button v-if="!task.queuePosition && task.queueStatus !== 'RUNNING'" class="btn btn-secondary" style="padding:4px 10px;font-size:12px;color:#8b5cf6;border-color:#c4b5fd;" @click="executeTask(task)">⚡ 立即执行</button>
                                     <button v-if="task.queuePosition" class="btn btn-secondary" style="padding:4px 10px;font-size:12px;color:#f59e0b;border-color:#fcd34d;" @click="cancelQueuedTask(task)">✖ 取消排队</button>
-                                    <button class="btn btn-secondary" style="padding:4px 10px;font-size:12px;" @click="showExecutionsModal(task)">📜 执行记录</button>
+                                    <button class="btn btn-secondary" style="padding:4px 10px;font-size:12px;" @click="toggleExecutions(task)">📜 {{ expandedExecTaskId === task.id ? '收起' : '执行记录' }}</button>
+                                </div>
+                                <div v-if="expandedExecTaskId === task.id" class="task-execs" @click.stop>
+                                    <div v-if="executions.length === 0" style="text-align:center;padding:16px;color:#94a3b8;font-size:13px;">暂无执行记录</div>
+                                    <div v-for="ex in executions" :key="ex.executionId" class="exec-item">
+                                        <div class="exec-head">
+                                            <span class="exec-status" :class="'exec-status-' + ex.status">{{ statusLabel(ex.status) }}</span>
+                                            <span class="exec-meta">触发: {{ triggerLabel(ex.triggerType) }} / {{ ex.triggeredBy || '-' }}</span>
+                                            <span class="exec-meta">开始: {{ ex.startTime || '-' }}</span>
+                                            <span class="exec-meta">结束: {{ ex.endTime || '-' }}</span>
+                                        </div>
+                                        <div v-if="ex.logText" class="exec-log">{{ ex.logText }}</div>
+                                        <div v-if="ex.resultText" class="exec-result markdown-content" v-html="renderMd(ex.resultText)"></div>
+                                        <div v-if="ex.errorMessage" class="exec-error">❌ {{ ex.errorMessage }}</div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -157,7 +186,21 @@
                                 <div v-if="task.action === 'ai'" class="task-actions" @click.stop>
                                     <button v-if="!task.queuePosition && task.queueStatus !== 'RUNNING'" class="btn btn-secondary" style="padding:4px 10px;font-size:12px;color:#8b5cf6;border-color:#c4b5fd;" @click="executeTask(task)">⚡ 立即执行</button>
                                     <button v-if="task.queuePosition" class="btn btn-secondary" style="padding:4px 10px;font-size:12px;color:#f59e0b;border-color:#fcd34d;" @click="cancelQueuedTask(task)">✖ 取消排队</button>
-                                    <button class="btn btn-secondary" style="padding:4px 10px;font-size:12px;" @click="showExecutionsModal(task)">📜 执行记录</button>
+                                    <button class="btn btn-secondary" style="padding:4px 10px;font-size:12px;" @click="toggleExecutions(task)">📜 {{ expandedExecTaskId === task.id ? '收起' : '执行记录' }}</button>
+                                </div>
+                                <div v-if="expandedExecTaskId === task.id" class="task-execs" @click.stop>
+                                    <div v-if="executions.length === 0" style="text-align:center;padding:16px;color:#94a3b8;font-size:13px;">暂无执行记录</div>
+                                    <div v-for="ex in executions" :key="ex.executionId" class="exec-item">
+                                        <div class="exec-head">
+                                            <span class="exec-status" :class="'exec-status-' + ex.status">{{ statusLabel(ex.status) }}</span>
+                                            <span class="exec-meta">触发: {{ triggerLabel(ex.triggerType) }} / {{ ex.triggeredBy || '-' }}</span>
+                                            <span class="exec-meta">开始: {{ ex.startTime || '-' }}</span>
+                                            <span class="exec-meta">结束: {{ ex.endTime || '-' }}</span>
+                                        </div>
+                                        <div v-if="ex.logText" class="exec-log">{{ ex.logText }}</div>
+                                        <div v-if="ex.resultText" class="exec-result markdown-content" v-html="renderMd(ex.resultText)"></div>
+                                        <div v-if="ex.errorMessage" class="exec-error">❌ {{ ex.errorMessage }}</div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -184,7 +227,21 @@
                                     <span v-if="task.creatorName" class="task-due">👤 {{ task.creatorName }}</span>
                                 </div>
                                 <div v-if="task.action === 'ai'" class="task-actions" @click.stop>
-                                    <button class="btn btn-secondary" style="padding:4px 10px;font-size:12px;" @click="showExecutionsModal(task)">📜 执行记录</button>
+                                    <button class="btn btn-secondary" style="padding:4px 10px;font-size:12px;" @click="toggleExecutions(task)">📜 {{ expandedExecTaskId === task.id ? '收起' : '执行记录' }}</button>
+                                </div>
+                                <div v-if="expandedExecTaskId === task.id" class="task-execs" @click.stop>
+                                    <div v-if="executions.length === 0" style="text-align:center;padding:16px;color:#94a3b8;font-size:13px;">暂无执行记录</div>
+                                    <div v-for="ex in executions" :key="ex.executionId" class="exec-item">
+                                        <div class="exec-head">
+                                            <span class="exec-status" :class="'exec-status-' + ex.status">{{ statusLabel(ex.status) }}</span>
+                                            <span class="exec-meta">触发: {{ triggerLabel(ex.triggerType) }} / {{ ex.triggeredBy || '-' }}</span>
+                                            <span class="exec-meta">开始: {{ ex.startTime || '-' }}</span>
+                                            <span class="exec-meta">结束: {{ ex.endTime || '-' }}</span>
+                                        </div>
+                                        <div v-if="ex.logText" class="exec-log">{{ ex.logText }}</div>
+                                        <div v-if="ex.resultText" class="exec-result markdown-content" v-html="renderMd(ex.resultText)"></div>
+                                        <div v-if="ex.errorMessage" class="exec-error">❌ {{ ex.errorMessage }}</div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -194,6 +251,36 @@
                     💡 <b>AI 任务</b>：任务到期时 AI 会自动执行你填写的指令（查数据、生成报告），结果推送到飞书；多个任务同时触发时会进入<b>执行队列</b>依次处理，可在卡片上查看排队位置与<b>执行记录</b>。
                     可设置「一次性」定时启动，或「循环执行」（每天/每周/每月/Cron）让任务按周期自动运行，循环任务执行完成后自动回到待办等待下一周期。
                     普通任务到期/逾期会自动推送提醒，完成后自动沉淀到「任务完成记录」数据集，供日报引用。
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">📜 任务执行记录</h2>
+                    <span style="font-size:13px;color:var(--text-muted);">共 {{ execTotal }} 条</span>
+                </div>
+                <div v-if="execPageItems.length === 0" class="empty-state" style="padding:30px 10px;">
+                    <div class="empty-icon">📭</div>
+                    <div>暂无执行记录</div>
+                </div>
+                <div v-else>
+                    <div v-for="ex in execPageItems" :key="ex.executionId" class="exec-item">
+                        <div class="exec-head">
+                            <span class="exec-status" :class="'exec-status-' + ex.status">{{ statusLabel(ex.status) }}</span>
+                            <span style="font-weight:500;font-size:13px;">{{ ex.taskTitle }}</span>
+                            <span class="exec-meta">触发: {{ triggerLabel(ex.triggerType) }} / {{ ex.triggeredBy || '-' }}</span>
+                            <span class="exec-meta">开始: {{ ex.startTime || '-' }}</span>
+                            <span class="exec-meta">结束: {{ ex.endTime || '-' }}</span>
+                        </div>
+                        <div v-if="ex.logText" class="exec-log">{{ ex.logText }}</div>
+                        <div v-if="ex.resultText" class="exec-result markdown-content" v-html="renderMd(ex.resultText)"></div>
+                        <div v-if="ex.errorMessage" class="exec-error">❌ {{ ex.errorMessage }}</div>
+                    </div>
+                    <div class="pagination">
+                        <button class="btn btn-secondary" style="padding:4px 12px;font-size:12px;" :disabled="execPage <= 1" @click="changeExecPage(execPage - 1)">‹ 上一页</button>
+                        <span style="font-size:13px;color:var(--text-secondary);">第 {{ execPage }} / {{ execTotalPages }} 页</span>
+                        <button class="btn btn-secondary" style="padding:4px 12px;font-size:12px;" :disabled="execPage >= execTotalPages" @click="changeExecPage(execPage + 1)">下一页 ›</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -307,32 +394,6 @@
         </div>
     </div>
 
-    <div class="modal-overlay" :class="{ show: showExecutionsModalVisible }" @click.self="showExecutionsModalVisible = false">
-        <div class="modal" style="width:680px; max-height:85vh; overflow-y:auto;">
-            <h3>📜 执行记录 - {{ executionsTaskTitle }}</h3>
-            <div v-if="executions.length === 0" class="empty-state" style="padding:30px 10px;">
-                <div class="empty-icon">📭</div>
-                <div>暂无执行记录</div>
-            </div>
-            <div v-for="ex in executions" :key="ex.executionId" class="exec-item">
-                <div class="exec-head">
-                    <span class="exec-status" :class="'exec-status-' + ex.status">
-                        {{ statusLabel(ex.status) }}
-                    </span>
-                    <span class="exec-meta">触发方式: {{ triggerLabel(ex.triggerType) }}</span>
-                    <span class="exec-meta">触发人: {{ ex.triggeredBy || '-' }}</span>
-                    <span class="exec-meta">开始: {{ ex.startTime || '-' }}</span>
-                    <span class="exec-meta">结束: {{ ex.endTime || '-' }}</span>
-                </div>
-                <div v-if="ex.logText" class="exec-log">{{ ex.logText }}</div>
-                <div v-if="ex.resultText" class="exec-result">📊 {{ ex.resultText }}</div>
-                <div v-if="ex.errorMessage" class="exec-error">❌ {{ ex.errorMessage }}</div>
-            </div>
-            <div class="modal-actions">
-                <button class="btn btn-secondary" @click="showExecutionsModalVisible = false">关闭</button>
-            </div>
-        </div>
-    </div>
     </main>
 
     <script>
@@ -407,9 +468,14 @@
                 const showDeleteModal = ref(false);
                 const deleteId = ref('');
 
-                const showExecutionsModalVisible = ref(false);
                 const executions = ref([]);
-                const executionsTaskTitle = ref('');
+                const expandedExecTaskId = ref('');
+
+                const execPage = ref(1);
+                const execPageSize = 10;
+                const execPageItems = ref([]);
+                const execTotal = ref(0);
+                const execTotalPages = computed(() => Math.max(1, Math.ceil(execTotal.value / execPageSize)));
 
                 const pendingTasks = computed(() => (tasks.value || []).filter(t => t.status === 'pending'));
                 const progressTasks = computed(() => (tasks.value || []).filter(t => t.status === 'in_progress'));
@@ -563,9 +629,13 @@
                     }
                 }
 
-                async function showExecutionsModal(task) {
-                    executionsTaskTitle.value = task.title;
-                    showExecutionsModalVisible.value = true;
+                async function toggleExecutions(task) {
+                    if (expandedExecTaskId.value === task.id) {
+                        expandedExecTaskId.value = '';
+                        return;
+                    }
+                    expandedExecTaskId.value = task.id;
+                    executions.value = [];
                     let url = '/api/tasks/executions?taskId=' + task.id;
                     if (currentKbId.value) url += '&kbId=' + currentKbId.value;
 
@@ -575,6 +645,41 @@
                         executions.value = r.executions;
                     } else {
                         executions.value = [];
+                    }
+                }
+
+                async function loadExecutionsPage() {
+                    let url = '/api/tasks/executions?page=' + execPage.value + '&pageSize=' + execPageSize;
+                    if (currentKbId.value) url += '&kbId=' + currentKbId.value;
+
+                    const r = await checkAuthBeforeFetch(url);
+                    if (isAuthError(r)) { handleUnauthenticated(); return; }
+                    if (r.ok) {
+                        execPageItems.value = Array.isArray(r.executions) ? r.executions : [];
+                        execTotal.value = r.total || 0;
+                        if (execPage.value > execTotalPages.value && execTotalPages.value >= 1) {
+                            execPage.value = execTotalPages.value;
+                            return loadExecutionsPage();
+                        }
+                    } else {
+                        execPageItems.value = [];
+                        execTotal.value = 0;
+                    }
+                }
+
+                function changeExecPage(p) {
+                    if (p < 1 || p > execTotalPages.value) return;
+                    execPage.value = p;
+                    loadExecutionsPage();
+                }
+
+                function renderMd(text) {
+                    if (!text) return '';
+                    try {
+                        if (window.marked) return marked.parse(text);
+                        return String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/\n/g, '<br>');
+                    } catch (e) {
+                        return String(text);
                     }
                 }
 
@@ -624,8 +729,12 @@
 
                 onMounted(() => {
                     loadTasks();
+                    loadExecutionsPage();
                     const timer = setInterval(() => {
-                        if (!document.hidden) loadTasks();
+                        if (!document.hidden) {
+                            loadTasks();
+                            loadExecutionsPage();
+                        }
                     }, 15000);
                     window.addEventListener('beforeunload', () => clearInterval(timer));
                 });
@@ -638,11 +747,12 @@
                     isDueToday, isOverdue,
                     showAddTaskModal, showEditTaskModal, saveTask,
                     executeTask, cancelQueuedTask,
-                    showExecutionsModal, showExecutionsModalVisible, executions, executionsTaskTitle,
-                    statusLabel, triggerLabel, formatSchedule, cycleLabel,
+                    toggleExecutions, expandedExecTaskId, executions,
+                    statusLabel, triggerLabel, formatSchedule, cycleLabel, renderMd,
                     weekDays, cycleWeekDays,
                     openDeleteModal, confirmDelete,
-                    formatDate
+                    formatDate,
+                    execPage, execPageItems, execTotal, execTotalPages, changeExecPage
                 };
             }
         }).mount('#app');

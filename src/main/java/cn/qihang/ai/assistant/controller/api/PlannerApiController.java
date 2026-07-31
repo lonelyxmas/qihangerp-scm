@@ -243,11 +243,13 @@ public class PlannerApiController {
 
     @GetMapping("/api/tasks/executions")
     @ResponseBody
-    public Map<String, Object> getExecutions(@RequestParam(required = false) Long taskId) {
-        List<TaskExecution> executions = (taskId != null)
-                ? taskService.getTaskExecutions(taskId)
-                : taskService.getAllExecutions();
-        return Map.of("ok", true, "executions", executions);
+    public Map<String, Object> getExecutions(@RequestParam(required = false) Long taskId,
+                                             @RequestParam(required = false, defaultValue = "1") int page,
+                                             @RequestParam(required = false, defaultValue = "10") int pageSize) {
+        if (taskId != null) {
+            return Map.of("ok", true, "executions", taskService.getTaskExecutions(taskId));
+        }
+        return taskService.getExecutionsPage(page, pageSize, getCurrentUserId(), isCurrentUserAdmin());
     }
 
     @GetMapping("/api/reminders")
