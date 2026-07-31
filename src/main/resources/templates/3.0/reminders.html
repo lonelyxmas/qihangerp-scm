@@ -75,7 +75,7 @@
     <main class="main-content">
         <div class="content-header">
             <h1 class="content-title">提醒中心</h1>
-            <div style="display:flex;gap:8px;align-items:center;">
+            <div id="headerActions" style="display:flex;gap:8px;align-items:center;">
                 <a href="/tasks" class="btn btn-secondary" style="text-decoration:none;">📋 任务中心</a>
             </div>
         </div>
@@ -175,10 +175,16 @@
             return d.__401 || (d.code === 500 && d.msg === '认证失败');
         }
 
+        function updateHeaderActions() {
+            var el = document.getElementById('headerActions');
+            if (el) el.style.display = localStorage.getItem('Admin-Token') ? '' : 'none';
+        }
+
         function handleUnauthenticated() {
             localStorage.removeItem('Admin-Token');
             document.cookie = 'Admin-Token=; path=/; max-age=0; SameSite=Lax';
-            document.getElementById('app').innerHTML = '<div class="empty-state"><div class="empty-icon">🔐</div><div class="empty-title">需要登录</div><div class="empty-desc">登录后即可使用任务管理功能</div></div>';
+            updateHeaderActions();
+            document.getElementById('app').innerHTML = '<div class="empty-state"><div class="empty-icon">🔐</div><div class="empty-title">需要登录</div><div class="empty-desc">登录后即可使用提醒功能</div></div>';
             showLoginModal(function() { window.location.href = window.location.href; });
         }
 
@@ -191,12 +197,14 @@
         }
 
         document.addEventListener('DOMContentLoaded', function() {
+            updateHeaderActions();
             var token = localStorage.getItem('Admin-Token');
             if (!token) { handleUnauthenticated(); return; }
         });
 
         document.addEventListener('auth-change', function() {
-            if (!localStorage.getItem('Admin-Token')) handleUnauthenticated();
+            if (!localStorage.getItem('Admin-Token')) { updateHeaderActions(); handleUnauthenticated(); }
+            else { updateHeaderActions(); }
         });
 
         createApp({
@@ -224,7 +232,7 @@
                 const deleteId = ref('');
                 const deleteType = ref('');
 
-                const enabledReminderCount = computed(() => reminders.value.filter(r => r.enabled).length);
+                const enabledReminderCount = computed(() => (reminders.value || []).filter(r => r.enabled).length);
 
                 async function loadReminders() {
                     let url = '/api/reminders';
@@ -232,7 +240,12 @@
                     
                     const r = await checkAuthBeforeFetch(url);
                     if (isAuthError(r)) { handleUnauthenticated(); return; }
-                    reminders.value = r;
+                    if (Array.isArray(r)) {
+                        reminders.value = r;
+                    } else {
+                        console.warn('提醒接口返回异常数据:', r);
+                        reminders.value = [];
+                    }
                 }
 
                 function showAddReminderModal() {

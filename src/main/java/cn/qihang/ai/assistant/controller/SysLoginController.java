@@ -44,13 +44,17 @@ public class SysLoginController extends BaseController {
 
     @GetMapping("/api/sys-api/getInfo")
     public AjaxResult getInfo() {
-        SysUser user = SecurityUtils.getLoginUser().getUser();
-        Set<String> roles = permissionService.getRolePermission(user);
-        Set<String> permissions = permissionService.getMenuPermission(user);
-        AjaxResult ajax = AjaxResult.success();
-        ajax.put("user", user);
-        ajax.put("roles", roles);
-        ajax.put("permissions", permissions);
-        return ajax;
+        try {
+            SysUser user = SecurityUtils.getLoginUser().getUser();
+            Set<String> roles = permissionService.getRolePermission(user);
+            Set<String> permissions = permissionService.getMenuPermission(user);
+            AjaxResult ajax = AjaxResult.success();
+            ajax.put("user", user);
+            ajax.put("roles", roles);
+            ajax.put("permissions", permissions);
+            return ajax;
+        } catch (Exception e) {
+            return AjaxResult.error(401, "未登录或登录已过期，请先登录");
+        }
     }
 }

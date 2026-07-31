@@ -67,7 +67,7 @@
     <main class="main-content">
         <div class="content-header">
             <h1 class="content-title">任务中心</h1>
-            <div style="display:flex;gap:8px;align-items:center;">
+            <div id="headerActions" style="display:flex;gap:8px;align-items:center;">
                 <a href="/reminders" class="btn btn-secondary" style="text-decoration:none;">⏰ 提醒中心</a>
             </div>
         </div>
@@ -238,9 +238,15 @@
             return d.__401 || (d.code === 500 && d.msg === '认证失败');
         }
 
+        function updateHeaderActions() {
+            var el = document.getElementById('headerActions');
+            if (el) el.style.display = localStorage.getItem('Admin-Token') ? '' : 'none';
+        }
+
         function handleUnauthenticated() {
             localStorage.removeItem('Admin-Token');
             document.cookie = 'Admin-Token=; path=/; max-age=0; SameSite=Lax';
+            updateHeaderActions();
             document.getElementById('app').innerHTML = '<div class="empty-state"><div class="empty-icon">🔐</div><div class="empty-title">需要登录</div><div class="empty-desc">登录后即可使用任务中心</div></div>';
             showLoginModal(function() { window.location.href = window.location.href; });
         }
@@ -254,12 +260,14 @@
         }
 
         document.addEventListener('DOMContentLoaded', function() {
+            updateHeaderActions();
             var token = localStorage.getItem('Admin-Token');
             if (!token) { handleUnauthenticated(); return; }
         });
 
         document.addEventListener('auth-change', function() {
-            if (!localStorage.getItem('Admin-Token')) handleUnauthenticated();
+            if (!localStorage.getItem('Admin-Token')) { updateHeaderActions(); handleUnauthenticated(); }
+            else { updateHeaderActions(); }
         });
 
         createApp({
@@ -277,9 +285,9 @@
                 const showDeleteModal = ref(false);
                 const deleteId = ref('');
 
-                const pendingTasks = computed(() => tasks.value.filter(t => t.status === 'pending'));
-                const progressTasks = computed(() => tasks.value.filter(t => t.status === 'in_progress'));
-                const doneTasks = computed(() => tasks.value.filter(t => t.status === 'done'));
+                const pendingTasks = computed(() => (tasks.value || []).filter(t => t.status === 'pending'));
+                const progressTasks = computed(() => (tasks.value || []).filter(t => t.status === 'in_progress'));
+                const doneTasks = computed(() => (tasks.value || []).filter(t => t.status === 'done'));
 
                 function todayStr() {
                     const d = new Date();
@@ -302,8 +310,11 @@
 
                     const r = await checkAuthBeforeFetch(url);
                     if (isAuthError(r)) { handleUnauthenticated(); return; }
-                    if (r.ok && r.tasks) {
+                    if (r.ok && Array.isArray(r.tasks)) {
                         tasks.value = r.tasks;
+                    } else {
+                        console.warn('任务接口返回异常数据:', r);
+                        tasks.value = [];
                     }
                 }
 

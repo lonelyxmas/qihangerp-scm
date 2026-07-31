@@ -142,7 +142,9 @@
                 return;
             }
             fetch('/api/sys-api/getInfo', { credentials: 'same-origin' }).then(function(r) {
-                if (r.status === 401 || r.status === 403) {
+                return r.json().catch(function() { return {}; });
+            }).then(function(data) {
+                if (!data || data.code !== 200) {
                     handleUnauthenticated();
                 }
             }).catch(function() {});
