@@ -18,8 +18,8 @@ export const router = createRouter({
             redirect: '/home',
             children: [
                 { path: 'home', name: 'home', component: HomeView, meta: { title: '首页' } },
-                { path: 'datacenter', name: 'datacenter', component: DataCenterView, meta: { title: '数据中心' } },
-                { path: 'data', name: 'data', component: DataRecordsView, meta: { title: '数据管理' } },
+                { path: 'datacenter', name: 'datacenter', component: DataCenterView, meta: { title: '数据模块管理' } },
+                { path: 'data', name: 'data', component: DataRecordsView, meta: { title: '数据中心' } },
                 { path: 'tasks', name: 'tasks', component: TasksView, meta: { title: '任务中心' } },
                 { path: 'chat', component: PlaceholderView, meta: { title: 'AI 对话', legacy: '/chat' } },
                 { path: 'kb', component: PlaceholderView, meta: { title: '知识库', legacy: '/notes' } },
