@@ -1,5 +1,6 @@
 import { createRouter, createWebHashHistory } from 'vue-router';
 import { getToken } from '../api/client';
+import { useAuthStore } from '../stores/auth';
 import MainLayout from '../layouts/MainLayout.vue';
 import LoginView from '../views/LoginView.vue';
 import HomeView from '../views/HomeView.vue';
@@ -39,12 +40,19 @@ export const router = createRouter({
     ],
 });
 
-router.beforeEach((to) => {
+router.beforeEach(async (to) => {
     if (to.name !== 'login' && !getToken()) {
         return { name: 'login' };
     }
     if (to.name === 'login' && getToken()) {
         return { name: 'home' };
+    }
+    if (to.name === 'config') {
+        const auth = useAuthStore();
+        await auth.ensureUserInfo();
+        if (!auth.isAdmin) {
+            return { name: 'home' };
+        }
     }
     return true;
 });

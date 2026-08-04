@@ -8,7 +8,7 @@
                 <span>启航AI</span>
             </div>
             <nav class="app-nav">
-                <div class="app-nav-group" v-for="g in navGroups" :key="g.label">
+                <div class="app-nav-group" v-for="g in visibleNavGroups" :key="g.label">
                     <div class="app-nav-label">{{ g.label }}</div>
                     <router-link
                         v-for="item in g.items"
@@ -41,7 +41,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useAuthStore } from '../stores/auth';
 
@@ -49,9 +49,25 @@ const route = useRoute();
 const router = useRouter();
 const auth = useAuthStore();
 
+onMounted(() => {
+    auth.ensureUserInfo().catch(() => router.push('/login'));
+});
+
 const legacyBase = 'http://localhost:6790';
 
-const navGroups = [
+interface NavItem {
+    path: string;
+    label: string;
+    icon: string;
+    adminOnly?: boolean;
+}
+
+interface NavGroup {
+    label: string;
+    items: NavItem[];
+}
+
+const navGroups: NavGroup[] = [
     {
         label: 'AI 工作台',
         items: [
@@ -79,10 +95,16 @@ const navGroups = [
     {
         label: '系统',
         items: [
-            { path: '/config', label: '系统配置', icon: '⚙️' },
+            { path: '/config', label: '系统配置', icon: '⚙️', adminOnly: true },
         ],
     },
 ];
+
+const visibleNavGroups = computed(() =>
+    navGroups
+        .map((g) => ({ ...g, items: g.items.filter((item) => !item.adminOnly || auth.isAdmin) }))
+        .filter((g) => g.items.length > 0)
+);
 
 const pageTitle = computed(() => String(route.meta.title ?? '启航 AI'));
 const userName = computed(() => auth.displayName());

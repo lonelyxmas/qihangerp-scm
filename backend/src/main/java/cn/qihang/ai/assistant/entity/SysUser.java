@@ -1,6 +1,7 @@
 package cn.qihang.ai.assistant.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import java.io.Serializable;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -69,7 +70,7 @@ public class SysUser implements Serializable {
     public void setSex(String sex) { this.sex = sex; }
     public String getAvatar() { return avatar; }
     public void setAvatar(String avatar) { this.avatar = avatar; }
-    @JsonIgnore
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     public String getPassword() { return password; }
     public void setPassword(String password) { this.password = password; }
     public String getStatus() { return status; }

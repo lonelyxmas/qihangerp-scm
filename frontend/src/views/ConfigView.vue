@@ -7,6 +7,7 @@
             <div class="config-nav-list">
                 <div class="config-nav-item" :class="{ active: activeTab === 'ai' }" @click="activeTab = 'ai'">🧠 AI 模型</div>
                 <div class="config-nav-item" :class="{ active: activeTab === 'feishu' }" @click="activeTab = 'feishu'">🔗 飞书集成</div>
+                <div class="config-nav-item" :class="{ active: activeTab === 'users' }" @click="switchTabUsers">👥 用户管理</div>
                 <div class="config-nav-item" :class="{ active: activeTab === 'system' }" @click="activeTab = 'system'">ℹ️ 系统信息</div>
                 <div class="config-nav-item" :class="{ active: activeTab === 'scheduler' }" @click="activeTab = 'scheduler'">⚙️ 定时任务</div>
                 <div class="config-nav-item" :class="{ active: activeTab === 'kb' }" @click="switchTabKb">📚 知识库</div>
@@ -199,6 +200,42 @@
                 </div>
             </div>
 
+            <div v-show="activeTab === 'users'">
+                <div class="card">
+                    <div class="card-title">👥 用户管理</div>
+                    <div class="card-desc">管理系统用户。系统配置仅管理员可访问，普通用户登录后无此菜单。</div>
+                    <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+                        <el-button type="primary" size="small" @click="openCreateUser">+ 新建用户</el-button>
+                    </div>
+                    <el-table v-loading="usersLoading" :data="userList" size="small" border>
+                        <el-table-column label="ID" prop="userId" width="60" />
+                        <el-table-column label="用户名" prop="userName" min-width="100" />
+                        <el-table-column label="昵称" prop="nickName" min-width="100" />
+                        <el-table-column label="手机号" prop="phonenumber" min-width="120" />
+                        <el-table-column label="邮箱" prop="email" min-width="170" />
+                        <el-table-column label="状态" width="90">
+                            <template #default="{ row }">
+                                <el-switch
+                                    :model-value="row.status === '0'"
+                                    :loading="changingStatusId === row.userId"
+                                    @change="(v: boolean) => toggleStatus(row, v)"
+                                />
+                            </template>
+                        </el-table-column>
+                        <el-table-column label="创建时间" min-width="150">
+                            <template #default="{ row }">{{ fmtTime(row.createTime) }}</template>
+                        </el-table-column>
+                        <el-table-column label="操作" width="210">
+                            <template #default="{ row }">
+                                <el-button size="small" text @click="openEditUser(row)">编辑</el-button>
+                                <el-button size="small" text type="primary" @click="openResetPwd(row)">重置密码</el-button>
+                                <el-button size="small" text type="danger" :disabled="row.userId === currentUserId" @click="deleteUser(row)">删除</el-button>
+                            </template>
+                        </el-table-column>
+                    </el-table>
+                </div>
+            </div>
+
             <div v-show="activeTab === 'system'">
                 <div class="card">
                     <div class="card-title">ℹ️ 系统信息</div>
@@ -279,6 +316,70 @@
             </div>
         </main>
 
+        <!-- 用户弹窗 -->
+        <el-dialog v-model="userModalOpen" :title="userEditingId !== null ? '编辑用户' : '新建用户'" width="520px" append-to-body>
+            <div class="form-row">
+                <div class="form-group" style="flex: 1;">
+                    <label class="form-label">用户名 *</label>
+                    <el-input v-model="userForm.userName" :disabled="userEditingId !== null" placeholder="登录账号" />
+                </div>
+                <div class="form-group" style="flex: 1;">
+                    <label class="form-label">昵称</label>
+                    <el-input v-model="userForm.nickName" />
+                </div>
+            </div>
+            <div v-if="userEditingId === null" class="form-group">
+                <label class="form-label">密码 *</label>
+                <el-input v-model="userForm.password" type="password" show-password placeholder="初始密码" />
+            </div>
+            <div class="form-row">
+                <div class="form-group" style="flex: 1;">
+                    <label class="form-label">手机号</label>
+                    <el-input v-model="userForm.phonenumber" />
+                </div>
+                <div class="form-group" style="flex: 1;">
+                    <label class="form-label">邮箱</label>
+                    <el-input v-model="userForm.email" />
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group" style="flex: 1;">
+                    <label class="form-label">性别</label>
+                    <el-select v-model="userForm.sex" style="width: 100%;">
+                        <el-option label="男" value="0" />
+                        <el-option label="女" value="1" />
+                        <el-option label="未知" value="2" />
+                    </el-select>
+                </div>
+                <div class="form-group" style="flex: 1;">
+                    <label class="form-label">角色</label>
+                    <el-select v-model="userForm.roleIds" multiple style="width: 100%;">
+                        <el-option v-for="r in roleOptions" :key="r.roleId" :label="r.roleName" :value="r.roleId" />
+                    </el-select>
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">备注</label>
+                <el-input v-model="userForm.remark" type="textarea" :rows="2" />
+            </div>
+            <template #footer>
+                <el-button @click="userModalOpen = false">取消</el-button>
+                <el-button type="primary" @click="saveUser">保存</el-button>
+            </template>
+        </el-dialog>
+
+        <!-- 重置密码弹窗 -->
+        <el-dialog v-model="resetPwdModalOpen" title="重置密码" width="380px" append-to-body>
+            <div class="form-group">
+                <label class="form-label">用户：{{ resetPwdForm.userName }}</label>
+                <el-input v-model="resetPwdForm.password" type="password" show-password placeholder="新密码" />
+            </div>
+            <template #footer>
+                <el-button @click="resetPwdModalOpen = false">取消</el-button>
+                <el-button type="primary" @click="saveResetPwd">保存</el-button>
+            </template>
+        </el-dialog>
+
         <!-- KB 弹窗 -->
         <el-dialog v-model="kbModalOpen" :title="editingKbId !== null ? '编辑知识库' : '新建知识库'" width="420px" append-to-body>
             <div class="form-group">
@@ -311,10 +412,14 @@
 </template>
 
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { apiFetch, apiError } from '../api/client';
+import { useAuthStore } from '../stores/auth';
 import DataCenter from './DataCenter.vue';
+
+const authStore = useAuthStore();
+const currentUserId = computed(() => authStore.user?.userId ?? 0);
 
 const activeTab = ref('ai');
 
@@ -709,6 +814,212 @@ async function reindexKb(kbId: number): Promise<void> {
         ElMessage.error('❌ ' + apiError(d, '重索引失败'));
         loadKbIndexStatus(kbId);
     }
+}
+
+// ========== 用户管理 ==========
+interface SysUserRow {
+    userId: number;
+    userName: string;
+    nickName?: string;
+    phonenumber?: string;
+    email?: string;
+    sex?: string;
+    status?: string;
+    remark?: string;
+    createTime?: string;
+    roleIds?: number[];
+}
+
+interface SysRole {
+    roleId: number;
+    roleName: string;
+    roleKey: string;
+    admin?: boolean;
+}
+
+const usersLoading = ref(false);
+const userList = ref<SysUserRow[]>([]);
+const roleOptions = ref<SysRole[]>([]);
+const userModalOpen = ref(false);
+const userEditingId = ref<number | null>(null);
+const userForm = ref({ userName: '', nickName: '', password: '', phonenumber: '', email: '', sex: '0', remark: '', roleIds: [] as number[] });
+const resetPwdModalOpen = ref(false);
+const resetPwdForm = ref({ userId: 0, userName: '', password: '' });
+const changingStatusId = ref<number | null>(null);
+
+function switchTabUsers(): void {
+    activeTab.value = 'users';
+    loadUsers();
+    loadRoles();
+}
+
+async function loadUsers(): Promise<void> {
+    usersLoading.value = true;
+    try {
+        const d = await apiFetch('/api/sys-api/system/user/list');
+        if (d.code === 200) userList.value = (d.rows as SysUserRow[]) || [];
+    } catch {
+        ElMessage.error('❌ 加载用户失败');
+    } finally {
+        usersLoading.value = false;
+    }
+}
+
+async function loadRoles(): Promise<void> {
+    try {
+        const d = await apiFetch('/api/sys-api/system/user/');
+        if (d.code === 200) roleOptions.value = (d.roles as SysRole[]) || [];
+    } catch {
+        /* ignore */
+    }
+}
+
+function openCreateUser(): void {
+    userEditingId.value = null;
+    userForm.value = { userName: '', nickName: '', password: '', phonenumber: '', email: '', sex: '0', remark: '', roleIds: [] };
+    userModalOpen.value = true;
+}
+
+async function openEditUser(row: SysUserRow): Promise<void> {
+    userEditingId.value = row.userId;
+    let u = row;
+    try {
+        const d = await apiFetch('/api/sys-api/system/user/' + row.userId);
+        if (d.code === 200 && d.data) u = d.data as SysUserRow;
+    } catch {
+        /* use row */
+    }
+    userForm.value = {
+        userName: u.userName || '',
+        nickName: u.nickName || '',
+        password: '',
+        phonenumber: u.phonenumber || '',
+        email: u.email || '',
+        sex: u.sex || '0',
+        remark: u.remark || '',
+        roleIds: u.roleIds ? [...u.roleIds] : [],
+    };
+    userModalOpen.value = true;
+}
+
+async function saveUser(): Promise<void> {
+    const name = userForm.value.userName.trim();
+    if (!name) {
+        ElMessage.error('请输入用户名');
+        return;
+    }
+    if (userEditingId.value === null && !userForm.value.password) {
+        ElMessage.error('请输入密码');
+        return;
+    }
+    const payload: Record<string, any> = {
+        userName: name,
+        nickName: userForm.value.nickName,
+        phonenumber: userForm.value.phonenumber,
+        email: userForm.value.email,
+        sex: userForm.value.sex,
+        remark: userForm.value.remark,
+        roleIds: userForm.value.roleIds,
+    };
+    try {
+        if (userEditingId.value !== null) {
+            payload.userId = userEditingId.value;
+            const d = await apiFetch('/api/sys-api/system/user', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            });
+            if (d.code === 200) {
+                userModalOpen.value = false;
+                ElMessage.success('✅ 用户已更新');
+            } else {
+                ElMessage.error('❌ ' + (d.msg || '保存失败'));
+                return;
+            }
+        } else {
+            payload.password = userForm.value.password;
+            payload.status = '0';
+            const d = await apiFetch('/api/sys-api/system/user', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            });
+            if (d.code === 200) {
+                userModalOpen.value = false;
+                ElMessage.success('✅ 用户已创建');
+            } else {
+                ElMessage.error('❌ ' + (d.msg || '保存失败'));
+                return;
+            }
+        }
+        await loadUsers();
+    } catch (e) {
+        ElMessage.error('❌ 保存失败');
+    }
+}
+
+async function deleteUser(row: SysUserRow): Promise<void> {
+    try {
+        await ElMessageBox.confirm(`确定删除用户「${row.userName}」？`, '删除用户', { type: 'warning' });
+    } catch {
+        return;
+    }
+    const d = await apiFetch('/api/sys-api/system/user/' + row.userId, { method: 'DELETE' });
+    if (d.code === 200) {
+        ElMessage.success('✅ 用户已删除');
+        await loadUsers();
+    } else {
+        ElMessage.error('❌ ' + (d.msg || '删除失败'));
+    }
+}
+
+async function toggleStatus(row: SysUserRow, active: boolean): Promise<void> {
+    changingStatusId.value = row.userId;
+    try {
+        const d = await apiFetch('/api/sys-api/system/user/changeStatus', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId: row.userId, status: active ? '0' : '1' }),
+        });
+        if (d.code === 200) {
+            row.status = active ? '0' : '1';
+            ElMessage.success(active ? '✅ 已启用' : '✅ 已停用');
+        } else {
+            ElMessage.error('❌ ' + (d.msg || '操作失败'));
+        }
+    } catch {
+        ElMessage.error('❌ 操作失败');
+    } finally {
+        changingStatusId.value = null;
+    }
+}
+
+function openResetPwd(row: SysUserRow): void {
+    resetPwdForm.value = { userId: row.userId, userName: row.userName, password: '' };
+    resetPwdModalOpen.value = true;
+}
+
+async function saveResetPwd(): Promise<void> {
+    if (!resetPwdForm.value.password) {
+        ElMessage.error('请输入新密码');
+        return;
+    }
+    const d = await apiFetch('/api/sys-api/system/user/resetPwd', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: resetPwdForm.value.userId, password: resetPwdForm.value.password }),
+    });
+    if (d.code === 200) {
+        resetPwdModalOpen.value = false;
+        ElMessage.success('✅ 密码已重置');
+    } else {
+        ElMessage.error('❌ ' + (d.msg || '重置失败'));
+    }
+}
+
+function fmtTime(t?: string): string {
+    if (!t) return '';
+    return String(t).replace('T', ' ').slice(0, 19);
 }
 
 // ========== 数据中心 Tab ==========

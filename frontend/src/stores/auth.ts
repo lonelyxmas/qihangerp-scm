@@ -1,8 +1,9 @@
 import { defineStore } from 'pinia';
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import { apiFetch, getToken, setToken, clearToken, apiError } from '../api/client';
 
 interface SysUser {
+    userId?: number;
     userName?: string;
     nickName?: string;
     avatar?: string;
@@ -11,7 +12,14 @@ interface SysUser {
 export const useAuthStore = defineStore('auth', () => {
     const token = ref<string | null>(getToken());
     const user = ref<SysUser | null>(null);
+    const roles = ref<string[]>([]);
     const initialized = ref(false);
+
+    const isAdmin = computed(() => {
+        if (user.value?.userId === 1) return true;
+        if (roles.value.includes('admin')) return true;
+        return false;
+    });
 
     async function login(username: string, password: string): Promise<void> {
         const d = await apiFetch('/api/sys-api/login', {
@@ -33,9 +41,20 @@ export const useAuthStore = defineStore('auth', () => {
         const d = await apiFetch('/api/sys-api/getInfo');
         if (d.code === 200 || d.ok) {
             user.value = (d.user as SysUser) || {};
+            roles.value = Array.isArray(d.roles) ? (d.roles as string[]) : [];
             initialized.value = true;
         } else {
             throw new Error(apiError(d, '获取用户信息失败'));
+        }
+    }
+
+    async function ensureUserInfo(): Promise<void> {
+        if (initialized.value) return;
+        if (!token.value) return;
+        try {
+            await fetchUserInfo();
+        } catch {
+            logout();
         }
     }
 
@@ -51,8 +70,10 @@ export const useAuthStore = defineStore('auth', () => {
         }).catch(() => {});
         token.value = null;
         user.value = null;
+        roles.value = [];
+        initialized.value = false;
         clearToken();
     }
 
-    return { token, user, initialized, login, fetchUserInfo, displayName, logout };
+    return { token, user, roles, initialized, isAdmin, login, fetchUserInfo, ensureUserInfo, displayName, logout };
 });
