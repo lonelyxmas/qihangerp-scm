@@ -63,7 +63,7 @@ const navGroups = [
         label: '工作中心',
         items: [
             { path: '/kb', label: '知识库', icon: '📚' },
-            { path: '/data', label: '数据中心', icon: '🗂️' },
+            { path: '/data', label: '数据中心', icon: '📊' },
             { path: '/tasks', label: '任务中心', icon: '✅' },
             { path: '/reminders', label: '提醒中心', icon: '⏰' },
         ],
@@ -79,7 +79,6 @@ const navGroups = [
     {
         label: '系统',
         items: [
-            { path: '/datacenter', label: '数据模块管理', icon: '📦' },
             { path: '/config', label: '系统配置', icon: '⚙️' },
         ],
     },
