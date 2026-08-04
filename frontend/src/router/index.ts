@@ -7,6 +7,9 @@ import DataCenterView from '../views/DataCenterView.vue';
 import DataRecordsView from '../views/DataRecordsView.vue';
 import TasksView from '../views/TasksView.vue';
 import RemindersView from '../views/RemindersView.vue';
+import ApprovalsView from '../views/ApprovalsView.vue';
+import ActivityView from '../views/ActivityView.vue';
+import NotificationsView from '../views/NotificationsView.vue';
 import PlaceholderView from '../views/PlaceholderView.vue';
 
 export const router = createRouter({
@@ -23,11 +26,11 @@ export const router = createRouter({
                 { path: 'data', name: 'data', component: DataRecordsView, meta: { title: '数据中心' } },
                 { path: 'tasks', name: 'tasks', component: TasksView, meta: { title: '任务中心' } },
                 { path: 'reminders', name: 'reminders', component: RemindersView, meta: { title: '提醒中心' } },
+                { path: 'approvals', name: 'approvals', component: ApprovalsView, meta: { title: '审批中心' } },
+                { path: 'activity', name: 'activity', component: ActivityView, meta: { title: '动态流' } },
+                { path: 'notifications', name: 'notifications', component: NotificationsView, meta: { title: '通知中心' } },
                 { path: 'chat', component: PlaceholderView, meta: { title: 'AI 对话', legacy: '/chat' } },
                 { path: 'kb', component: PlaceholderView, meta: { title: '知识库', legacy: '/notes' } },
-                { path: 'approvals', component: PlaceholderView, meta: { title: '审批中心', legacy: '/approvals' } },
-                { path: 'activity', component: PlaceholderView, meta: { title: '动态流', legacy: '/activity' } },
-                { path: 'notifications', component: PlaceholderView, meta: { title: '通知中心', legacy: '/notifications' } },
                 { path: 'config', component: PlaceholderView, meta: { title: '系统配置', legacy: '/config/ai' } },
             ],
         },
