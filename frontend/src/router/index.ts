@@ -10,6 +10,7 @@ import RemindersView from '../views/RemindersView.vue';
 import ApprovalsView from '../views/ApprovalsView.vue';
 import ActivityView from '../views/ActivityView.vue';
 import NotificationsView from '../views/NotificationsView.vue';
+import KbView from '../views/KbView.vue';
 import PlaceholderView from '../views/PlaceholderView.vue';
 
 export const router = createRouter({
@@ -30,7 +31,7 @@ export const router = createRouter({
                 { path: 'activity', name: 'activity', component: ActivityView, meta: { title: '动态流' } },
                 { path: 'notifications', name: 'notifications', component: NotificationsView, meta: { title: '通知中心' } },
                 { path: 'chat', component: PlaceholderView, meta: { title: 'AI 对话', legacy: '/chat' } },
-                { path: 'kb', component: PlaceholderView, meta: { title: '知识库', legacy: '/notes' } },
+                { path: 'kb', name: 'kb', component: KbView, meta: { title: '知识库', flush: true } },
                 { path: 'config', component: PlaceholderView, meta: { title: '系统配置', legacy: '/config/ai' } },
             ],
         },

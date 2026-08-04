@@ -33,7 +33,7 @@
                     <el-button size="small" text type="danger" @click="onLogout">退出</el-button>
                 </div>
             </header>
-            <main class="app-content">
+            <main class="app-content" :class="{ flush: route.meta.flush }">
                 <router-view />
             </main>
         </div>
@@ -137,5 +137,6 @@ function onLogout(): void {
     width: 30px; height: 30px; border-radius: 50%; background: var(--primary); color: white;
     display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 600;
 }
-.app-content { flex: 1; overflow-y: auto; padding: 24px; }
+.app-content { flex: 1; overflow-y: auto; padding: 24px; position: relative; min-height: 0; }
+.app-content.flush { padding: 0; overflow: hidden; display: flex; flex-direction: column; }
 </style>
