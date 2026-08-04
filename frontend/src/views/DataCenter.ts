@@ -1,4 +1,4 @@
-import { ref, onMounted, computed } from 'vue';
+import { ref, computed } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { apiFetch, apiError } from '../api/client';
 
@@ -345,8 +345,6 @@ async function deleteDataset(id: string): Promise<void> {
     }
 }
 
-onMounted(loadDataCenter);
-
 export {
     FIELD_TYPES,
     ICONS,
@@ -363,6 +361,7 @@ export {
     fieldRows,
     aiGenerating,
     datasetsOf,
+    loadDataCenter,
     openCreateModule,
     openEditModule,
     deleteModule,

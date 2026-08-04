@@ -64,6 +64,7 @@ const navGroups = [
         items: [
             { path: '/kb', label: '知识库', icon: '📚' },
             { path: '/datacenter', label: '数据中心', icon: '📦' },
+            { path: '/data', label: '数据管理', icon: '🗂️' },
             { path: '/tasks', label: '任务中心', icon: '✅' },
             { path: '/reminders', label: '提醒中心', icon: '⏰' },
         ],

@@ -141,6 +141,7 @@
 </template>
 
 <script setup lang="ts">
+import { onMounted } from 'vue';
 import {
     modules,
     loading,
@@ -169,7 +170,10 @@ import {
     onDisplayNameChange,
     aiGenerateKeys,
     saveDataset,
+    loadDataCenter,
 } from './DataCenter';
+
+onMounted(loadDataCenter);
 </script>
 
 <style scoped>
