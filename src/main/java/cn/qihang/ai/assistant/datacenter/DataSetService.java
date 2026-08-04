@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import cn.qihang.ai.assistant.datacenter.model.DataField;
 import cn.qihang.ai.assistant.datacenter.model.DataSchema;
 import cn.qihang.ai.assistant.datacenter.model.DataSet;
+import cn.qihang.ai.assistant.datacenter.model.FieldType;
 import cn.qihang.ai.assistant.datacenter.model.ImportConfig;
 import cn.qihang.ai.assistant.entity.DataSetEntity;
 import cn.qihang.ai.assistant.entity.DataSetRecordEntity;
@@ -21,7 +22,10 @@ import org.springframework.stereotype.Service;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.*;
+import java.util.regex.Pattern;
 
 @Service
 public class DataSetService {
@@ -68,6 +72,8 @@ public class DataSetService {
     }
 
     private static final Set<String> RECORD_SYSTEM_FIELDS = Set.of("id", "recordNum", "编号", "recordType", "recordStatus", "type", "类型", "status", "状态", "创建时间", "更新时间");
+
+    private static final Pattern FIELD_NAME_PATTERN = Pattern.compile("^[a-zA-Z][a-zA-Z0-9_]{0,63}$");
 
     private static final Set<String> TYPE_ALIASES = Set.of("type", "类型");
     private static final Set<String> STATUS_ALIASES = Set.of("status", "状态");
@@ -119,17 +125,126 @@ public class DataSetService {
         return out;
     }
 
+    /**
+     * 校验并规范化 Schema 字段定义：
+     * - name 作为 data_json 的存储 key，新字段必须为合法英文标识符；非法 ASCII 名自动修正为 field_N
+     * - 旧数据（中文名）保留原名，前端通过 displayName 双 key 兼容显示
+     * - type 未知类型归一为 text；select 类型要求 options，非 select 清理 options
+     * - 字段名去重（自动加后缀）
+     */
     private DataSchema normalizeSchema(DataSchema schema) {
         if (schema == null) return null;
         if (schema.getFields() == null) return schema;
         List<DataField> cleaned = new ArrayList<>();
+        Set<String> seen = new HashSet<>();
         for (DataField f : schema.getFields()) {
-            if (f == null || f.getName() == null) continue;
-            if (RECORD_SYSTEM_FIELDS.contains(f.getName().trim())) continue;
+            if (f == null) continue;
+            String rawName = f.getName() == null ? "" : f.getName().trim();
+            String rawDisplay = f.getDisplayName() == null ? null : f.getDisplayName().trim();
+            if (rawName.isEmpty() && (rawDisplay == null || rawDisplay.isEmpty())) continue;
+            if (RECORD_SYSTEM_FIELDS.contains(rawName)) continue;
+
+            String name = rawName;
+            if (name.isEmpty()) {
+                name = "field_" + (cleaned.size() + 1);
+            } else if (!FIELD_NAME_PATTERN.matcher(name).matches()) {
+                boolean ascii = name.chars().allMatch(c -> c < 128);
+                if (ascii) {
+                    name = "field_" + (cleaned.size() + 1);
+                }
+            }
+            String base = name;
+            int suffix = 1;
+            while (seen.contains(name)) {
+                name = base + "_" + (suffix++);
+            }
+            seen.add(name);
+
+            f.setName(name);
+            f.setDisplayName(rawDisplay != null && !rawDisplay.isEmpty() ? rawDisplay : (rawName.isEmpty() ? name : rawName));
+            f.setType(FieldType.normalize(f.getType()));
+            if (FieldType.isSelect(f.getType())) {
+                if (f.getOptions() != null) {
+                    List<String> opts = f.getOptions().stream()
+                            .filter(o -> o != null)
+                            .map(String::trim)
+                            .filter(o -> !o.isEmpty())
+                            .distinct()
+                            .toList();
+                    f.setOptions(opts);
+                }
+            } else {
+                f.setOptions(null);
+            }
             cleaned.add(f);
         }
         schema.setFields(cleaned);
         return schema;
+    }
+
+    /**
+     * 按 Schema 字段类型严格校验并规范化记录值（用于手工新增/编辑记录）：
+     * - number/money：必须是数字，统一转为 Double
+     * - date：必须是日期，统一转为 yyyy-MM-dd
+     * - select：值必须在选项列表中
+     * 校验失败抛出 IllegalArgumentException，由调用方返回明确错误信息。
+     */
+    public Map<String, Object> validateAndNormalizeRecord(DataSet ds, Map<String, Object> record) {
+        if (record == null) return null;
+        if (ds == null || ds.getSchema() == null || ds.getSchema().getFields() == null) {
+            return record;
+        }
+        Map<String, Object> result = new HashMap<>(record);
+        for (DataField f : ds.getSchema().getFields()) {
+            if (f == null || f.getName() == null) continue;
+            Object v = result.get(f.getName());
+            if (v == null || v.toString().isBlank()) continue;
+            String type = f.getType() == null ? FieldType.TEXT : f.getType();
+            String label = f.getDisplayName() != null ? f.getDisplayName() : f.getName();
+            String str = v.toString().trim();
+            if (FieldType.isNumeric(type)) {
+                try {
+                    result.put(f.getName(), Double.parseDouble(str));
+                } catch (NumberFormatException e) {
+                    throw new IllegalArgumentException("字段「" + label + "」必须是数字，当前值: " + str);
+                }
+            } else if (FieldType.DATE.equals(type)) {
+                String normalized = normalizeDate(str);
+                if (normalized == null) {
+                    throw new IllegalArgumentException("字段「" + label + "」必须是日期（如 2026-08-04），当前值: " + str);
+                }
+                result.put(f.getName(), normalized);
+            } else if (FieldType.isSelect(type) && f.getOptions() != null && !f.getOptions().isEmpty()) {
+                if (!f.getOptions().contains(str)) {
+                    throw new IllegalArgumentException("字段「" + label + "」的值不在选项列表中: " + str);
+                }
+            }
+        }
+        return result;
+    }
+
+    /** 宽松模式：校验失败时保留原值，供 AI 工具/批量导入使用，避免中断 */
+    private Map<String, Object> lenientNormalizeRecord(DataSet ds, Map<String, Object> record) {
+        try {
+            return validateAndNormalizeRecord(ds, record);
+        } catch (IllegalArgumentException e) {
+            log.warn("[数据集] 记录值规范化失败（保留原值）: {}", e.getMessage());
+            return record;
+        }
+    }
+
+    private String normalizeDate(String value) {
+        String v = value.trim();
+        try {
+            return LocalDate.parse(v).toString();
+        } catch (Exception ignored) {}
+        try {
+            return LocalDateTime.parse(v.replace(' ', 'T')).toLocalDate().toString();
+        } catch (Exception ignored) {}
+        try {
+            return LocalDate.parse(v.replace('/', '-')).toString();
+        } catch (Exception ignored) {}
+        return null;
     }
 
     public DataSet createDataset(DataSet ds) {
@@ -248,7 +363,7 @@ public class DataSetService {
                 skipped += (newRecords.size() - imported - skipped);
                 break;
             }
-            DataSetRecordEntity entity = saveRecordToDb(datasetId, raw, source, userId, userName);
+            DataSetRecordEntity entity = saveRecordToDb(ds, raw, source, userId, userName);
             if (entity != null) {
                 if (ds != null) {
                     collabEngine.processNewRecord(ds, entity);
@@ -286,6 +401,8 @@ public class DataSetService {
         if (entity == null) return null;
 
         DataSet ds = getDataset(datasetId);
+        if (newData == null) return null;
+        newData = lenientNormalizeRecord(ds, newData);
 
         String rawType = resolveType(newData, datasetId);
         String rawStatus = resolveStatus(newData, datasetId);
@@ -453,14 +570,16 @@ public class DataSetService {
         }
     }
 
-    private DataSetRecordEntity saveRecordToDb(String datasetId, Map<String, Object> raw, String source, Long userId, String userName) {
+    private DataSetRecordEntity saveRecordToDb(DataSet ds, Map<String, Object> raw, String source, Long userId, String userName) {
+        String datasetId = ds != null ? ds.getId() : null;
         String recordId = UUID.randomUUID().toString().substring(0, 12);
-        String rawType = resolveType(raw, datasetId);
-        String rawStatus = resolveStatus(raw, datasetId);
+        Map<String, Object> normalized = lenientNormalizeRecord(ds, raw);
+        String rawType = resolveType(normalized, datasetId);
+        String rawStatus = resolveStatus(normalized, datasetId);
         String type = fallthroughType(rawType, datasetId);
         String status = fallthroughStatus(rawStatus, datasetId);
-        String userRecordNum = resolveRecordNum(raw);
-        Map<String, Object> business = stripSystemFields(raw);
+        String userRecordNum = resolveRecordNum(normalized);
+        Map<String, Object> business = stripSystemFields(normalized);
         String now = TimeUtil.nowStr();
         String recordNum = (userRecordNum != null) ? userRecordNum
                 : String.format("%04d", recordDbService.countByDataset(datasetId) + 1);

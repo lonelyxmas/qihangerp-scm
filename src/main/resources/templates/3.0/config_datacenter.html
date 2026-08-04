@@ -48,6 +48,16 @@
 
         .dc-icon-option { display: inline-flex; align-items: center; justify-content: center; width: 36px; height: 36px; border: 2px solid var(--border); border-radius: var(--radius-sm); cursor: pointer; font-size: 18px; transition: all 0.15s; }
         .dc-icon-option:hover { border-color: var(--primary); }
+
+        .field-editor { width: 100%; border-collapse: collapse; font-size: 13px; }
+        .field-editor th { text-align: left; padding: 6px 8px; background: #f8fafc; border: 1px solid var(--border); font-weight: 600; color: var(--text-secondary); }
+        .field-editor td { padding: 4px; border: 1px solid var(--border); }
+        .field-editor input, .field-editor select { width: 100%; padding: 6px 8px; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 13px; outline: none; font-family: inherit; box-sizing: border-box; }
+        .field-editor input:focus, .field-editor select:focus { border-color: var(--primary); }
+        .field-editor .fd-del { background: none; border: none; cursor: pointer; color: var(--text-muted); font-size: 14px; padding: 4px 8px; }
+        .field-editor .fd-del:hover { color: #dc2626; }
+        .field-editor .fd-name-input { font-family: monospace; }
+        .field-editor .fd-options-cell { min-width: 180px; }
     </style>
 </head>
 <body>
@@ -107,7 +117,7 @@
     </div>
 
     <div id="dcDatasetModal" class="modal-overlay">
-        <div class="modal-box" style="width:540px;" onclick="event.stopPropagation()">
+        <div class="modal-box" style="width:760px;" onclick="event.stopPropagation()">
             <div class="modal-header">
                 <h3 id="dcDatasetModalTitle">新建数据集</h3>
                 <button onclick="closeDcModal('dcDatasetModal')">✕</button>
@@ -118,8 +128,15 @@
                     <input id="dcDsName" type="text" placeholder="如：客户信息">
                 </div>
                 <div class="form-group">
-                    <label>Schema 字段（每行一个）</label>
-                    <textarea id="dcDsSchema" rows="8" style="resize:vertical;" placeholder="地址&#10;电话&#10;负责人"></textarea>
+                    <label style="display:flex;align-items:center;justify-content:space-between;">
+                        <span>字段定义</span>
+                        <span style="display:flex;gap:6px;">
+                            <button class="btn btn-secondary btn-sm" onclick="dcAiGenerateKeys()">✨ AI 生成英文标识</button>
+                            <button class="btn btn-secondary btn-sm" onclick="addDcFieldRow()">+ 添加字段</button>
+                        </span>
+                    </label>
+                    <div id="dcDsFieldEditor"></div>
+                    <div class="text-muted" style="font-size:12px;margin-top:4px;">英文标识是数据存储的 key（小写字母/数字/下划线），中文显示名用于界面展示。旧数据集的中文标识保留兼容。</div>
                 </div>
                 <div class="form-group">
                     <label>类型选项（每行一个）</label>
@@ -295,8 +312,10 @@
         dcEditingDsId = null; dcCreatingDsModuleId = moduleId;
         document.getElementById('dcDatasetModalTitle').textContent = '新建数据集';
         document.getElementById('dcDsName').value = ''; document.getElementById('dcDsDesc').value = '';
-        document.getElementById('dcDsSchema').value = ''; document.getElementById('dcDsTypeOptions').value = '';
-        document.getElementById('dcDsStatusOptions').value = ''; document.getElementById('dcDsFeishuNotify').checked = false;
+        document.getElementById('dcDsTypeOptions').value = ''; document.getElementById('dcDsStatusOptions').value = '';
+        document.getElementById('dcDsFeishuNotify').checked = false;
+        dcFieldRows = [];
+        addDcFieldRow();
         showDcModal('dcDatasetModal');
     }
 
@@ -306,7 +325,16 @@
         dcEditingDsId = id; dcCreatingDsModuleId = null;
         document.getElementById('dcDatasetModalTitle').textContent = '编辑数据集';
         document.getElementById('dcDsName').value = ds.name; document.getElementById('dcDsDesc').value = ds.description || '';
-        if (ds.schema && ds.schema.fields) { document.getElementById('dcDsSchema').value = ds.schema.fields.map(function(f){ return f.displayName || f.name; }).join('\n'); } else { document.getElementById('dcDsSchema').value = ''; }
+        dcFieldRows = [];
+        if (ds.schema && ds.schema.fields && ds.schema.fields.length > 0) {
+            for (var i = 0; i < ds.schema.fields.length; i++) {
+                var f = ds.schema.fields[i];
+                dcFieldRows.push({ displayName: f.displayName || '', name: f.name || '', type: f.type || 'text', options: f.options || [] });
+            }
+        } else {
+            addDcFieldRow();
+        }
+        renderDcFieldEditor();
         if (ds.schema && ds.schema.typeOptions) { document.getElementById('dcDsTypeOptions').value = ds.schema.typeOptions.join('\n'); } else { document.getElementById('dcDsTypeOptions').value = ''; }
         if (ds.schema && ds.schema.statusOptions) { document.getElementById('dcDsStatusOptions').value = ds.schema.statusOptions.join('\n'); } else { document.getElementById('dcDsStatusOptions').value = ''; }
         var cc = ds.collabConfig || {};
@@ -314,13 +342,150 @@
         showDcModal('dcDatasetModal');
     }
 
+    // ========== 字段编辑器 ==========
+
+    var dcFieldRows = [];
+    var DC_FIELD_TYPES = ['text','textarea','number','money','date','select','user'];
+    var DC_FIELD_LABELS = {'text':'文本','textarea':'多行文本','number':'数字','money':'金额','date':'日期','select':'下拉选项','user':'成员'};
+    var DC_AUTO_KEY_RE = /^field_\d+$/;
+
+    function dcGenFieldKey(idx) {
+        return 'field_' + (idx + 1);
+    }
+
+    function dcEsc(v) {
+        return String(v == null ? '' : v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    function dcUpdateField(idx, key, value) {
+        if (dcFieldRows[idx]) dcFieldRows[idx][key] = value;
+    }
+
+    function dcAutoKey(idx) {
+        var f = dcFieldRows[idx];
+        if (!f) return;
+        if (!f.name || DC_AUTO_KEY_RE.test(f.name)) {
+            f.name = dcGenFieldKey(idx);
+            renderDcFieldEditor();
+        }
+    }
+
+    function addDcFieldRow() {
+        dcFieldRows.push({ displayName: '', name: '', type: 'text', options: [] });
+        renderDcFieldEditor();
+    }
+
+    function removeDcFieldRow(idx) {
+        dcFieldRows.splice(idx, 1);
+        renderDcFieldEditor();
+    }
+
+    function renderDcFieldEditor() {
+        var container = document.getElementById('dcDsFieldEditor');
+        if (!container) return;
+        var html = '<table class="field-editor"><thead><tr>';
+        html += '<th style="width:26%;">中文显示名</th><th style="width:26%;">英文标识</th><th style="width:16%;">类型</th><th class="fd-options-cell">选项（逗号分隔）</th><th style="width:36px;"></th>';
+        html += '</tr></thead><tbody>';
+        for (var i = 0; i < dcFieldRows.length; i++) {
+            var f = dcFieldRows[i];
+            var typeSel = '';
+            for (var t = 0; t < DC_FIELD_TYPES.length; t++) {
+                var sel = f.type === DC_FIELD_TYPES[t] ? ' selected' : '';
+                typeSel += '<option value="' + DC_FIELD_TYPES[t] + '"' + sel + '>' + DC_FIELD_LABELS[DC_FIELD_TYPES[t]] + '</option>';
+            }
+            var optsVal = (f.options || []).join(',');
+            var optsStyle = f.type === 'select' ? '' : ' style="display:none;"';
+            html += '<tr>';
+            html += '<td><input value="' + dcEsc(f.displayName) + '" placeholder="如：客户名称" oninput="dcUpdateField(' + i + ',\'displayName\',this.value)" onchange="dcAutoKey(' + i + ')"></td>';
+            html += '<td><input class="fd-name-input" value="' + dcEsc(f.name) + '" placeholder="自动生成，可修改" oninput="dcUpdateField(' + i + ',\'name\',this.value)"></td>';
+            html += '<td><select onchange="dcUpdateField(' + i + ',\'type\',this.value);renderDcFieldEditor()">' + typeSel + '</select></td>';
+            html += '<td class="fd-options-cell"><input value="' + dcEsc(optsVal) + '" placeholder="意向客户,已成交" oninput="dcUpdateField(' + i + ',\'optionsText\',this.value)"' + optsStyle + '></td>';
+            html += '<td><button class="fd-del" onclick="removeDcFieldRow(' + i + ')" title="删除字段">✕</button></td>';
+            html += '</tr>';
+        }
+        html += '</tbody></table>';
+        container.innerHTML = html;
+        for (var j = 0; j < dcFieldRows.length; j++) {
+            if (dcFieldRows[j].optionsText) {
+                dcFieldRows[j].options = dcFieldRows[j].optionsText.split(',').map(function(s){ return s.trim(); }).filter(function(s){ return s; });
+            }
+        }
+    }
+
+    function dcCollectFieldOptions() {
+        for (var i = 0; i < dcFieldRows.length; i++) {
+            var f = dcFieldRows[i];
+            if (f.type === 'select') {
+                if (f.optionsText != null) {
+                    f.options = f.optionsText.split(',').map(function(s){ return s.trim(); }).filter(function(s){ return s; });
+                }
+            } else {
+                f.options = [];
+            }
+        }
+    }
+
+    function dcAiGenerateKeys() {
+        var rows = dcFieldRows.filter(function(f){ return (f.displayName || '').trim(); });
+        if (rows.length === 0) { toast('请先填写字段的中文显示名', 'error'); return; }
+        var names = rows.map(function(f){ return f.displayName.trim(); });
+        var btn = document.querySelector('button[onclick="dcAiGenerateKeys()"]');
+        if (btn) { btn.disabled = true; btn.textContent = '✨ 生成中...'; }
+        apiFetch('/api/datacenter/llm/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                system: '你是数据建模助手。将中文字段名转换为英文标识符：小写字母开头，仅含字母、数字、下划线，语义清晰，如"客户名称"→customer_name、"报价金额"→quote_amount。',
+                user: '为以下字段名生成英文标识符，只输出JSON对象（键为中文字段名，值为英文标识符）：' + JSON.stringify(names)
+            })
+        }).then(function(r){ return r.json(); }).then(function(d) {
+            if (d.ok && d.reply) {
+                var mapping = null;
+                try {
+                    var clean = d.reply.trim();
+                    clean = clean.replace(/^```(?:json)?\s*/,'').replace(/```\s*$/,'');
+                    var start = clean.indexOf('{'), end = clean.lastIndexOf('}');
+                    if (start >= 0 && end > start) mapping = JSON.parse(clean.substring(start, end + 1));
+                } catch (e) { mapping = null; }
+                if (mapping) {
+                    var updated = 0;
+                    for (var i = 0; i < dcFieldRows.length; i++) {
+                        var f = dcFieldRows[i];
+                        var key = mapping[f.displayName.trim()];
+                        if (key && (!f.name || DC_AUTO_KEY_RE.test(f.name))) { f.name = key; updated++; }
+                    }
+                    renderDcFieldEditor();
+                    toast(updated > 0 ? '✅ 已生成 ' + updated + ' 个英文标识' : '✅ 完成，可手动修改', 'success');
+                } else {
+                    toast('AI 返回格式无法解析，可手动填写', 'error');
+                }
+            } else {
+                toast(d.error || 'AI 生成失败，请检查 LLM 配置', 'error');
+            }
+        }).catch(function() {
+            toast('AI 生成失败，请检查 LLM 配置', 'error');
+        }).finally(function() {
+            if (btn) { btn.disabled = false; btn.textContent = '✨ AI 生成英文标识'; }
+        });
+    }
+
     function saveDcDataset() {
         var name = document.getElementById('dcDsName').value.trim();
         if (!name) { toast('请输入数据集名称', 'error'); return; }
-        var fields = document.getElementById('dcDsSchema').value.split('\n').map(function(s){ return s.trim(); }).filter(function(s){ return s; });
+        dcCollectFieldOptions();
+        var fields = [];
+        for (var i = 0; i < dcFieldRows.length; i++) {
+            var f = dcFieldRows[i];
+            var displayName = (f.displayName || '').trim();
+            var fname = (f.name || '').trim() || dcGenFieldKey(fields.length);
+            if (!displayName && !fname) continue;
+            var field = { name: fname, displayName: displayName || fname, type: f.type || 'text' };
+            if (f.type === 'select' && f.options && f.options.length > 0) field.options = f.options;
+            fields.push(field);
+        }
         var typeOptions = document.getElementById('dcDsTypeOptions').value.split('\n').map(function(s){ return s.trim(); }).filter(function(s){ return s; });
         var statusOptions = document.getElementById('dcDsStatusOptions').value.split('\n').map(function(s){ return s.trim(); }).filter(function(s){ return s; });
-        var schema = { fields: fields.map(function(n){ return { name: n, displayName: n, type: 'text' }; }), typeOptions: typeOptions, statusOptions: statusOptions };
+        var schema = { fields: fields, typeOptions: typeOptions, statusOptions: statusOptions };
         var data = { name: name, description: document.getElementById('dcDsDesc').value, type: typeOptions.length > 0 ? typeOptions[0] : '', status: statusOptions.length > 0 ? statusOptions[0] : '', schema: schema, collabConfig: { feishuNotify: document.getElementById('dcDsFeishuNotify').checked } };
         if (!dcEditingDsId) data.moduleId = dcCreatingDsModuleId;
         var url = '/api/datacenter/datasets'; var method = 'POST';

@@ -43,7 +43,7 @@ public class SchedulerService {
         this.feishuService = feishuService;
     }
 
-    @Scheduled(cron = "0 0 11 * * ?", zone = "Asia/Shanghai")
+    @Scheduled(cron = "0 0 8 * * ?", zone = "Asia/Shanghai")
     public void morningReport() {
         log.info("[{}] ⏰ 定时任务：生成综合日报", TimeUtil.nowStr());
         List<KbBaseEntity> kbs = kbService.getAll();

@@ -395,10 +395,14 @@ public class DataApiController {
                 return ResponseEntity.ok(Map.of("ok", false, "error", "记录数据不能为空"));
             }
 
+            record = dataSetService.validateAndNormalizeRecord(ds, record);
+
             long userId = getCurrentUserId();
             String userName = getCurrentUserName();
             int count = dataSetService.addRecords(id, List.of(record), "manual", userId, userName);
             return ResponseEntity.ok(Map.of("ok", true, "count", count));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.ok(Map.of("ok", false, "error", e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.ok(Map.of("ok", false, "error", e.getMessage()));
         }
@@ -419,6 +423,8 @@ public class DataApiController {
             @SuppressWarnings("unchecked")
             Map<String, Object> data = (Map<String, Object>) body.get("data");
 
+            data = dataSetService.validateAndNormalizeRecord(ds, data);
+
             long userId = getCurrentUserId();
             String userName = getCurrentUserName();
             Map<String, Object> updated = dataSetService.updateRecord(id, recordId, data, userId, userName);
@@ -427,6 +433,8 @@ public class DataApiController {
             }
 
             return ResponseEntity.ok(Map.of("ok", true));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.ok(Map.of("ok", false, "error", e.getMessage()));
         } catch (Exception e) {
             return ResponseEntity.ok(Map.of("ok", false, "error", e.getMessage()));
         }

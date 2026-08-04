@@ -9,6 +9,7 @@ public class DataField {
     private String displayName;
     private Boolean required;
     private String defaultValue;
+    private java.util.List<String> options;
 
     public DataField() {}
 
@@ -32,4 +33,7 @@ public class DataField {
 
     public String getDefaultValue() { return defaultValue; }
     public void setDefaultValue(String defaultValue) { this.defaultValue = defaultValue; }
+
+    public java.util.List<String> getOptions() { return options; }
+    public void setOptions(java.util.List<String> options) { this.options = options; }
 }
